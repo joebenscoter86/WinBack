@@ -1,0 +1,51 @@
+{
+  "id": "com.jkbtech.dispute-buddy",
+  "version": "0.0.1",
+  "name": "Dispute Buddy",
+  "icon": "",
+  "permissions": [
+    {
+      "permission": "dispute_read",
+      "purpose": "Read dispute details to guide merchants through the response process"
+    },
+    {
+      "permission": "dispute_write",
+      "purpose": "Submit evidence and responses on behalf of the merchant"
+    },
+    {
+      "permission": "charge_read",
+      "purpose": "Read charge details associated with disputes"
+    },
+    {
+      "permission": "customer_read",
+      "purpose": "Read customer information for dispute context"
+    },
+    {
+      "permission": "file_write",
+      "purpose": "Upload evidence files for dispute responses"
+    }
+  ],
+  "app_backend": {
+    "url": "https://dispute-buddy.vercel.app"
+  },
+  "ui_extension": {
+    "views": [
+      {
+        "viewport": "stripe.dashboard.dispute.detail",
+        "component": "DisputeDetailView"
+      },
+      {
+        "viewport": "stripe.dashboard.dispute.list",
+        "component": "DisputeListView"
+      }
+    ],
+    "content_security_policy": {
+      "connect-src": null,
+      "image-src": null
+    }
+  },
+  "post_install_action": {
+    "type": "external",
+    "url": "https://dispute-buddy.vercel.app/onboarding"
+  }
+}

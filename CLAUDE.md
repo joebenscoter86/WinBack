@@ -37,6 +37,7 @@ Stripe Dashboard (iframe) → Vercel API Routes → Supabase + Claude API + Stri
 
 ### Critical Architecture Decisions (from /autoplan review)
 
+- **Monorepo with two packages** — `stripe-app/` (Stripe App frontend, UI extensions) and `backend/` (Next.js API on Vercel). Stripe CLI expects `stripe-app.json` at its project root; Next.js expects `app/` at its root. Separate directories avoid config conflicts (competing tsconfig, package.json, build systems). Each is independently deployable: Vercel deploys from `backend/`, `stripe apps upload` runs from `stripe-app/`. No monorepo tooling (Turborepo/Nx) needed at this scale.
 - **Auth middleware is mandatory** — Every Vercel API route (except webhooks) MUST verify the Stripe App signature via `fetchStripeSignature()`. Without this, the backend is an open API. See WIN-31.
 - **Background AI generation** — Claude API calls take 3-15 seconds. Don't block in the iframe. Use async generation with polling: POST returns a `generation_id`, client polls for completion. See WIN-18.
 - **Evidence submission is irrevocable** — Stripe's `submit: true` on the Disputes API is final. No undo. Must implement partial-failure handling and idempotency. See WIN-20.
@@ -87,12 +88,13 @@ Stripe Dashboard (iframe) → Vercel API Routes → Supabase + Claude API + Stri
 ### Commit Message Format
 
 ```
-<type>: <short description>
+<type>(<scope>): <short description>
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 ```
 
 Types: `feat`, `fix`, `test`, `refactor`, `docs`, `chore`
+Scopes: `stripe-app`, `backend`, or omit for cross-cutting changes
 
 ---
 
@@ -133,4 +135,12 @@ python3 .taskmaster/scripts/execution-state.py complete <task_id>
 
 # Rollback to checkpoint
 bash .taskmaster/scripts/rollback.sh <task_id>
+
+# Development (run from repo root)
+cd stripe-app && stripe apps start   # Stripe App frontend
+cd backend && npm run dev            # Next.js API backend
+
+# Deployment
+# Vercel: set Root Directory to "backend/" in project settings
+# Stripe: cd stripe-app && stripe apps upload
 ```
