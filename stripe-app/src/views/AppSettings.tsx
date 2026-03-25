@@ -6,7 +6,7 @@ import {
 import type { ExtensionContextValue } from "@stripe/ui-extension-sdk/context";
 
 /**
- * AppSettings — settings page for Dispute Buddy.
+ * AppSettings — settings page for WinBack.
  * Subscription status, account info, and preferences.
  */
 const AppSettings = ({ environment, userContext }: ExtensionContextValue) => {
@@ -15,7 +15,7 @@ const AppSettings = ({ environment, userContext }: ExtensionContextValue) => {
       <Box css={{ padding: "medium" }}>
         <Banner
           type="default"
-          title="Dispute Buddy Settings"
+          title="WinBack Settings"
           description="Manage your subscription and preferences."
         />
       </Box>

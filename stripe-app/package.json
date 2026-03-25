@@ -1,7 +1,7 @@
 {
-  "name": "dispute-buddy-stripe-app",
+  "name": "winback-stripe-app",
   "version": "0.0.1",
-  "description": "Dispute Buddy — Guided dispute resolution for Stripe merchants",
+  "description": "WinBack — Guided dispute resolution for Stripe merchants",
   "scripts": {
     "build": "stripe apps build",
     "start": "stripe apps start",

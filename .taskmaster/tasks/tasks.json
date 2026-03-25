@@ -7,7 +7,7 @@
       "status": "pending",
       "dependencies": [],
       "priority": "high",
-      "details": "1. Run `npx create-next-app@latest dispute-buddy --typescript --app --tailwind`\n2. Install Stripe Apps SDK: `npm install @stripe/ui-extension-sdk @stripe/stripe-js stripe`\n3. Configure stripe-app.json manifest with required permissions: read_disputes, read_charges, read_customers, write_dispute_evidence\n4. Set up the app entry point per Stripe Apps docs\n5. Configure environment variables for STRIPE_SECRET_KEY, STRIPE_APP_SECRET, ANTHROPIC_API_KEY\n6. Verify app loads in Stripe Developer Dashboard dev mode",
+      "details": "1. Run `npx create-next-app@latest winback --typescript --app --tailwind`\n2. Install Stripe Apps SDK: `npm install @stripe/ui-extension-sdk @stripe/stripe-js stripe`\n3. Configure stripe-app.json manifest with required permissions: read_disputes, read_charges, read_customers, write_dispute_evidence\n4. Set up the app entry point per Stripe Apps docs\n5. Configure environment variables for STRIPE_SECRET_KEY, STRIPE_APP_SECRET, ANTHROPIC_API_KEY\n6. Verify app loads in Stripe Developer Dashboard dev mode",
       "testStrategy": "App loads successfully in Stripe Developer Dashboard without errors. All environment variables validated. TypeScript compiles without errors.",
       "subtasks": []
     },
@@ -95,7 +95,7 @@
       "status": "pending",
       "dependencies": [1, 4],
       "priority": "high",
-      "details": "1. Set up Stripe App entry point with proper manifest\n2. Create main app layout with sidebar navigation using Stripe UI components\n3. Set up routing between views: Disputes List, Dispute Detail, Settings/Account\n4. Add Dispute Buddy branding (logo, colors) within SDK constraints\n5. Implement loading states and error boundaries\n6. Set up app-to-backend communication layer (authenticated API calls to Vercel)",
+      "details": "1. Set up Stripe App entry point with proper manifest\n2. Create main app layout with sidebar navigation using Stripe UI components\n3. Set up routing between views: Disputes List, Dispute Detail, Settings/Account\n4. Add WinBack branding (logo, colors) within SDK constraints\n5. Implement loading states and error boundaries\n6. Set up app-to-backend communication layer (authenticated API calls to Vercel)",
       "testStrategy": "App loads in Stripe Dashboard dev mode. Navigation between views works. Backend API calls authenticated correctly.",
       "subtasks": []
     },
@@ -271,7 +271,7 @@
       "status": "pending",
       "dependencies": [9, 11],
       "priority": "medium",
-      "details": "1. Detect when merchant has zero disputes\n2. Display clean empty state: 'You're all set! When a dispute comes in, we'll walk you through exactly what to do.'\n3. Brief onboarding flow on first visit:\n   - What Dispute Buddy does\n   - How it works (checklist → evidence → AI narrative → submit)\n   - What happens when a dispute arrives\n4. Promise of notification: 'We'll alert you the moment a dispute needs attention'\n5. Optional: quick tour of the app interface",
+      "details": "1. Detect when merchant has zero disputes\n2. Display clean empty state: 'You're all set! When a dispute comes in, we'll walk you through exactly what to do.'\n3. Brief onboarding flow on first visit:\n   - What WinBack does\n   - How it works (checklist → evidence → AI narrative → submit)\n   - What happens when a dispute arrives\n4. Promise of notification: 'We'll alert you the moment a dispute needs attention'\n5. Optional: quick tour of the app interface",
       "testStrategy": "Empty state renders when no disputes exist. Onboarding content is clear and helpful. First-visit detection works.",
       "subtasks": []
     },
@@ -304,14 +304,14 @@
       "status": "pending",
       "dependencies": [27],
       "priority": "medium",
-      "details": "1. Write marketplace listing:\n   - Title: 'Dispute Buddy: Win More Chargebacks for $29/month'\n   - Description: Lead with value prop ('Stop giving Stripe 30% of your recovered disputes')\n   - Feature list highlighting guided evidence, AI narratives, flat pricing\n2. Take screenshots showing:\n   - Dispute list with urgency indicators\n   - Evidence checklist with 'why this matters'\n   - AI-generated narrative with reasoning\n   - Win rate dashboard\n3. Set pricing: $29/month\n4. Add support contact info\n5. Review Stripe App Marketplace submission requirements",
+      "details": "1. Write marketplace listing:\n   - Title: 'WinBack: Win More Chargebacks for $29/month'\n   - Description: Lead with value prop ('Stop giving Stripe 30% of your recovered disputes')\n   - Feature list highlighting guided evidence, AI narratives, flat pricing\n2. Take screenshots showing:\n   - Dispute list with urgency indicators\n   - Evidence checklist with 'why this matters'\n   - AI-generated narrative with reasoning\n   - Win rate dashboard\n3. Set pricing: $29/month\n4. Add support contact info\n5. Review Stripe App Marketplace submission requirements",
       "testStrategy": "Listing is complete with all required fields. Screenshots are high quality and show key features. Pricing is correct.",
       "subtasks": []
     },
     {
       "id": 29,
       "title": "Submit App for Stripe Marketplace Review",
-      "description": "Submit the Dispute Buddy Stripe App for marketplace review. Address any review feedback.",
+      "description": "Submit the WinBack Stripe App for marketplace review. Address any review feedback.",
       "status": "pending",
       "dependencies": [28],
       "priority": "high",

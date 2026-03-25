@@ -1,4 +1,4 @@
-# PRD: Dispute Buddy
+# PRD: WinBack
 
 **Author:** Joe Benscoter
 **Date:** 2026-03-24
@@ -27,7 +27,7 @@
 
 ## Executive Summary
 
-Small Stripe merchants are losing payment disputes at a ~70-80% rate because they lack guidance on what evidence to submit and how to present it. Existing solutions either take 25-30% of recovered amounts (Chargeflow, Stripe Smart Disputes) or cost $499+/month (DisputeNinja). Dispute Buddy is a $29/month flat-rate Stripe App that lives inside the Stripe Dashboard and guides merchants through building complete, compelling evidence packages using reason-code-specific playbooks and AI-generated narratives. The merchant keeps every dollar they recover. Target: 100+ paying merchants within 90 days of launch.
+Small Stripe merchants are losing payment disputes at a ~70-80% rate because they lack guidance on what evidence to submit and how to present it. Existing solutions either take 25-30% of recovered amounts (Chargeflow, Stripe Smart Disputes) or cost $499+/month (DisputeNinja). WinBack is a $29/month flat-rate Stripe App that lives inside the Stripe Dashboard and guides merchants through building complete, compelling evidence packages using reason-code-specific playbooks and AI-generated narratives. The merchant keeps every dollar they recover. Target: 100+ paying merchants within 90 days of launch.
 
 ---
 
@@ -72,10 +72,10 @@ Small Stripe merchants (Shopify sellers, service businesses, SaaS companies, mar
 - **Measurement Method:** Stripe Billing subscription count + in-app analytics
 
 ### Goal 2: Dispute Win Rate Improvement
-- **Description:** Prove that merchants using Dispute Buddy win significantly more disputes than the industry baseline
-- **Metric:** Win rate for disputes submitted through Dispute Buddy
+- **Description:** Prove that merchants using WinBack win significantly more disputes than the industry baseline
+- **Metric:** Win rate for disputes submitted through WinBack
 - **Baseline:** ~20-30% industry manual win rate for small merchants
-- **Target:** 50%+ win rate for disputes submitted through Dispute Buddy
+- **Target:** 50%+ win rate for disputes submitted through WinBack
 - **Timeframe:** Measurable after 60 days (dispute resolution takes 60-75 days)
 - **Measurement Method:** In-app outcome tracking via Stripe Disputes API
 
@@ -188,7 +188,7 @@ Small Stripe merchants (Shopify sellers, service businesses, SaaS companies, mar
 
 ### Story 5: Empty State & Onboarding
 
-**As a** merchant who just installed Dispute Buddy but has no active disputes,
+**As a** merchant who just installed WinBack but has no active disputes,
 **I want to** understand what the app does and feel confident it'll help when a dispute hits,
 **So that I** don't uninstall it before I even use it.
 
@@ -207,7 +207,7 @@ Small Stripe merchants (Shopify sellers, service businesses, SaaS companies, mar
 
 ### Story 6: Subscription & Billing
 
-**As a** merchant who wants to use Dispute Buddy,
+**As a** merchant who wants to use WinBack,
 **I want to** subscribe for $29/month with a streamlined billing flow,
 **So that I can** start using the tool immediately.
 
@@ -227,7 +227,7 @@ Small Stripe merchants (Shopify sellers, service businesses, SaaS companies, mar
 
 ### Story 7: Landing Page & Waitlist
 
-**As a** potential merchant who discovers Dispute Buddy before launch,
+**As a** potential merchant who discovers WinBack before launch,
 **I want to** understand the value proposition and join a waitlist,
 **So that I** can be notified when the product launches.
 
@@ -554,7 +554,7 @@ Evidence fields per reason code:
 ┌─────────────────────────────────────────────────┐
 │              Stripe Dashboard                     │
 │  ┌───────────────────────────────────────────┐   │
-│  │         Dispute Buddy (Stripe App)         │   │
+│  │         WinBack (Stripe App)         │   │
 │  │         React + Stripe UI Components       │   │
 │  │         Runs in iframe                     │   │
 │  └──────────────────┬────────────────────────┘   │
@@ -829,13 +829,13 @@ Note: Many tasks are parallelizable. With AI agent execution, code tasks compres
 
 ## Out of Scope
 
-1. **Full automation (submit without merchant review)** — Dispute Buddy is a guide, not a black box. Merchant always reviews and approves.
+1. **Full automation (submit without merchant review)** — WinBack is a guide, not a black box. Merchant always reviews and approves.
 2. **Mobile app** — Stripe Dashboard is desktop-focused. No separate mobile app for MVP.
 3. **Multi-merchant/agency support** — Phase 3 feature. MVP is one Stripe account per installation.
 4. **Shipping carrier auto-integration** — Phase 3. MVP requires manual tracking number entry.
 5. **Prevention-only features** — MVP focuses on winning existing disputes. Prevention insights come in Phase 2-3.
 6. **Non-Stripe payment processors** — Stripe only for now. PayPal/Adyen/others are future portfolio expansion.
-7. **Shared infrastructure for portfolio apps** — Build Dispute Buddy standalone. Don't over-architect for future Stripe apps yet.
+7. **Shared infrastructure for portfolio apps** — Build WinBack standalone. Don't over-architect for future Stripe apps yet.
 8. **Enterprise features** — No team management, no role-based access, no bulk operations.
 
 ---

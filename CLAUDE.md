@@ -1,10 +1,10 @@
-# Project: Dispute Buddy
+# Project: WinBack
 
 > **Stripe App — Guided dispute resolution for small merchants**
 
 ## Project Overview
 
-Dispute Buddy is a $29/month flat-rate Stripe App that guides small merchants through winning payment disputes using reason-code-specific playbooks and AI-generated narratives. It runs inside the Stripe Dashboard.
+WinBack is a $29/month flat-rate Stripe App that guides small merchants through winning payment disputes using reason-code-specific playbooks and AI-generated narratives. It runs inside the Stripe Dashboard.
 
 **Key Documents:**
 - PRD: `.taskmaster/docs/prd.md` - Comprehensive product requirements (original baseline)

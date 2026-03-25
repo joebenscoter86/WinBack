@@ -12,11 +12,11 @@ import type { ExtensionContextValue } from "@stripe/ui-extension-sdk/context";
  */
 const PaymentDisputeView = ({ environment, userContext }: ExtensionContextValue) => {
   return (
-    <ContextView title="Dispute Buddy">
+    <ContextView title="WinBack">
       <Box css={{ padding: "medium" }}>
         <Banner
           type="default"
-          title="Dispute Buddy"
+          title="WinBack"
           description="Guided dispute resolution for this payment."
         />
       </Box>
