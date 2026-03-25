@@ -21,31 +21,39 @@
       "purpose": "Read customer information for dispute context"
     },
     {
+      "permission": "file_read",
+      "purpose": "Read uploaded evidence files"
+    },
+    {
       "permission": "file_write",
       "purpose": "Upload evidence files for dispute responses"
+    },
+    {
+      "permission": "payment_intent_read",
+      "purpose": "Read payment intent details for dispute context"
     }
   ],
-  "app_backend": {
-    "url": "https://dispute-buddy.vercel.app"
-  },
   "ui_extension": {
     "views": [
       {
-        "viewport": "stripe.dashboard.dispute.detail",
-        "component": "DisputeDetailView"
+        "viewport": "stripe.dashboard.payment.detail",
+        "component": "PaymentDisputeView"
       },
       {
-        "viewport": "stripe.dashboard.dispute.list",
+        "viewport": "stripe.dashboard.drawer.default",
         "component": "DisputeListView"
+      },
+      {
+        "viewport": "settings",
+        "component": "AppSettings"
       }
     ],
     "content_security_policy": {
-      "connect-src": null,
+      "connect-src": ["https://dispute-buddy.vercel.app"],
       "image-src": null
     }
   },
   "post_install_action": {
-    "type": "external",
-    "url": "https://dispute-buddy.vercel.app/onboarding"
+    "type": "settings"
   }
 }

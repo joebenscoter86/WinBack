@@ -1,0 +1,26 @@
+import {
+  Box,
+  SettingsView,
+  Banner,
+} from "@stripe/ui-extension-sdk/ui";
+import type { ExtensionContextValue } from "@stripe/ui-extension-sdk/context";
+
+/**
+ * AppSettings — settings page for Dispute Buddy.
+ * Subscription status, account info, and preferences.
+ */
+const AppSettings = ({ environment, userContext }: ExtensionContextValue) => {
+  return (
+    <SettingsView>
+      <Box css={{ padding: "medium" }}>
+        <Banner
+          type="default"
+          title="Dispute Buddy Settings"
+          description="Manage your subscription and preferences."
+        />
+      </Box>
+    </SettingsView>
+  );
+};
+
+export default AppSettings;
