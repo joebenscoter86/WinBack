@@ -8,7 +8,7 @@ export type DisputeStatus =
   | 'warning_closed'
   | 'charge_refunded';
 
-export type CardNetwork = 'visa' | 'mastercard' | 'amex' | 'discover';
+export type CardNetwork = 'visa' | 'mastercard' | 'amex' | 'discover' | 'unknown';
 
 export type WizardStep = 'review' | 'evidence' | 'narrative' | 'submit';
 
@@ -31,4 +31,9 @@ export interface Dispute {
   reason_code: string;
   network: CardNetwork;
   payment_intent?: string;
+  charge_id: string;
+  customer_name?: string;
+  customer_email?: string;
+  created: number;
+  evidence_due_by: number;
 }

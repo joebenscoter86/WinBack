@@ -72,9 +72,9 @@ Stripe Dashboard (iframe) → Vercel API Routes → Supabase + Claude API + Stri
 
 ### Task Execution
 
-1. Read the task from `.taskmaster/tasks/tasks.json`
-2. Check dependencies — ensure dependent tasks are complete
-3. Reference relevant PRD sections in `.taskmaster/docs/prd.md`
+1. **Check Linear first** -- query the WinBack team in Linear (`list_issues` with `team: "WinBack"`) to get current issue statuses, priorities, and phase assignments. Linear is the source of truth for what's done, in progress, and next.
+2. Check dependencies in Linear -- ensure dependent issues are complete
+3. Reference relevant PRD sections in `.taskmaster/docs/prd.md` and the Linear issue description for implementation details
 4. Implement the task
 5. Test thoroughly
 6. Create feature branch, commit, and mark task complete

@@ -1,38 +1,91 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* Background & Surfaces */
-  --color-background: #0b1326;
-  --color-surface-low: #131b2e;
-  --color-surface: #171f33;
-  --color-surface-high: #222a3d;
-  --color-surface-highest: #2d3449;
-  --color-surface-bright: #31394d;
+  /* Background & Surfaces — Ethereal Velocity */
+  --color-background: #0c1324;
+  --color-surface: #0c1324;
+  --color-surface-dim: #0c1324;
+  --color-surface-lowest: #070d1f;
+  --color-surface-low: #151b2d;
+  --color-surface-container: #191f31;
+  --color-surface-high: #23293c;
+  --color-surface-highest: #2e3447;
+  --color-surface-bright: #33394c;
+  --color-surface-variant: #2e3447;
 
   /* Text */
-  --color-foreground: #dae2fd;
-  --color-on-surface: #dae2fd;
-  --color-on-surface-variant: #bccabe;
-  --color-outline: #869489;
+  --color-foreground: #dce1fb;
+  --color-on-surface: #dce1fb;
+  --color-on-surface-variant: #bbc9cf;
+  --color-on-background: #dce1fb;
+  --color-outline: #859399;
+  --color-outline-variant: #3c494e;
 
-  /* Primary (Emerald / Win) */
-  --color-primary: #00e475;
-  --color-primary-container: #00a955;
-  --color-on-primary: #003918;
+  /* Primary (Cyan) */
+  --color-primary: #a4e6ff;
+  --color-primary-container: #00d1ff;
+  --color-primary-dim: #4cd6ff;
+  --color-on-primary: #003543;
+  --color-on-primary-container: #00566a;
 
-  /* Secondary (Blue / Logo accent) */
-  --color-secondary: #4cd6fb;
+  /* Secondary (Muted Blue) */
+  --color-secondary: #b9c7e4;
+  --color-secondary-container: #3c4962;
+  --color-on-secondary: #233148;
+  --color-secondary-fixed-dim: #008394;
 
-  /* Tertiary (Warning / Competitor) */
-  --color-tertiary: #ffb3ae;
-  --color-tertiary-container: #ff5956;
+  /* Tertiary (Purple accent) */
+  --color-tertiary: #e4d6ff;
+  --color-tertiary-container: #cbb5ff;
+
+  /* Error */
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+
+  /* Inverse */
+  --color-inverse-surface: #dce1fb;
+  --color-inverse-on-surface: #2a3043;
+  --color-inverse-primary: #00677f;
 
   /* Fonts */
   --font-sans: var(--font-manrope);
-  --font-display: var(--font-space-grotesk);
+  --font-headline: var(--font-plus-jakarta);
+  --font-label: var(--font-inter);
+}
+
+:root {
+  /* shadcn token mapping for product-card component */
+  --card: 222 47% 9%;        /* surface-container #191f31 */
+  --card-foreground: 230 82% 92%; /* on-surface #dce1fb */
+  --primary: 192 100% 50%;   /* primary-container #00d1ff */
+  --muted-foreground: 200 14% 57%; /* on-surface-variant #bbc9cf */
 }
 
 body {
-  background: #0b1326;
-  color: #dae2fd;
+  background: #0c1324;
+  color: #dce1fb;
+}
+
+/* Utility classes for the cinematic design */
+.ethereal-blur {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.ribbon-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 209, 255, 0.15) 0%,
+    rgba(0, 131, 148, 0.05) 50%,
+    rgba(12, 19, 36, 0) 100%
+  );
+}
+
+.primary-cta-gradient {
+  background: linear-gradient(45deg, #a4e6ff 0%, #00d1ff 100%);
+}
+
+.glass-border-light {
+  border-top: 1px solid rgba(164, 230, 255, 0.2);
+  border-left: 1px solid rgba(164, 230, 255, 0.1);
 }
