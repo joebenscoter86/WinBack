@@ -5,12 +5,10 @@ function Navbar() {
   return (
     <nav className="sticky top-0 z-50 backdrop-blur-xl bg-background/60">
       <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Image src="/logo.png" alt="WinBack" width={32} height={32} />
-          <span className="font-[family-name:var(--font-space-grotesk)] font-bold text-lg text-on-surface">
-            WinBack
-          </span>
-        </div>
+        <a href="#" className="flex items-center font-[family-name:var(--font-space-grotesk)] text-2xl font-bold tracking-tight">
+          <span className="text-transparent [-webkit-text-stroke:1.5px_#4cd6fb]">Win</span>
+          <span className="text-[#4cd6fb]">Back</span>
+        </a>
         <div className="hidden sm:flex items-center gap-8">
           <a href="#comparison" className="text-on-surface-variant text-sm hover:text-on-surface transition-colors">
             Comparison
@@ -58,22 +56,14 @@ function Hero() {
         </div>
         <p className="text-outline text-sm mt-4">Early access opening soon</p>
       </div>
-      <div className="flex-shrink-0">
-        <div className="bg-surface-low rounded-xl p-8 sm:p-12">
-          <Image
-            src="/logo.png"
-            alt="WinBack product"
-            width={200}
-            height={200}
-            className="mx-auto"
-          />
-          <p className="font-[family-name:var(--font-space-grotesk)] text-on-surface font-bold text-xl text-center mt-4">
-            WINBACK
-          </p>
-          <p className="text-outline text-xs text-center mt-1 tracking-[0.2em] uppercase">
-            Guided dispute resolution for Stripe merchants
-          </p>
-        </div>
+      <div className="flex-shrink-0 hidden sm:block">
+        <Image
+          src="/hero-v2.png"
+          alt="Shield with upward arrow representing dispute recovery"
+          width={400}
+          height={400}
+          priority
+        />
       </div>
     </section>
   );
@@ -230,10 +220,10 @@ function Footer() {
   return (
     <footer className="max-w-6xl mx-auto px-6 py-8">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Image src="/logo.png" alt="WinBack" width={20} height={20} />
+        <div className="flex items-center gap-3">
+          <Image src="/logo.png" alt="WinBack" width={80} height={20} />
           <span className="text-outline text-sm">
-            &copy; 2026 WinBack. Guided dispute resolution for Stripe merchants.
+            &copy; 2026
           </span>
         </div>
         <div className="flex gap-6">
