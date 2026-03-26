@@ -1,65 +1,267 @@
 import Image from "next/image";
+import { WaitlistForm } from "./components/waitlist-form";
+
+function Navbar() {
+  return (
+    <nav className="sticky top-0 z-50 backdrop-blur-xl bg-background/60">
+      <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Image src="/logo.png" alt="WinBack" width={32} height={32} />
+          <span className="font-[family-name:var(--font-space-grotesk)] font-bold text-lg text-on-surface">
+            WinBack
+          </span>
+        </div>
+        <div className="hidden sm:flex items-center gap-8">
+          <a href="#comparison" className="text-on-surface-variant text-sm hover:text-on-surface transition-colors">
+            Comparison
+          </a>
+          <a href="#features" className="text-on-surface-variant text-sm hover:text-on-surface transition-colors">
+            Features
+          </a>
+          <a href="#pricing" className="text-on-surface-variant text-sm hover:text-on-surface transition-colors">
+            Pricing
+          </a>
+          <a
+            href="#waitlist"
+            className="bg-gradient-to-r from-primary to-primary-container text-on-primary font-semibold px-5 py-2 rounded text-sm hover:opacity-90 transition-opacity"
+          >
+            Join Waitlist
+          </a>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+function Hero() {
+  return (
+    <section className="max-w-6xl mx-auto px-6 py-20 sm:py-32 flex flex-col sm:flex-row items-center gap-12 sm:gap-16">
+      <div className="flex-1">
+        <h1 className="font-[family-name:var(--font-space-grotesk)] text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight">
+          Stop giving away{" "}
+          <span className="text-primary">30%</span> of your recovered revenue.
+        </h1>
+        <p className="text-on-surface-variant text-lg sm:text-xl mt-6 leading-relaxed max-w-lg">
+          $29/month flat, no success fees. Win back your revenue with our simple
+          dispute submission guide.
+        </p>
+        <div className="mt-8 flex flex-col sm:flex-row items-start gap-4">
+          <a
+            href="#waitlist"
+            className="bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold px-8 py-4 rounded text-base hover:opacity-90 transition-opacity inline-flex items-center gap-2"
+          >
+            Join the Waitlist
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="ml-1">
+              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </a>
+        </div>
+        <p className="text-outline text-sm mt-4">Early access opening soon</p>
+      </div>
+      <div className="flex-shrink-0">
+        <div className="bg-surface-low rounded-xl p-8 sm:p-12">
+          <Image
+            src="/logo.png"
+            alt="WinBack product"
+            width={200}
+            height={200}
+            className="mx-auto"
+          />
+          <p className="font-[family-name:var(--font-space-grotesk)] text-on-surface font-bold text-xl text-center mt-4">
+            WINBACK
+          </p>
+          <p className="text-outline text-xs text-center mt-1 tracking-[0.2em] uppercase">
+            Safe &bull; Fast &bull; Secure
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Features() {
+  const features = [
+    {
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-primary">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+      title: "Direct Stripe Integration",
+      description:
+        "Seamlessly connect your existing payment flow. We monitor, notify, and prepare your defense without manual data entry.",
+      accent: "primary",
+    },
+    {
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-secondary">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+      title: "Minute-by-Minute Guidance",
+      description:
+        "Receive aggressive, step-by-step submission templates tailored to the specific reason code of every dispute.",
+      accent: "secondary",
+    },
+    {
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-primary">
+          <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+      title: "Zero Hidden Fees",
+      description:
+        'No "success fees," no "revenue shares," no surprises. Just a professional tool for a transparent monthly price.',
+      accent: "primary",
+    },
+  ];
+
+  return (
+    <section id="features" className="max-w-6xl mx-auto px-6 py-20">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {features.map((feature) => (
+          <div
+            key={feature.title}
+            className="bg-surface-low rounded-xl p-8"
+          >
+            <div
+              className={`w-10 h-10 rounded-lg flex items-center justify-center mb-4 ${
+                feature.accent === "secondary"
+                  ? "bg-secondary/10"
+                  : "bg-primary/10"
+              }`}
+            >
+              {feature.icon}
+            </div>
+            <h3 className="font-[family-name:var(--font-space-grotesk)] text-on-surface font-bold text-lg mb-2">
+              {feature.title}
+            </h3>
+            <p className="text-on-surface-variant text-sm leading-relaxed">
+              {feature.description}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Comparison() {
+  const competitors = [
+    { name: "Smart Disputes", pricing: "30% success fee" },
+    { name: "Chargeflow", pricing: "25% success fee" },
+    { name: "DisputeNinja", pricing: "$499/month" },
+  ];
+
+  return (
+    <section id="comparison" className="max-w-6xl mx-auto px-6 py-20">
+      <h2 className="font-[family-name:var(--font-space-grotesk)] text-on-surface text-3xl sm:text-4xl font-bold text-center mb-2">
+        WINBACK VS. THE REST
+      </h2>
+      <p className="text-outline text-center text-sm mb-10">
+        Why pay more when you already earned it?
+      </p>
+
+      <div className="flex flex-col gap-2 max-w-2xl mx-auto" id="pricing">
+        <div className="bg-surface-high rounded-lg px-6 py-4 flex justify-between items-center border-l-[3px] border-primary">
+          <span className="text-primary font-bold font-[family-name:var(--font-space-grotesk)]">
+            WinBack
+          </span>
+          <span className="text-primary font-semibold">$29/month flat fee</span>
+        </div>
+
+        {competitors.map((comp) => (
+          <div
+            key={comp.name}
+            className="bg-surface-low rounded-lg px-6 py-4 flex justify-between items-center"
+          >
+            <span className="text-tertiary">{comp.name}</span>
+            <span className="text-tertiary-container font-semibold">
+              {comp.pricing}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <p className="text-outline text-sm text-center mt-8 max-w-xl mx-auto leading-relaxed">
+        Most services take a cut of your "recovered" revenue, revenue that was
+        rightfully yours to begin with. We think that's robbery. WinBack charges
+        for the tool, not your hard-earned cash.
+      </p>
+    </section>
+  );
+}
+
+function CallToAction() {
+  return (
+    <section id="waitlist" className="max-w-6xl mx-auto px-6 py-20">
+      <div className="bg-gradient-to-b from-surface-low to-background rounded-2xl px-8 sm:px-16 py-16 text-center">
+        <h2 className="font-[family-name:var(--font-space-grotesk)] text-on-surface text-3xl sm:text-4xl font-bold mb-4">
+          Ready to take control?
+        </h2>
+        <p className="text-on-surface-variant text-base mb-10 max-w-md mx-auto">
+          Join the waitlist today for priority onboarding. Be the first to use the
+          aggressive toolkit built for merchants, not middlemen.
+        </p>
+
+        <WaitlistForm />
+
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 justify-center mt-8">
+          <span className="text-outline text-sm flex items-center justify-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-primary">
+              <path d="M11.5 3.5L5.5 9.5L2.5 6.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            No credit card required
+          </span>
+          <span className="text-outline text-sm flex items-center justify-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-primary">
+              <path d="M11.5 3.5L5.5 9.5L2.5 6.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Stripe Verified
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="max-w-6xl mx-auto px-6 py-8">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Image src="/logo.png" alt="WinBack" width={20} height={20} />
+          <span className="text-outline text-sm">
+            &copy; 2026 WinBack. The Aggressive Advocate for your Revenue.
+          </span>
+        </div>
+        <div className="flex gap-6">
+          <a href="#" className="text-outline text-sm hover:text-on-surface transition-colors">
+            Terms
+          </a>
+          <a href="#" className="text-outline text-sm hover:text-on-surface transition-colors">
+            Privacy
+          </a>
+          <a href="#" className="text-outline text-sm hover:text-on-surface transition-colors">
+            Contact
+          </a>
+        </div>
+      </div>
+    </footer>
+  );
+}
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+    <>
+      <Navbar />
+      <main>
+        <Hero />
+        <Features />
+        <Comparison />
+        <CallToAction />
       </main>
-    </div>
+      <Footer />
+    </>
   );
 }

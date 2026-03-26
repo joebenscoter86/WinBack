@@ -49,7 +49,7 @@
       }
     ],
     "content_security_policy": {
-      "connect-src": ["https://winback-api.vercel.app"],
+      "connect-src": ["https://winback-api.vercel.app/api/"],
       "image-src": null
     }
   },
