@@ -1,215 +1,434 @@
-import Image from "next/image";
 import { WaitlistForm } from "./components/waitlist-form";
+import { PlaybookCards } from "./components/playbook-cards";
+import { HeroWidget } from "./components/hero-widget";
+import { NarrativeDemo } from "@/components/ui/narrative-demo";
+import { AlertFeed } from "@/components/ui/alert-feed";
 
 function Navbar() {
   return (
-    <nav className="sticky top-0 z-50 backdrop-blur-xl bg-background/60">
-      <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-        <a href="#" className="flex items-center font-[family-name:var(--font-space-grotesk)] text-2xl font-bold tracking-tight">
-          <span className="text-transparent [-webkit-text-stroke:1.5px_#4cd6fb]">Win</span>
-          <span className="text-[#4cd6fb]">Back</span>
-        </a>
-        <div className="hidden sm:flex items-center gap-8">
-          <a href="#comparison" className="text-on-surface-variant text-sm hover:text-on-surface transition-colors">
-            Comparison
-          </a>
-          <a href="#features" className="text-on-surface-variant text-sm hover:text-on-surface transition-colors">
+    <nav className="fixed top-0 w-full z-50 bg-slate-900/40 backdrop-blur-xl border-b border-white/10 shadow-[0_20px_40px_rgba(7,13,31,0.4)]">
+      <div className="flex justify-between items-center w-full px-6 py-4 max-w-7xl mx-auto">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl font-bold tracking-tighter text-white font-[family-name:var(--font-plus-jakarta)]">
+            WinBack
+          </span>
+        </div>
+        <div className="hidden md:flex gap-8 items-center">
+          <a
+            href="#features"
+            className="text-slate-300 hover:text-white transition-colors font-[family-name:var(--font-inter)] text-sm tracking-wide"
+          >
             Features
           </a>
-          <a href="#pricing" className="text-on-surface-variant text-sm hover:text-on-surface transition-colors">
+          <a
+            href="#pricing"
+            className="text-slate-300 hover:text-white transition-colors font-[family-name:var(--font-inter)] text-sm tracking-wide"
+          >
             Pricing
           </a>
           <a
-            href="#waitlist"
-            className="bg-gradient-to-r from-primary to-primary-container text-on-primary font-semibold px-5 py-2 rounded text-sm hover:opacity-90 transition-opacity"
+            href="#comparison"
+            className="text-slate-300 hover:text-white transition-colors font-[family-name:var(--font-inter)] text-sm tracking-wide"
           >
-            Join Waitlist
+            Compare
           </a>
         </div>
+        <a
+          href="#waitlist"
+          className="primary-cta-gradient text-on-primary-container px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-[family-name:var(--font-plus-jakarta)] font-bold text-xs sm:text-sm tracking-tight hover:opacity-90 transition-opacity"
+        >
+          Join Waitlist
+        </a>
       </div>
     </nav>
   );
 }
 
+function RibbonBackground() {
+  return (
+    <div className="absolute top-0 left-0 w-full h-full pointer-events-none -z-10">
+      <div className="absolute top-[10%] -left-[10%] w-[120%] h-[80%] ribbon-gradient rotate-12 blur-[120px] opacity-40" />
+      <div className="absolute top-[40%] -right-[20%] w-[100%] h-[60%] ribbon-gradient -rotate-6 blur-[150px] opacity-30" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        alt=""
+        src="/ribbon.png"
+        className="absolute top-0 right-0 w-full h-auto object-cover opacity-20 mix-blend-screen"
+      />
+    </div>
+  );
+}
+
 function Hero() {
   return (
-    <section className="max-w-6xl mx-auto px-6 py-20 sm:py-32 flex flex-col sm:flex-row items-center gap-12 sm:gap-16">
-      <div className="flex-1">
-        <h1 className="font-[family-name:var(--font-space-grotesk)] text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight">
-          Win your Stripe disputes.{" "}
-          <span className="text-primary">Keep every dollar.</span>
-        </h1>
-        <p className="text-on-surface-variant text-lg sm:text-xl mt-6 leading-relaxed max-w-lg">
-          Reason-code playbooks built from 10+ years on the issuer side of the
-          table. $29/month flat. No success fees. No middlemen.
-        </p>
-        <div className="mt-8 flex flex-col sm:flex-row items-start gap-4">
-          <a
-            href="#waitlist"
-            className="bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold px-8 py-4 rounded text-base hover:opacity-90 transition-opacity inline-flex items-center gap-2"
-          >
-            Join the Waitlist
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="ml-1">
-              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </a>
+    <section className="max-w-7xl mx-auto px-6 pt-12 pb-16 md:pt-20 md:pb-32 text-center md:text-left grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+      <div className="space-y-8 relative z-10">
+        {/* Status badge */}
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface-bright text-primary-container font-[family-name:var(--font-inter)] text-[10px] tracking-widest uppercase font-semibold">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-container opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-container" />
+          </span>
+          Now available on Stripe
         </div>
-        <p className="text-outline text-sm mt-4">Early access opening soon</p>
+
+        <h1 className="text-5xl sm:text-6xl md:text-8xl font-[family-name:var(--font-plus-jakarta)] font-extrabold tracking-tighter text-white leading-[0.9]">
+          Win back your{" "}
+          <br />
+          <span className="text-primary">revenue.</span>
+        </h1>
+
+        <p className="text-on-surface-variant text-xl md:text-2xl max-w-lg leading-relaxed">
+          You&apos;re losing disputes you should be winning. WinBack gives you
+          step-by-step playbooks that show you exactly what to submit and why
+          it wins. $29/month flat. You keep every dollar you recover.
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-4 max-w-md" id="waitlist">
+          <WaitlistForm />
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-6 text-slate-500 font-[family-name:var(--font-inter)] text-xs tracking-widest uppercase">
+          <span>Lives in your Stripe Dashboard</span>
+          <span className="hidden sm:block w-12 h-px bg-outline-variant/30" />
+          <span>No credit card required</span>
+        </div>
       </div>
-      <div className="flex-shrink-0 hidden sm:block">
-        <Image
-          src="/hero-v2.png"
-          alt="Shield with upward arrow representing dispute recovery"
-          width={400}
-          height={400}
-          priority
-        />
+
+      {/* Product Widget */}
+      <div className="hidden md:block">
+        <HeroWidget />
       </div>
     </section>
   );
 }
 
-function Features() {
-  const features = [
-    {
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-primary">
-          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      ),
-      title: "Built into your Stripe Dashboard",
-      description:
-        "WinBack lives right where your disputes are. Open a dispute, see exactly what the cardholder claimed and what evidence you need. No tab-switching, no copy-pasting.",
-      accent: "primary",
-    },
-    {
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-secondary">
-          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      ),
-      title: "Playbooks that know what issuers look for",
-      description:
-        "Each reason code has different rules. Our playbooks tell you exactly what evidence the issuing bank evaluates, what mistakes to avoid, and how to structure your response.",
-      accent: "secondary",
-    },
-    {
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-primary">
-          <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      ),
-      title: "You keep 100% of what you recover",
-      description:
-        "Other services take 25-30% of your recovered revenue. That's your money twice over. WinBack is $29/month flat, whether you recover $50 or $5,000.",
-      accent: "primary",
-    },
-  ];
-
+function PricingCallout() {
   return (
-    <section id="features" className="max-w-6xl mx-auto px-6 py-20">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {features.map((feature) => (
-          <div
-            key={feature.title}
-            className="bg-surface-low rounded-xl p-8"
-          >
-            <div
-              className={`w-10 h-10 rounded-lg flex items-center justify-center mb-4 ${
-                feature.accent === "secondary"
-                  ? "bg-secondary/10"
-                  : "bg-primary/10"
-              }`}
-            >
-              {feature.icon}
-            </div>
-            <h3 className="font-[family-name:var(--font-space-grotesk)] text-on-surface font-bold text-lg mb-2">
-              {feature.title}
-            </h3>
-            <p className="text-on-surface-variant text-sm leading-relaxed">
-              {feature.description}
+    <section id="pricing" className="max-w-7xl mx-auto px-6 py-12">
+      <div className="bg-surface-low rounded-[2rem] p-1 shadow-2xl overflow-hidden">
+        <div className="bg-background/40 backdrop-blur-md rounded-[1.9rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 border border-white/5">
+          <div className="space-y-2">
+            <h2 className="text-2xl sm:text-3xl md:text-5xl font-[family-name:var(--font-plus-jakarta)] font-bold text-white tracking-tight">
+              Radically simple pricing.
+            </h2>
+            <p className="text-on-surface-variant text-base sm:text-lg">
+              Other services take 25-30% of money that was already yours.
             </p>
           </div>
-        ))}
+          <div className="flex flex-col items-center md:items-end">
+            <div className="text-primary font-[family-name:var(--font-plus-jakarta)] font-extrabold text-6xl md:text-7xl">
+              $29
+              <span className="text-2xl text-slate-500">/mo</span>
+            </div>
+            <p className="text-slate-400 font-[family-name:var(--font-inter)] text-xs tracking-widest uppercase mt-2">
+              Flat fee. No success fees. Ever.
+            </p>
+          </div>
+        </div>
       </div>
     </section>
   );
 }
 
-function Comparison() {
+function ComparisonTable() {
   const competitors = [
-    { name: "Smart Disputes", pricing: "30% success fee" },
-    { name: "Chargeflow", pricing: "25% success fee" },
-    { name: "DisputeNinja", pricing: "$499/month" },
+    {
+      name: "Smart Disputes",
+      fee: "30% Success Fee",
+      integration: "Internal data only",
+      cost: "$3,000",
+    },
+    {
+      name: "Chargeflow",
+      fee: "25% Success Fee",
+      integration: "Webhooks",
+      cost: "$2,500",
+    },
+    {
+      name: "DisputeNinja",
+      fee: "$499/mo Base",
+      integration: "Manual Upload",
+      cost: "$499",
+    },
   ];
 
   return (
-    <section id="comparison" className="max-w-6xl mx-auto px-6 py-20">
-      <h2 className="font-[family-name:var(--font-space-grotesk)] text-on-surface text-3xl sm:text-4xl font-bold text-center mb-2">
-        WINBACK VS. THE REST
-      </h2>
-      <p className="text-outline text-center text-sm mb-10">
-        Why pay more when you already earned it?
-      </p>
-
-      <div className="flex flex-col gap-2 max-w-2xl mx-auto" id="pricing">
-        <div className="bg-surface-high rounded-lg px-6 py-4 flex justify-between items-center border-l-[3px] border-primary">
-          <span className="text-primary font-bold font-[family-name:var(--font-space-grotesk)]">
-            WinBack
-          </span>
-          <span className="text-primary font-semibold">$29/month flat fee</span>
-        </div>
-
-        {competitors.map((comp) => (
-          <div
-            key={comp.name}
-            className="bg-surface-low rounded-lg px-6 py-4 flex justify-between items-center"
-          >
-            <span className="text-tertiary">{comp.name}</span>
-            <span className="text-tertiary-container font-semibold">
-              {comp.pricing}
-            </span>
-          </div>
-        ))}
+    <section id="comparison" className="max-w-7xl mx-auto px-6 py-16 md:py-32">
+      <div className="text-center mb-10 md:mb-16 space-y-4">
+        <h2 className="text-3xl sm:text-4xl md:text-5xl font-[family-name:var(--font-plus-jakarta)] font-extrabold text-white tracking-tighter">
+          The true cost of disputes.
+        </h2>
+        <p className="text-on-surface-variant max-w-2xl mx-auto">
+          You earned that revenue. You shouldn&apos;t have to share it just
+          because a customer filed a dispute.
+        </p>
       </div>
-
-      <p className="text-outline text-sm text-center mt-8 max-w-xl mx-auto leading-relaxed">
-        Other services charge you a percentage of money that was already yours.
-        You earned that revenue. You shouldn't have to share it just because a
-        customer filed a dispute.
-      </p>
+      <div className="overflow-x-auto bg-surface-low rounded-2xl sm:rounded-3xl border border-white/5">
+        <table className="w-full text-left border-collapse min-w-[480px]">
+          <thead>
+            <tr className="border-b border-white/5">
+              <th className="px-4 sm:px-8 py-4 sm:py-6 text-xs font-[family-name:var(--font-inter)] uppercase tracking-widest text-slate-500">
+                Provider
+              </th>
+              <th className="px-4 sm:px-8 py-4 sm:py-6 text-xs font-[family-name:var(--font-inter)] uppercase tracking-widest text-slate-500">
+                Fee Structure
+              </th>
+              <th className="px-4 sm:px-8 py-4 sm:py-6 text-xs font-[family-name:var(--font-inter)] uppercase tracking-widest text-slate-500 hidden sm:table-cell">
+                Integration
+              </th>
+              <th className="px-4 sm:px-8 py-4 sm:py-6 text-xs font-[family-name:var(--font-inter)] uppercase tracking-widest text-slate-500">
+                Cost on $10k
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {competitors.map((comp) => (
+              <tr
+                key={comp.name}
+                className="group hover:bg-white/5 transition-colors"
+              >
+                <td className="px-4 sm:px-8 py-5 sm:py-8 font-[family-name:var(--font-plus-jakarta)] font-bold text-base sm:text-xl text-white">
+                  {comp.name}
+                </td>
+                <td className="px-4 sm:px-8 py-5 sm:py-8 text-on-surface-variant text-sm">
+                  {comp.fee}
+                </td>
+                <td className="px-4 sm:px-8 py-5 sm:py-8 text-on-surface-variant text-sm hidden sm:table-cell">
+                  {comp.integration}
+                </td>
+                <td className="px-4 sm:px-8 py-5 sm:py-8 text-error font-bold">
+                  {comp.cost}
+                </td>
+              </tr>
+            ))}
+            {/* WinBack row */}
+            <tr className="bg-primary/5">
+              <td className="px-4 sm:px-8 py-6 sm:py-10 font-[family-name:var(--font-plus-jakarta)] font-extrabold text-xl sm:text-2xl text-primary">
+                WinBack
+              </td>
+              <td className="px-4 sm:px-8 py-6 sm:py-10 text-primary/90 font-medium text-sm">
+                Flat $29/mo
+              </td>
+              <td className="px-4 sm:px-8 py-6 sm:py-10 text-primary/90 font-medium hidden sm:table-cell">
+                1-Click Stripe App
+              </td>
+              <td className="px-4 sm:px-8 py-6 sm:py-10 text-primary font-extrabold text-2xl sm:text-3xl">
+                $29
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
 
-function CallToAction() {
+function FeatureGrid() {
   return (
-    <section id="waitlist" className="max-w-6xl mx-auto px-6 py-20">
-      <div className="bg-gradient-to-b from-surface-low to-background rounded-2xl px-8 sm:px-16 py-16 text-center">
-        <h2 className="font-[family-name:var(--font-space-grotesk)] text-on-surface text-3xl sm:text-4xl font-bold mb-4">
-          Stop losing disputes you should be winning.
-        </h2>
-        <p className="text-on-surface-variant text-base mb-10 max-w-md mx-auto">
-          Join the waitlist for early access. WinBack shows you exactly what to
-          submit, why it matters, and how to present it. Like having a payments
-          expert in your corner.
+    <section id="features" className="max-w-7xl mx-auto px-6 py-16 md:py-32">
+      {/* Section header */}
+      <div className="grid md:grid-cols-2 gap-8 md:gap-24 items-center mb-12 md:mb-24">
+        <div>
+          <h2 className="text-3xl sm:text-4xl md:text-6xl font-[family-name:var(--font-plus-jakarta)] font-extrabold text-white tracking-tighter leading-tight">
+            Like having a payments expert in your corner.
+          </h2>
+        </div>
+        <p className="text-on-surface-variant text-xl leading-relaxed">
+          WinBack lives inside your Stripe Dashboard. Open a dispute, see
+          exactly what the issuing bank evaluates, what evidence you need, and
+          how to present it. No tab-switching, no guesswork.
         </p>
+      </div>
 
-        <WaitlistForm />
+      {/* Bento grid */}
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* Card 1: Wide */}
+        <div className="md:col-span-2 bg-surface-low p-1 rounded-3xl border border-white/5 group overflow-hidden">
+          <div className="bg-surface-container p-8 h-full rounded-[1.4rem] flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="text-primary"
+                >
+                  <path
+                    d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <polyline
+                    points="14 2 14 8 20 8"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <line
+                    x1="16"
+                    y1="13"
+                    x2="8"
+                    y2="13"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1="16"
+                    y1="17"
+                    x2="8"
+                    y2="17"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-[family-name:var(--font-plus-jakarta)] font-bold text-white">
+                Reason-Code Playbooks
+              </h3>
+              <p className="text-on-surface-variant">
+                A Visa 13.1 &quot;Not Received&quot; needs different evidence than
+                a Mastercard 4853 &quot;Not as Described.&quot; Our playbooks
+                decode each reason code so you know exactly what to submit, what
+                the issuer actually evaluates, and what mistakes sink most
+                responses.
+              </p>
+            </div>
+            <div className="mt-8 pt-8 border-t border-white/5">
+              <PlaybookCards />
+            </div>
+          </div>
+        </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 justify-center mt-8">
-          <span className="text-outline text-sm flex items-center justify-center gap-1.5">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-primary">
-              <path d="M11.5 3.5L5.5 9.5L2.5 6.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            No credit card required
-          </span>
-          <span className="text-outline text-sm flex items-center justify-center gap-1.5">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-primary">
-              <path d="M11.5 3.5L5.5 9.5L2.5 6.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Stripe Verified
-          </span>
+        {/* Card 2: Narrow */}
+        <div className="bg-surface-low p-1 rounded-3xl border border-white/5 group">
+          <div className="bg-surface-container p-8 h-full rounded-[1.4rem]">
+            <div className="w-12 h-12 bg-primary-container/10 rounded-xl flex items-center justify-center mb-6">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                className="text-primary-container"
+              >
+                <path
+                  d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-[family-name:var(--font-plus-jakarta)] font-bold text-white mb-3">
+              Real-time Alerts
+            </h3>
+            <p className="text-on-surface-variant text-sm mb-4">
+              Disputes have hard deadlines. Miss one and you auto-lose.
+            </p>
+            <AlertFeed />
+          </div>
+        </div>
+
+        {/* Card 3: Narrow */}
+        <div className="bg-surface-low p-1 rounded-3xl border border-white/5 group">
+          <div className="bg-surface-container p-8 h-full rounded-[1.4rem]">
+            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                className="text-primary"
+              >
+                <path
+                  d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-[family-name:var(--font-plus-jakarta)] font-bold text-white mb-4">
+              Read-Only Access
+            </h3>
+            <p className="text-on-surface-variant">
+              WinBack uses read-only Stripe permissions. We can see your
+              disputes and evidence but can never initiate charges, refunds, or
+              transfers. Your funds stay where they are.
+            </p>
+          </div>
+        </div>
+
+        {/* Card 4: Wide */}
+        <div className="md:col-span-2 bg-surface-low p-1 rounded-3xl border border-white/5 group overflow-hidden">
+          <div className="bg-surface-container p-8 h-full rounded-[1.4rem] flex flex-col md:flex-row gap-8 items-center">
+            <div className="flex-1 space-y-4">
+              <div className="w-12 h-12 bg-secondary-fixed-dim/10 rounded-xl flex items-center justify-center">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="text-secondary-fixed-dim"
+                >
+                  <path
+                    d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-[family-name:var(--font-plus-jakarta)] font-bold text-white">
+                AI-Generated Narratives
+              </h3>
+              <p className="text-on-surface-variant">
+                AI drafts your dispute narrative using your uploaded evidence
+                and the right playbook for your reason code. You review it, edit
+                anything you want, and submit on your terms. You stay in
+                control.
+              </p>
+            </div>
+            <div className="flex-1 w-full min-h-[240px]">
+              <NarrativeDemo />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FinalCTA() {
+  return (
+    <section className="max-w-5xl mx-auto px-6 py-20 md:py-40">
+      <div className="relative bg-surface-low rounded-2xl sm:rounded-[3rem] p-8 sm:p-12 md:p-24 overflow-hidden border border-white/5 text-center">
+        {/* Internal ribbon glow */}
+        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-primary-container/10 blur-[120px] rounded-full" />
+        <div className="relative z-10 space-y-8">
+          <h2 className="text-3xl sm:text-5xl md:text-7xl font-[family-name:var(--font-plus-jakarta)] font-extrabold text-white tracking-tighter">
+            Stop losing disputes you should be winning.
+          </h2>
+          <p className="text-on-surface-variant text-lg sm:text-xl max-w-xl mx-auto">
+            The system isn&apos;t rigged. You just need the right playbook.
+            Join the waitlist and be first to get issuer-side expertise in your
+            Stripe Dashboard.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 max-w-lg mx-auto mt-12">
+            <WaitlistForm />
+          </div>
+          <p className="text-slate-500 font-[family-name:var(--font-inter)] text-[10px] tracking-[0.2em] uppercase">
+            No credit card required &bull; Secure Stripe connection
+          </p>
         </div>
       </div>
     </section>
@@ -218,22 +437,33 @@ function CallToAction() {
 
 function Footer() {
   return (
-    <footer className="max-w-6xl mx-auto px-6 py-8">
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div className="flex items-center gap-3">
-          <Image src="/logo.png" alt="WinBack" width={80} height={20} />
-          <span className="text-outline text-sm">
-            &copy; 2026
+    <footer className="bg-background w-full py-12 border-t border-white/5">
+      <div className="flex flex-col md:flex-row justify-between items-center px-8 max-w-7xl mx-auto gap-8">
+        <div className="flex flex-col items-center md:items-start gap-4">
+          <span className="text-lg font-bold text-slate-100 font-[family-name:var(--font-plus-jakarta)] tracking-tighter">
+            WinBack
           </span>
+          <p className="text-slate-500 font-[family-name:var(--font-inter)] tracking-widest uppercase text-[10px]">
+            &copy; 2026 WinBack
+          </p>
         </div>
-        <div className="flex gap-6">
-          <a href="#" className="text-outline text-sm hover:text-on-surface transition-colors">
+        <div className="flex gap-8">
+          <a
+            href="#"
+            className="text-slate-500 hover:text-cyan-400 transition-colors font-[family-name:var(--font-inter)] tracking-widest uppercase text-[10px] opacity-80 hover:opacity-100"
+          >
             Terms
           </a>
-          <a href="#" className="text-outline text-sm hover:text-on-surface transition-colors">
+          <a
+            href="#"
+            className="text-slate-500 hover:text-cyan-400 transition-colors font-[family-name:var(--font-inter)] tracking-widest uppercase text-[10px] opacity-80 hover:opacity-100"
+          >
             Privacy
           </a>
-          <a href="#" className="text-outline text-sm hover:text-on-surface transition-colors">
+          <a
+            href="#"
+            className="text-slate-500 hover:text-cyan-400 transition-colors font-[family-name:var(--font-inter)] tracking-widest uppercase text-[10px] opacity-80 hover:opacity-100"
+          >
             Contact
           </a>
         </div>
@@ -246,11 +476,13 @@ export default function Home() {
   return (
     <>
       <Navbar />
-      <main>
+      <main className="relative overflow-hidden pt-24">
+        <RibbonBackground />
         <Hero />
-        <Features />
-        <Comparison />
-        <CallToAction />
+        <PricingCallout />
+        <ComparisonTable />
+        <FeatureGrid />
+        <FinalCTA />
       </main>
       <Footer />
     </>
