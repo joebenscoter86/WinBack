@@ -1,5 +1,6 @@
 import { Box, Badge, Button, Inline } from '@stripe/ui-extension-sdk/ui';
 import type { Dispute } from '../lib/types';
+import { getStatusBadge, getUrgencyBadge } from '../lib/utils';
 
 interface DisputeCardProps {
   dispute: Dispute;
@@ -13,21 +14,9 @@ function formatAmount(amount: number, currency: string): string {
   }).format(amount / 100);
 }
 
-function getDaysRemaining(dueBy: string): number {
-  const now = new Date();
-  const due = new Date(dueBy);
-  return Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-function getUrgencyBadge(dueBy: string): { label: string; type: 'urgent' | 'warning' | 'positive' } {
-  const days = getDaysRemaining(dueBy);
-  if (days <= 3) return { label: `${days}d left`, type: 'urgent' };
-  if (days <= 7) return { label: `${days}d left`, type: 'warning' };
-  return { label: `${days}d left`, type: 'positive' };
-}
-
 const DisputeCard = ({ dispute, onSelect }: DisputeCardProps) => {
-  const urgency = getUrgencyBadge(dispute.due_by);
+  const statusBadge = getStatusBadge(dispute.status);
+  const urgencyBadge = getUrgencyBadge(dispute.due_by, dispute.status);
 
   return (
     <Button
@@ -47,8 +36,16 @@ const DisputeCard = ({ dispute, onSelect }: DisputeCardProps) => {
           <Inline css={{ font: 'body', fontWeight: 'semibold' }}>
             {formatAmount(dispute.amount, dispute.currency)}
           </Inline>
-          <Badge type={urgency.type}>{urgency.label}</Badge>
+          <Box css={{ stack: 'x', gap: 'xsmall' }}>
+            <Badge type={statusBadge.type}>{statusBadge.label}</Badge>
+            {urgencyBadge && (
+              <Badge type={urgencyBadge.type}>{urgencyBadge.label}</Badge>
+            )}
+          </Box>
         </Box>
+        <Inline css={{ font: 'caption' }}>
+          {dispute.customer_name || 'Unknown customer'}
+        </Inline>
         <Box css={{ stack: 'x', gap: 'small' }}>
           <Inline css={{ font: 'caption', color: 'secondary' }}>
             {dispute.network.charAt(0).toUpperCase() + dispute.network.slice(1)} {dispute.reason_code}
