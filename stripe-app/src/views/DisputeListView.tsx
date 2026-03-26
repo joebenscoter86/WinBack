@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   ContextView,
@@ -16,19 +16,41 @@ import DisputeCard from '../components/DisputeCard';
 import DisputeWorkflow from '../components/DisputeWorkflow';
 import EmptyState from '../components/EmptyState';
 import ErrorBanner from '../components/ErrorBanner';
-import { MOCK_DISPUTES } from '../lib/mockData';
+import { fetchBackend, ApiError } from '../lib/apiClient';
 import type { Dispute } from '../lib/types';
 
 type ViewState = 'loading' | 'error' | 'ready';
 
 const DisputeListView = ({ environment, userContext }: ExtensionContextValue) => {
-  // In WIN-10+, these will come from API calls instead of mock data
-  const [viewState] = useState<ViewState>('ready');
-  const [disputes] = useState<Dispute[]>(MOCK_DISPUTES);
-  const [errorMessage] = useState('');
+  const [viewState, setViewState] = useState<ViewState>('loading');
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const [selectedDisputeId, setSelectedDisputeId] = useState<string | null>(null);
   const [showWorkflow, setShowWorkflow] = useState(false);
+
+  const loadDisputes = useCallback(async () => {
+    setViewState('loading');
+    try {
+      const result = await fetchBackend<{ data: Dispute[] }>('/api/disputes', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      setDisputes(result.data);
+      setViewState('ready');
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : 'Failed to load disputes. Please try again.';
+      setErrorMessage(message);
+      setViewState('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDisputes();
+  }, [loadDisputes]);
 
   const handleSelectDispute = (disputeId: string) => {
     setSelectedDisputeId(disputeId);
