@@ -27,6 +27,37 @@ supabase/.temp/
 *.swp
 *.swo
 
+# AI tool configs
+.adal/
+.agents/
+.augment/
+.codebuddy/
+.commandcode/
+.continue/
+.cortex/
+.crush/
+.factory/
+.goose/
+.iflow/
+.junie/
+.kilocode/
+.kiro/
+.kode/
+.mcpjam/
+.mux/
+.neovate/
+.openhands/
+.pi/
+.pochi/
+.qoder/
+.qwen/
+.roo/
+.superpowers/
+.trae/
+.vibe/
+.windsurf/
+.zencoder/
+
 # OS
 .DS_Store
 Thumbs.db
