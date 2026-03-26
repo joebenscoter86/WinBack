@@ -38,12 +38,12 @@ function Hero() {
     <section className="max-w-6xl mx-auto px-6 py-20 sm:py-32 flex flex-col sm:flex-row items-center gap-12 sm:gap-16">
       <div className="flex-1">
         <h1 className="font-[family-name:var(--font-space-grotesk)] text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight">
-          Stop giving away{" "}
-          <span className="text-primary">30%</span> of your recovered revenue.
+          Win your Stripe disputes.{" "}
+          <span className="text-primary">Keep every dollar.</span>
         </h1>
         <p className="text-on-surface-variant text-lg sm:text-xl mt-6 leading-relaxed max-w-lg">
-          $29/month flat, no success fees. Win back your revenue with our simple
-          dispute submission guide.
+          Reason-code playbooks built from 10+ years on the issuer side of the
+          table. $29/month flat. No success fees. No middlemen.
         </p>
         <div className="mt-8 flex flex-col sm:flex-row items-start gap-4">
           <a
@@ -71,7 +71,7 @@ function Hero() {
             WINBACK
           </p>
           <p className="text-outline text-xs text-center mt-1 tracking-[0.2em] uppercase">
-            Safe &bull; Fast &bull; Secure
+            Guided dispute resolution for Stripe merchants
           </p>
         </div>
       </div>
@@ -87,9 +87,9 @@ function Features() {
           <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       ),
-      title: "Direct Stripe Integration",
+      title: "Built into your Stripe Dashboard",
       description:
-        "Seamlessly connect your existing payment flow. We monitor, notify, and prepare your defense without manual data entry.",
+        "WinBack lives right where your disputes are. Open a dispute, see exactly what the cardholder claimed and what evidence you need. No tab-switching, no copy-pasting.",
       accent: "primary",
     },
     {
@@ -98,9 +98,9 @@ function Features() {
           <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       ),
-      title: "Minute-by-Minute Guidance",
+      title: "Playbooks that know what issuers look for",
       description:
-        "Receive aggressive, step-by-step submission templates tailored to the specific reason code of every dispute.",
+        "Each reason code has different rules. Our playbooks tell you exactly what evidence the issuing bank evaluates, what mistakes to avoid, and how to structure your response.",
       accent: "secondary",
     },
     {
@@ -109,9 +109,9 @@ function Features() {
           <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       ),
-      title: "Zero Hidden Fees",
+      title: "You keep 100% of what you recover",
       description:
-        'No "success fees," no "revenue shares," no surprises. Just a professional tool for a transparent monthly price.',
+        "Other services take 25-30% of your recovered revenue. That's your money twice over. WinBack is $29/month flat, whether you recover $50 or $5,000.",
       accent: "primary",
     },
   ];
@@ -184,9 +184,9 @@ function Comparison() {
       </div>
 
       <p className="text-outline text-sm text-center mt-8 max-w-xl mx-auto leading-relaxed">
-        Most services take a cut of your "recovered" revenue, revenue that was
-        rightfully yours to begin with. We think that's robbery. WinBack charges
-        for the tool, not your hard-earned cash.
+        Other services charge you a percentage of money that was already yours.
+        You earned that revenue. You shouldn't have to share it just because a
+        customer filed a dispute.
       </p>
     </section>
   );
@@ -197,11 +197,12 @@ function CallToAction() {
     <section id="waitlist" className="max-w-6xl mx-auto px-6 py-20">
       <div className="bg-gradient-to-b from-surface-low to-background rounded-2xl px-8 sm:px-16 py-16 text-center">
         <h2 className="font-[family-name:var(--font-space-grotesk)] text-on-surface text-3xl sm:text-4xl font-bold mb-4">
-          Ready to take control?
+          Stop losing disputes you should be winning.
         </h2>
         <p className="text-on-surface-variant text-base mb-10 max-w-md mx-auto">
-          Join the waitlist today for priority onboarding. Be the first to use the
-          aggressive toolkit built for merchants, not middlemen.
+          Join the waitlist for early access. WinBack shows you exactly what to
+          submit, why it matters, and how to present it. Like having a payments
+          expert in your corner.
         </p>
 
         <WaitlistForm />
@@ -232,7 +233,7 @@ function Footer() {
         <div className="flex items-center gap-2">
           <Image src="/logo.png" alt="WinBack" width={20} height={20} />
           <span className="text-outline text-sm">
-            &copy; 2026 WinBack. The Aggressive Advocate for your Revenue.
+            &copy; 2026 WinBack. Guided dispute resolution for Stripe merchants.
           </span>
         </div>
         <div className="flex gap-6">

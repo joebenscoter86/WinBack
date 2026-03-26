@@ -15,26 +15,26 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "WinBack: Stop Giving Away 30% of Your Recovered Revenue",
+  title: "WinBack: Win Your Stripe Disputes. Keep Every Dollar.",
   description:
-    "$29/month flat fee dispute resolution for Stripe merchants. No success fees. Guided playbooks built from 10+ years of issuer-side experience.",
+    "Guided dispute resolution for Stripe merchants. Reason-code playbooks built from 10+ years of issuer-side experience. $29/month flat. No success fees.",
   metadataBase: new URL("https://winbackpay.com"),
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "WinBack: Stop Giving Away 30% of Your Recovered Revenue",
+    title: "WinBack: Win Your Stripe Disputes. Keep Every Dollar.",
     description:
-      "$29/month flat fee dispute resolution for Stripe merchants. No success fees.",
+      "Guided dispute resolution for Stripe merchants. $29/month flat. No success fees.",
     url: "https://winbackpay.com",
     siteName: "WinBack",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "WinBack: Stop Giving Away 30% of Your Recovered Revenue",
+    title: "WinBack: Win Your Stripe Disputes. Keep Every Dollar.",
     description:
-      "$29/month flat fee dispute resolution for Stripe merchants. No success fees.",
+      "Guided dispute resolution for Stripe merchants. $29/month flat. No success fees.",
   },
 };
 
