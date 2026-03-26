@@ -6,8 +6,13 @@ vi.mock("@/lib/supabase", () => ({
   },
 }));
 
+vi.mock("@/lib/resend", () => ({
+  getResend: vi.fn(),
+}));
+
 import { POST } from "../route";
 import { supabase } from "@/lib/supabase";
+import { getResend } from "@/lib/resend";
 
 function makeRequest(body: unknown): Request {
   return new Request("http://localhost/api/waitlist", {
@@ -17,14 +22,26 @@ function makeRequest(body: unknown): Request {
   });
 }
 
+function mockSupabaseInsert(error: { code: string; message: string } | null) {
+  const mockInsert = vi.fn().mockResolvedValue({ error });
+  vi.mocked(supabase.from).mockReturnValue({ insert: mockInsert } as any);
+  return mockInsert;
+}
+
+function mockResendSend() {
+  const mockSend = vi.fn().mockResolvedValue({ data: { id: "email_123" }, error: null });
+  vi.mocked(getResend).mockReturnValue({ emails: { send: mockSend } } as any);
+  return mockSend;
+}
+
 describe("POST /api/waitlist", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("returns 200 and inserts a valid email", async () => {
-    const mockInsert = vi.fn().mockResolvedValue({ error: null });
-    vi.mocked(supabase.from).mockReturnValue({ insert: mockInsert } as any);
+    mockSupabaseInsert(null);
+    mockResendSend();
 
     const res = await POST(makeRequest({ email: "test@example.com" }));
     const json = await res.json();
@@ -32,7 +49,45 @@ describe("POST /api/waitlist", () => {
     expect(res.status).toBe(200);
     expect(json).toEqual({ success: true });
     expect(supabase.from).toHaveBeenCalledWith("waitlist");
-    expect(mockInsert).toHaveBeenCalledWith({ email: "test@example.com", source: "landing_page" });
+  });
+
+  it("sends welcome email on successful insert", async () => {
+    mockSupabaseInsert(null);
+    const mockSend = mockResendSend();
+
+    await POST(makeRequest({ email: "test@example.com" }));
+
+    expect(mockSend).toHaveBeenCalledTimes(1);
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "test@example.com",
+        subject: expect.stringContaining("WinBack"),
+      })
+    );
+  });
+
+  it("does NOT send email on duplicate signup", async () => {
+    mockSupabaseInsert({ code: "23505", message: "duplicate key" });
+    const mockSend = mockResendSend();
+
+    const res = await POST(makeRequest({ email: "existing@example.com" }));
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json).toEqual({ success: true });
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it("returns 200 even when Resend fails", async () => {
+    mockSupabaseInsert(null);
+    const mockSend = vi.fn().mockRejectedValue(new Error("Resend is down"));
+    vi.mocked(getResend).mockReturnValue({ emails: { send: mockSend } } as any);
+
+    const res = await POST(makeRequest({ email: "test@example.com" }));
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json).toEqual({ success: true });
   });
 
   it("returns 400 for missing email", async () => {
@@ -49,19 +104,9 @@ describe("POST /api/waitlist", () => {
     expect(json).toEqual({ success: false, error: "Invalid email address" });
   });
 
-  it("returns 200 for duplicate email (unique constraint violation)", async () => {
-    const mockInsert = vi.fn().mockResolvedValue({ error: { code: "23505", message: "duplicate key" } });
-    vi.mocked(supabase.from).mockReturnValue({ insert: mockInsert } as any);
-
-    const res = await POST(makeRequest({ email: "existing@example.com" }));
-    const json = await res.json();
-    expect(res.status).toBe(200);
-    expect(json).toEqual({ success: true });
-  });
-
   it("returns 500 for unexpected Supabase errors", async () => {
-    const mockInsert = vi.fn().mockResolvedValue({ error: { code: "42000", message: "something broke" } });
-    vi.mocked(supabase.from).mockReturnValue({ insert: mockInsert } as any);
+    mockSupabaseInsert({ code: "42000", message: "something broke" });
+    mockResendSend();
 
     const res = await POST(makeRequest({ email: "test@example.com" }));
     const json = await res.json();

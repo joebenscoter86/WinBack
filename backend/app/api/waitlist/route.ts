@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { getResend } from "@/lib/resend";
+import { buildWaitlistWelcomeEmail } from "@/lib/email/waitlist-welcome";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "hello@winbackpay.com";
 
 export async function POST(request: Request) {
   let body: { email?: string };
@@ -37,6 +41,19 @@ export async function POST(request: Request) {
       { success: false, error: "Something went wrong. Please try again." },
       { status: 500 }
     );
+  }
+
+  // Best-effort welcome email -- never block signup
+  try {
+    const { subject, html } = buildWaitlistWelcomeEmail();
+    await getResend().emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject,
+      html,
+    });
+  } catch (err) {
+    console.error("Failed to send waitlist welcome email:", err);
   }
 
   return NextResponse.json({ success: true });
