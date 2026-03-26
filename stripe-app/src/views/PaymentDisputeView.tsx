@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Badge,
   Button,
   ContextView,
   Inline,
+  Spinner,
 } from '@stripe/ui-extension-sdk/ui';
 import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 import DisputeWorkflow from '../components/DisputeWorkflow';
-import { MOCK_DISPUTES } from '../lib/mockData';
+import { fetchBackend, ApiError } from '../lib/apiClient';
 import type { Dispute } from '../lib/types';
 
 function getStatusBadge(status: string): {
@@ -32,20 +33,53 @@ function getStatusBadge(status: string): {
   }
 }
 
+type ViewState = 'loading' | 'no_dispute' | 'error' | 'ready';
+
 const PaymentDisputeView = ({ environment }: ExtensionContextValue) => {
   const paymentIntentId = environment?.objectContext?.id;
 
-  // In WIN-10+, this will be a real API lookup by payment_intent ID
-  const dispute: Dispute | undefined = MOCK_DISPUTES.find(
-    (d) => d.payment_intent === paymentIntentId,
-  );
-
-  // For dev/demo: show first mock dispute if no match (real matching comes in WIN-10)
-  const displayDispute = dispute ?? MOCK_DISPUTES[0];
-
+  const [viewState, setViewState] = useState<ViewState>('loading');
+  const [dispute, setDispute] = useState<Dispute | null>(null);
   const [showWorkflow, setShowWorkflow] = useState(false);
 
-  if (!displayDispute) {
+  const loadDispute = useCallback(async () => {
+    if (!paymentIntentId) {
+      setViewState('no_dispute');
+      return;
+    }
+
+    setViewState('loading');
+    try {
+      const result = await fetchBackend<{ data: Dispute }>(
+        `/api/disputes/by-payment-intent/${paymentIntentId}`,
+        { method: 'POST', body: JSON.stringify({}) },
+      );
+      setDispute(result.data);
+      setViewState('ready');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        setViewState('no_dispute');
+      } else {
+        setViewState('error');
+      }
+    }
+  }, [paymentIntentId]);
+
+  useEffect(() => {
+    loadDispute();
+  }, [loadDispute]);
+
+  if (viewState === 'loading') {
+    return (
+      <ContextView title="WinBack">
+        <Box css={{ padding: 'medium', alignX: 'center' }}>
+          <Spinner size="large" />
+        </Box>
+      </ContextView>
+    );
+  }
+
+  if (viewState === 'no_dispute' || viewState === 'error' || !dispute) {
     return (
       <ContextView title="WinBack">
         <Box css={{ padding: 'medium', alignX: 'center' }}>
@@ -57,7 +91,7 @@ const PaymentDisputeView = ({ environment }: ExtensionContextValue) => {
     );
   }
 
-  const statusBadge = getStatusBadge(displayDispute.status);
+  const statusBadge = getStatusBadge(dispute.status);
 
   return (
     <ContextView title="WinBack">
@@ -78,17 +112,17 @@ const PaymentDisputeView = ({ environment }: ExtensionContextValue) => {
 
         <Box css={{ stack: 'y', gap: 'xsmall' }}>
           <Inline css={{ font: 'body' }}>
-            {displayDispute.network.charAt(0).toUpperCase() +
-              displayDispute.network.slice(1)}{' '}
-            {displayDispute.reason_code}
+            {dispute.network.charAt(0).toUpperCase() +
+              dispute.network.slice(1)}{' '}
+            {dispute.reason_code}
           </Inline>
           <Inline css={{ font: 'caption', color: 'secondary' }}>
-            {displayDispute.reason.replace(/_/g, ' ')}
+            {dispute.reason.replace(/_/g, ' ')}
           </Inline>
         </Box>
 
-        {(displayDispute.status === 'needs_response' ||
-          displayDispute.status === 'warning_needs_response') && (
+        {(dispute.status === 'needs_response' ||
+          dispute.status === 'warning_needs_response') && (
           <Button
             type="primary"
             css={{ width: 'fill' }}
@@ -100,7 +134,7 @@ const PaymentDisputeView = ({ environment }: ExtensionContextValue) => {
       </Box>
 
       <DisputeWorkflow
-        disputeId={displayDispute.id}
+        disputeId={dispute.id}
         shown={showWorkflow}
         setShown={setShowWorkflow}
       />
