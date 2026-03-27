@@ -15,7 +15,8 @@ import { getStatusBadge } from '../lib/utils';
 
 type ViewState = 'loading' | 'no_dispute' | 'error' | 'ready';
 
-const PaymentDisputeView = ({ environment }: ExtensionContextValue) => {
+const PaymentDisputeView = (context: ExtensionContextValue) => {
+  const { environment } = context;
   const paymentIntentId = environment?.objectContext?.id;
 
   const [viewState, setViewState] = useState<ViewState>('loading');
@@ -32,7 +33,7 @@ const PaymentDisputeView = ({ environment }: ExtensionContextValue) => {
     try {
       const result = await fetchBackend<{ data: Dispute }>(
         `/api/disputes/by-payment-intent/${paymentIntentId}`,
-        { method: 'POST', body: JSON.stringify({}) },
+        context,
       );
       setDispute(result.data);
       setViewState('ready');
@@ -43,7 +44,7 @@ const PaymentDisputeView = ({ environment }: ExtensionContextValue) => {
         setViewState('error');
       }
     }
-  }, [paymentIntentId]);
+  }, [paymentIntentId, context]);
 
   useEffect(() => {
     loadDispute();

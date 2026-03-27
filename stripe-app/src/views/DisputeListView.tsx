@@ -62,7 +62,8 @@ function getCountText(count: number, filter: StatusFilter): string {
   }
 }
 
-const DisputeListView = ({ environment, userContext }: ExtensionContextValue) => {
+const DisputeListView = (context: ExtensionContextValue) => {
+  const { environment, userContext } = context;
   const [viewState, setViewState] = useState<ViewState>('loading');
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
@@ -74,10 +75,7 @@ const DisputeListView = ({ environment, userContext }: ExtensionContextValue) =>
   const loadDisputes = useCallback(async () => {
     setViewState('loading');
     try {
-      const result = await fetchBackend<{ data: Dispute[] }>('/api/disputes', {
-        method: 'POST',
-        body: JSON.stringify({}),
-      });
+      const result = await fetchBackend<{ data: Dispute[] }>('/api/disputes', context);
       setDisputes(result.data);
       setViewState('ready');
     } catch (err) {
@@ -88,7 +86,7 @@ const DisputeListView = ({ environment, userContext }: ExtensionContextValue) =>
       setErrorMessage(message);
       setViewState('error');
     }
-  }, []);
+  }, [context]);
 
   useEffect(() => {
     loadDisputes();
