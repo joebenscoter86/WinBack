@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   ContextView,
@@ -72,10 +72,14 @@ const DisputeListView = (context: ExtensionContextValue) => {
   const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
   const [showWorkflow, setShowWorkflow] = useState(false);
 
+  // Ref to avoid context reference identity changes triggering re-fetches
+  const contextRef = useRef(context);
+  contextRef.current = context;
+
   const loadDisputes = useCallback(async () => {
     setViewState('loading');
     try {
-      const result = await fetchBackend<{ data: Dispute[] }>('/api/disputes', context);
+      const result = await fetchBackend<{ data: Dispute[] }>('/api/disputes', contextRef.current);
       setDisputes(result.data);
       setViewState('ready');
     } catch (err) {
@@ -86,7 +90,7 @@ const DisputeListView = (context: ExtensionContextValue) => {
       setErrorMessage(message);
       setViewState('error');
     }
-  }, [context]);
+  }, []);
 
   useEffect(() => {
     loadDisputes();
