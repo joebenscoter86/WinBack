@@ -50,13 +50,13 @@ export function normalizeDispute(d: Stripe.Dispute): WinBackDispute {
     charge && typeof charge.customer === "object" && charge.customer !== null
       ? charge.customer
       : null;
-  const network =
-    (charge?.payment_method_details as { card?: { network?: string } })?.card
-      ?.network ?? "unknown";
-
   const cardDetails = (
-    charge?.payment_method_details as { card?: { brand?: string; last4?: string; network?: string } } | null
+    charge?.payment_method_details as {
+      card?: { brand?: string; last4?: string; network?: string };
+    } | null
   )?.card;
+
+  const network = cardDetails?.network ?? "unknown";
 
   const dueBySec = d.evidence_details?.due_by ?? 0;
   const dueByDate = dueBySec

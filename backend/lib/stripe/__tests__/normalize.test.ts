@@ -155,6 +155,14 @@ describe("normalizeDispute", () => {
     expect(result.has_evidence).toBe(false);
   });
 
+  it("should set has_evidence false when evidence has all null values", () => {
+    const dispute = makeStripeDispute({
+      evidence: { receipt: null, customer_communication: null, shipping_documentation: null } as unknown as Stripe.Dispute.Evidence,
+    });
+    const result = normalizeDispute(dispute);
+    expect(result.has_evidence).toBe(false);
+  });
+
   it("should handle missing billing address", () => {
     const dispute = makeStripeDispute({
       charge: {
