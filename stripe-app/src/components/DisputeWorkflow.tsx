@@ -19,8 +19,9 @@ import { fetchBackend, ApiError } from '../lib/apiClient';
 import { getDaysRemaining, isResolved } from '../lib/utils';
 import ErrorBanner from './ErrorBanner';
 import DisputeOverview from './review/DisputeOverview';
-import ReasonCodeBreakdown from './review/ReasonCodeBreakdown';
-import GamePlan from './review/GamePlan';
+import CoachHeader from './review/CoachHeader';
+import QuickActions from './review/QuickActions';
+import LearnMore from './review/LearnMore';
 import UrgencyBanner from './review/UrgencyBanner';
 
 interface DisputeWorkflowProps {
@@ -55,12 +56,16 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
       setErrors({ dispute: null, playbook: null });
 
       // Fetch enriched dispute and playbook in parallel
+      // Skip playbook fetch if reason_code is empty (test disputes, unknown codes)
+      const shouldFetchPlaybook = !!initialDispute.reason_code;
       const [disputeResult, playbookResult] = await Promise.allSettled([
         fetchBackend<{ data: Dispute }>(`/api/disputes/${initialDispute.id}`, contextRef.current),
-        fetchBackend<{ data: PlaybookData }>('/api/playbooks', contextRef.current, {
-          network: initialDispute.network,
-          reason_code: initialDispute.reason_code,
-        }),
+        shouldFetchPlaybook
+          ? fetchBackend<{ data: PlaybookData }>('/api/playbooks', contextRef.current, {
+              network: initialDispute.network,
+              reason_code: initialDispute.reason_code,
+            })
+          : Promise.reject(new ApiError('No reason code', 404)),
       ]);
 
       if (disputeResult.status === 'fulfilled') {
@@ -132,8 +137,17 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
           <ErrorBanner message={errors.playbook} />
         ) : playbook ? (
           <>
-            <ReasonCodeBreakdown playbook={playbook} defaultExpanded={!isUrgent} />
-            <GamePlan playbook={playbook} />
+            <CoachHeader
+              headline={playbook.coach_headline}
+              summary={playbook.coach_summary}
+              urgencyMode={isUrgent}
+              daysRemaining={daysRemaining}
+            />
+            <QuickActions playbook={playbook} urgencyMode={isUrgent} />
+            <LearnMore
+              issuerSummary={playbook.coach_issuer_summary}
+              acquirerSummary={playbook.coach_acquirer_summary}
+            />
           </>
         ) : (
           <Banner
