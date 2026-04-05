@@ -47,6 +47,7 @@ export interface Dispute {
   evidence_submission_count?: number;
   is_charge_refundable?: boolean;
   metadata?: Record<string, string>;
+  checklist_state?: Record<string, boolean>;
 }
 
 // Playbook types (mirrors backend PlaybookData)

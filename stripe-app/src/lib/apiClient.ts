@@ -55,3 +55,40 @@ export async function fetchBackend<T = unknown>(
   }
   return response.json() as Promise<T>;
 }
+
+/**
+ * Makes an authenticated PATCH request to the WinBack backend.
+ */
+export async function patchBackend<T = unknown>(
+  path: string,
+  context: ExtensionContextValue,
+  data: Record<string, unknown>,
+): Promise<T> {
+  const signature = await fetchStripeSignature();
+
+  const body = JSON.stringify({
+    ...data,
+    user_id: context.userContext?.id,
+    account_id: context.userContext?.account.id,
+  });
+
+  const backendUrl = getBackendUrl(context.environment?.mode);
+  const response = await fetch(`${backendUrl}${path}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Stripe-Signature': signature,
+    },
+    body,
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({
+      message: response.statusText,
+    }));
+    throw new ApiError(
+      error.message || error.error || `API error: ${response.status}`,
+      response.status,
+    );
+  }
+  return response.json() as Promise<T>;
+}
