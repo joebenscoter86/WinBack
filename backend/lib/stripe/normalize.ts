@@ -15,6 +15,32 @@ export interface WinBackDispute {
   customer_email?: string;
   created: number;
   evidence_due_by: number;
+  transaction_date?: number;
+  card_brand?: string;
+  card_last4?: string;
+  billing_address?: string;
+  charge_description?: string;
+  receipt_url?: string;
+  has_evidence: boolean;
+  evidence_submission_count: number;
+  is_charge_refundable: boolean;
+  metadata: Record<string, string>;
+}
+
+function flattenAddress(address: Stripe.Address | null | undefined): string | undefined {
+  if (!address) return undefined;
+
+  const statePostal = [address.state, address.postal_code].filter(Boolean).join(" ");
+  const parts = [address.line1, address.line2, address.city, statePostal, address.country].filter(
+    (p): p is string => Boolean(p)
+  );
+
+  return parts.length > 0 ? parts.join(", ") : undefined;
+}
+
+function hasAnyEvidence(evidence: Stripe.Dispute.Evidence | null | undefined): boolean {
+  if (!evidence) return false;
+  return Object.values(evidence).some((v) => v !== null && v !== undefined && v !== "");
 }
 
 export function normalizeDispute(d: Stripe.Dispute): WinBackDispute {
@@ -24,9 +50,13 @@ export function normalizeDispute(d: Stripe.Dispute): WinBackDispute {
     charge && typeof charge.customer === "object" && charge.customer !== null
       ? charge.customer
       : null;
-  const network =
-    (charge?.payment_method_details as { card?: { network?: string } })?.card
-      ?.network ?? "unknown";
+  const cardDetails = (
+    charge?.payment_method_details as {
+      card?: { brand?: string; last4?: string; network?: string };
+    } | null
+  )?.card;
+
+  const network = cardDetails?.network ?? "unknown";
 
   const dueBySec = d.evidence_details?.due_by ?? 0;
   const dueByDate = dueBySec
@@ -51,5 +81,19 @@ export function normalizeDispute(d: Stripe.Dispute): WinBackDispute {
     customer_email: (customer as { email?: string })?.email ?? undefined,
     created: d.created,
     evidence_due_by: dueBySec,
+    transaction_date: (charge as { created?: number } | null)?.created ?? undefined,
+    card_brand: cardDetails?.brand ?? undefined,
+    card_last4: cardDetails?.last4 ?? undefined,
+    billing_address: flattenAddress(
+      (charge as { billing_details?: { address?: Stripe.Address | null } } | null)?.billing_details
+        ?.address
+    ),
+    charge_description:
+      (charge as { description?: string | null } | null)?.description ?? undefined,
+    receipt_url: (charge as { receipt_url?: string | null } | null)?.receipt_url ?? undefined,
+    has_evidence: hasAnyEvidence(d.evidence),
+    evidence_submission_count: d.evidence_details?.submission_count ?? 0,
+    is_charge_refundable: d.is_charge_refundable ?? false,
+    metadata: (charge as { metadata?: Record<string, string> } | null)?.metadata ?? {},
   };
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Badge,
@@ -11,36 +11,21 @@ import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 import DisputeWorkflow from '../components/DisputeWorkflow';
 import { fetchBackend, ApiError } from '../lib/apiClient';
 import type { Dispute } from '../lib/types';
-
-function getStatusBadge(status: string): {
-  label: string;
-  type: 'urgent' | 'warning' | 'positive' | 'negative' | 'info';
-} {
-  switch (status) {
-    case 'needs_response':
-    case 'warning_needs_response':
-      return { label: 'Needs Response', type: 'urgent' };
-    case 'under_review':
-    case 'warning_under_review':
-      return { label: 'Under Review', type: 'info' };
-    case 'won':
-      return { label: 'Won', type: 'positive' };
-    case 'lost':
-    case 'warning_closed':
-      return { label: 'Lost', type: 'negative' };
-    default:
-      return { label: status, type: 'info' };
-  }
-}
+import { getStatusBadge } from '../lib/utils';
 
 type ViewState = 'loading' | 'no_dispute' | 'error' | 'ready';
 
-const PaymentDisputeView = ({ environment }: ExtensionContextValue) => {
+const PaymentDisputeView = (context: ExtensionContextValue) => {
+  const { environment } = context;
   const paymentIntentId = environment?.objectContext?.id;
 
   const [viewState, setViewState] = useState<ViewState>('loading');
   const [dispute, setDispute] = useState<Dispute | null>(null);
   const [showWorkflow, setShowWorkflow] = useState(false);
+
+  // Ref to avoid context reference identity changes triggering re-fetches
+  const contextRef = useRef(context);
+  contextRef.current = context;
 
   const loadDispute = useCallback(async () => {
     if (!paymentIntentId) {
@@ -52,7 +37,7 @@ const PaymentDisputeView = ({ environment }: ExtensionContextValue) => {
     try {
       const result = await fetchBackend<{ data: Dispute }>(
         `/api/disputes/by-payment-intent/${paymentIntentId}`,
-        { method: 'POST', body: JSON.stringify({}) },
+        contextRef.current,
       );
       setDispute(result.data);
       setViewState('ready');
@@ -134,7 +119,8 @@ const PaymentDisputeView = ({ environment }: ExtensionContextValue) => {
       </Box>
 
       <DisputeWorkflow
-        disputeId={dispute.id}
+        dispute={dispute}
+        context={context}
         shown={showWorkflow}
         setShown={setShowWorkflow}
       />

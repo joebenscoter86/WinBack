@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   ContextView,
   Inline,
+  Select,
   Spinner,
   Tabs,
   Tab,
@@ -17,25 +18,68 @@ import DisputeWorkflow from '../components/DisputeWorkflow';
 import EmptyState from '../components/EmptyState';
 import ErrorBanner from '../components/ErrorBanner';
 import { fetchBackend, ApiError } from '../lib/apiClient';
+import { isResolved } from '../lib/utils';
 import type { Dispute } from '../lib/types';
 
 type ViewState = 'loading' | 'error' | 'ready';
+type StatusFilter = 'all' | 'needs_response' | 'under_review' | 'resolved';
 
-const DisputeListView = ({ environment, userContext }: ExtensionContextValue) => {
+const FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
+  { value: 'all', label: 'All disputes' },
+  { value: 'needs_response', label: 'Needs response' },
+  { value: 'under_review', label: 'Under review' },
+  { value: 'resolved', label: 'Resolved' },
+];
+
+function matchesFilter(dispute: Dispute, filter: StatusFilter): boolean {
+  switch (filter) {
+    case 'all':
+      return true;
+    case 'needs_response':
+      return dispute.status === 'needs_response' || dispute.status === 'warning_needs_response';
+    case 'under_review':
+      return dispute.status === 'under_review' || dispute.status === 'warning_under_review';
+    case 'resolved':
+      return isResolved(dispute.status);
+    default:
+      return true;
+  }
+}
+
+function getCountText(count: number, filter: StatusFilter): string {
+  const noun = count === 1 ? 'dispute' : 'disputes';
+  switch (filter) {
+    case 'all':
+      return `${count} ${noun}`;
+    case 'needs_response':
+      return `${count} needing response`;
+    case 'under_review':
+      return `${count} under review`;
+    case 'resolved':
+      return `${count} resolved`;
+    default:
+      return `${count} ${noun}`;
+  }
+}
+
+const DisputeListView = (context: ExtensionContextValue) => {
+  const { environment, userContext } = context;
   const [viewState, setViewState] = useState<ViewState>('loading');
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
-  const [selectedDisputeId, setSelectedDisputeId] = useState<string | null>(null);
+  const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
   const [showWorkflow, setShowWorkflow] = useState(false);
+
+  // Ref to avoid context reference identity changes triggering re-fetches
+  const contextRef = useRef(context);
+  contextRef.current = context;
 
   const loadDisputes = useCallback(async () => {
     setViewState('loading');
     try {
-      const result = await fetchBackend<{ data: Dispute[] }>('/api/disputes', {
-        method: 'POST',
-        body: JSON.stringify({}),
-      });
+      const result = await fetchBackend<{ data: Dispute[] }>('/api/disputes', contextRef.current);
       setDisputes(result.data);
       setViewState('ready');
     } catch (err) {
@@ -52,24 +96,22 @@ const DisputeListView = ({ environment, userContext }: ExtensionContextValue) =>
     loadDisputes();
   }, [loadDisputes]);
 
-  const handleSelectDispute = (disputeId: string) => {
-    setSelectedDisputeId(disputeId);
+  const handleSelectDispute = (dispute: Dispute) => {
+    setSelectedDispute(dispute);
     setShowWorkflow(true);
   };
 
   const handleCloseWorkflow = (shown: boolean) => {
     setShowWorkflow(shown);
-    if (!shown) setSelectedDisputeId(null);
+    if (!shown) setSelectedDispute(null);
   };
 
-  // Sort disputes by deadline (soonest first)
+  // Sort by deadline (soonest first)
   const sortedDisputes = [...disputes].sort(
     (a, b) => new Date(a.due_by).getTime() - new Date(b.due_by).getTime(),
   );
 
-  const activeDisputes = sortedDisputes.filter(
-    (d) => d.status === 'needs_response' || d.status === 'warning_needs_response',
-  );
+  const filteredDisputes = sortedDisputes.filter((d) => matchesFilter(d, statusFilter));
 
   return (
     <ContextView title="WinBack" description="Guided dispute resolution">
@@ -101,25 +143,47 @@ const DisputeListView = ({ environment, userContext }: ExtensionContextValue) =>
           <TabPanels>
             <TabPanel id="disputes">
               <Box css={{ padding: 'small', stack: 'y', gap: 'small' }}>
-                {activeDisputes.length === 0 ? (
+                {disputes.length === 0 ? (
                   <EmptyState
-                    title="No active disputes"
-                    description="No disputes need your response right now. That's a good thing!"
+                    title="No disputes yet"
+                    description="When a dispute comes in, we'll walk you through exactly what to do."
                   />
                 ) : (
                   <>
+                    <Select
+                      label="Filter"
+                      hiddenElements={['label']}
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                    >
+                      {FILTER_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </Select>
+
                     <Box css={{ paddingTop: 'small', paddingBottom: 'small' }}>
                       <Inline css={{ font: 'caption', color: 'secondary' }}>
-                        {activeDisputes.length} dispute{activeDisputes.length !== 1 ? 's' : ''} need{activeDisputes.length === 1 ? 's' : ''} response
+                        {getCountText(filteredDisputes.length, statusFilter)}
                       </Inline>
                     </Box>
-                    {activeDisputes.map((dispute) => (
-                      <DisputeCard
-                        key={dispute.id}
-                        dispute={dispute}
-                        onSelect={handleSelectDispute}
-                      />
-                    ))}
+
+                    {filteredDisputes.length === 0 ? (
+                      <Box css={{ padding: 'medium', alignX: 'center' }}>
+                        <Inline css={{ font: 'caption', color: 'secondary' }}>
+                          No {FILTER_OPTIONS.find((o) => o.value === statusFilter)?.label.toLowerCase()} disputes.
+                        </Inline>
+                      </Box>
+                    ) : (
+                      filteredDisputes.map((dispute) => (
+                        <DisputeCard
+                          key={dispute.id}
+                          dispute={dispute}
+                          onSelect={() => handleSelectDispute(dispute)}
+                        />
+                      ))
+                    )}
                   </>
                 )}
               </Box>
@@ -140,9 +204,10 @@ const DisputeListView = ({ environment, userContext }: ExtensionContextValue) =>
         </Tabs>
       )}
 
-      {selectedDisputeId && (
+      {selectedDispute && (
         <DisputeWorkflow
-          disputeId={selectedDisputeId}
+          dispute={selectedDispute}
+          context={context}
           shown={showWorkflow}
           setShown={handleCloseWorkflow}
         />

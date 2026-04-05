@@ -48,8 +48,12 @@ export function withStripeAuth<
       return await handler(request, verified);
     } catch (error) {
       console.error("Stripe App signature verification failed:", error);
+      console.error("Raw body:", rawBody);
+      console.error("Signature header:", signature?.substring(0, 50) + "...");
+      console.error("APP_SECRET set:", !!process.env.STRIPE_APP_SECRET);
+      console.error("APP_SECRET prefix:", process.env.STRIPE_APP_SECRET?.substring(0, 10));
       return NextResponse.json(
-        { error: "Invalid or expired signature" },
+        { error: "Invalid or expired signature", debug: String(error) },
         { status: 401 },
       );
     }

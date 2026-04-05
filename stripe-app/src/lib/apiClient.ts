@@ -1,7 +1,12 @@
 import fetchStripeSignature from '@stripe/ui-extension-sdk/signature';
+import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 
-// Matches connect-src in stripe-app.json CSP. For local dev, update CSP to localhost.
-const BACKEND_URL = 'https://winback-api.vercel.app';
+const PROD_BACKEND = 'https://winbackpay.com';
+const LOCAL_BACKEND = 'http://localhost:3000';
+
+function getBackendUrl(mode?: string): string {
+  return mode === 'development' ? LOCAL_BACKEND : PROD_BACKEND;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -13,18 +18,31 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Makes an authenticated request to the WinBack backend.
+ * Automatically includes Stripe App signature and identity fields.
+ */
 export async function fetchBackend<T = unknown>(
   path: string,
-  options?: RequestInit,
+  context: ExtensionContextValue,
+  data?: Record<string, unknown>,
 ): Promise<T> {
   const signature = await fetchStripeSignature();
-  const response = await fetch(`${BACKEND_URL}${path}`, {
-    ...options,
+
+  const body = JSON.stringify({
+    ...data,
+    user_id: context.userContext?.id,
+    account_id: context.userContext?.account.id,
+  });
+
+  const backendUrl = getBackendUrl(context.environment?.mode);
+  const response = await fetch(`${backendUrl}${path}`, {
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Stripe-Signature': signature,
-      ...options?.headers,
     },
+    body,
   });
   if (!response.ok) {
     const error = await response.json().catch(() => ({
