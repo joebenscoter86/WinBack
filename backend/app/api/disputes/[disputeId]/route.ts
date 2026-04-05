@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withStripeAuth } from "@/lib/stripe-auth";
 import { getDispute, normalizeDispute, classifyStripeError } from "@/lib/stripe";
 import { ensureMerchant } from "@/lib/merchants";
+import { supabase } from "@/lib/supabase";
 import Stripe from "stripe";
 
 export const POST = withStripeAuth(async (
@@ -41,4 +42,81 @@ export const POST = withStripeAuth(async (
       { status: 500 },
     );
   }
+});
+
+export const PATCH = withStripeAuth(async (
+  request: NextRequest,
+  { identity },
+) => {
+  const { accountId, userId } = identity;
+  const disputeId = request.nextUrl.pathname.split("/").at(-1);
+
+  if (!disputeId) {
+    return NextResponse.json(
+      { error: "Missing dispute ID", code: "invalid_request" },
+      { status: 400 },
+    );
+  }
+
+  ensureMerchant(accountId, userId);
+
+  const body = JSON.parse(await request.clone().text());
+  const { checklist_state } = body;
+
+  if (!checklist_state || typeof checklist_state !== "object") {
+    return NextResponse.json(
+      { error: "Invalid checklist_state", code: "invalid_request" },
+      { status: 400 },
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("disputes")
+    .update({ checklist_state })
+    .eq("stripe_dispute_id", disputeId)
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      const { data: merchant } = await supabase
+        .from("merchants")
+        .select("id")
+        .eq("stripe_account_id", accountId)
+        .single();
+
+      const { data: inserted, error: insertError } = await supabase
+        .from("disputes")
+        .upsert(
+          {
+            stripe_dispute_id: disputeId,
+            merchant_id: merchant?.id,
+            amount: 0,
+            reason_code: "",
+            checklist_state,
+          },
+          { onConflict: "stripe_dispute_id" },
+        )
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("Failed to upsert dispute checklist state:", insertError);
+        return NextResponse.json(
+          { error: "Failed to save checklist state", code: "db_error" },
+          { status: 500 },
+        );
+      }
+
+      return NextResponse.json({ data: inserted });
+    }
+
+    console.error("Failed to update checklist state:", error);
+    return NextResponse.json(
+      { error: "Failed to save checklist state", code: "db_error" },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({ data });
 });

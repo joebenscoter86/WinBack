@@ -15,6 +15,7 @@ export interface WinBackDispute {
   customer_email?: string;
   created: number;
   evidence_due_by: number;
+  checklist_state?: Record<string, boolean>;
 }
 
 export function normalizeDispute(d: Stripe.Dispute): WinBackDispute {
