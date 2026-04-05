@@ -3,6 +3,7 @@ import {
   Box,
   Button,
   Banner,
+  Divider,
   FocusView,
   Inline,
   Spinner,
@@ -127,6 +128,8 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
         {errors.dispute && <ErrorBanner message={errors.dispute} />}
 
         <DisputeOverview dispute={dispute} loading={loading.dispute} />
+
+        <Divider />
 
         {isLoadingPlaybook ? (
           <Box css={{ alignX: 'center', padding: 'medium' }}>

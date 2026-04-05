@@ -45,6 +45,9 @@ const QuickActions = ({ playbook, urgencyMode }: QuickActionsProps) => {
           <Inline css={{ font: 'body' }}>{text}</Inline>
         </Box>
       ))}
+      <Inline css={{ font: 'caption', color: 'secondary' }}>
+        Don't worry, we'll walk you through each of these on the next step.
+      </Inline>
     </Box>
   );
 };
