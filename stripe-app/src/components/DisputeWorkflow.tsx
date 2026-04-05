@@ -24,6 +24,7 @@ import CoachHeader from './review/CoachHeader';
 import QuickActions from './review/QuickActions';
 import LearnMore from './review/LearnMore';
 import UrgencyBanner from './review/UrgencyBanner';
+import EvidenceChecklist from './evidence/EvidenceChecklist';
 
 interface DisputeWorkflowProps {
   dispute: Dispute;
@@ -214,16 +215,13 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
               {renderReviewTab()}
             </TabPanel>
             <TabPanel id="evidence">
-              <Box css={{ padding: 'medium', stack: 'y', gap: 'medium' }}>
-                <Banner
-                  type="default"
-                  title="Step 2: Gather Evidence"
-                  description="Check off required evidence items and upload supporting files."
-                />
-                <Inline css={{ font: 'caption', color: 'secondary' }}>
-                  Evidence checklist and file upload will be built in WIN-14 and WIN-16.
-                </Inline>
-              </Box>
+              <EvidenceChecklist
+                dispute={dispute}
+                playbook={playbook}
+                context={contextRef.current}
+                isUrgent={isUrgent}
+                daysRemaining={daysRemaining}
+              />
             </TabPanel>
             <TabPanel id="narrative">
               <Box css={{ padding: 'medium', stack: 'y', gap: 'medium' }}>
