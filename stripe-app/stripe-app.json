@@ -21,7 +21,8 @@
     ],
     "content_security_policy": {
       "connect-src": [
-        "https://winbackpay.com/api/"
+        "https://winbackpay.com/api/",
+        "http://localhost:3000/api/"
       ],
       "purpose": ""
     }
