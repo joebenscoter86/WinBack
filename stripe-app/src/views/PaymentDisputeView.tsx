@@ -11,31 +11,12 @@ import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 import DisputeWorkflow from '../components/DisputeWorkflow';
 import { fetchBackend, ApiError } from '../lib/apiClient';
 import type { Dispute } from '../lib/types';
-
-function getStatusBadge(status: string): {
-  label: string;
-  type: 'urgent' | 'warning' | 'positive' | 'negative' | 'info';
-} {
-  switch (status) {
-    case 'needs_response':
-    case 'warning_needs_response':
-      return { label: 'Needs Response', type: 'urgent' };
-    case 'under_review':
-    case 'warning_under_review':
-      return { label: 'Under Review', type: 'info' };
-    case 'won':
-      return { label: 'Won', type: 'positive' };
-    case 'lost':
-    case 'warning_closed':
-      return { label: 'Lost', type: 'negative' };
-    default:
-      return { label: status, type: 'info' };
-  }
-}
+import { getStatusBadge } from '../lib/utils';
 
 type ViewState = 'loading' | 'no_dispute' | 'error' | 'ready';
 
-const PaymentDisputeView = ({ environment }: ExtensionContextValue) => {
+const PaymentDisputeView = (context: ExtensionContextValue) => {
+  const { environment } = context;
   const paymentIntentId = environment?.objectContext?.id;
 
   const [viewState, setViewState] = useState<ViewState>('loading');
@@ -52,7 +33,7 @@ const PaymentDisputeView = ({ environment }: ExtensionContextValue) => {
     try {
       const result = await fetchBackend<{ data: Dispute }>(
         `/api/disputes/by-payment-intent/${paymentIntentId}`,
-        { method: 'POST', body: JSON.stringify({}) },
+        context,
       );
       setDispute(result.data);
       setViewState('ready');
@@ -63,7 +44,7 @@ const PaymentDisputeView = ({ environment }: ExtensionContextValue) => {
         setViewState('error');
       }
     }
-  }, [paymentIntentId]);
+  }, [paymentIntentId, context]);
 
   useEffect(() => {
     loadDispute();

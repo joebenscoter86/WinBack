@@ -6,6 +6,7 @@ import { buildWaitlistWelcomeEmail } from "@/lib/email/waitlist-welcome";
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "hello@winbackpay.com";
+const NOTIFY_EMAIL = process.env.WAITLIST_NOTIFY_EMAIL;
 
 export async function POST(request: Request) {
   let body: { email?: string };
@@ -54,6 +55,20 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error("Failed to send waitlist welcome email:", err);
+  }
+
+  // Best-effort owner notification
+  if (NOTIFY_EMAIL) {
+    try {
+      await getResend().emails.send({
+        from: FROM_EMAIL,
+        to: NOTIFY_EMAIL,
+        subject: `New waitlist signup: ${email}`,
+        html: `<p><strong>${email}</strong> just joined the WinBack waitlist.</p>`,
+      });
+    } catch (err) {
+      console.error("Failed to send waitlist notification:", err);
+    }
   }
 
   return NextResponse.json({ success: true });

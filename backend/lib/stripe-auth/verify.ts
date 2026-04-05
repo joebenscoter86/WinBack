@@ -33,16 +33,22 @@ export function verifyStripeAppSignature<
     throw new Error("STRIPE_APP_SECRET is not configured");
   }
 
-  // verifyHeader throws StripeSignatureVerificationError on invalid signatures.
-  // Default tolerance is 300 seconds (5 min), appropriate for app requests.
-  getStripe().webhooks.signature.verifyHeader(rawBody, signature, appSecret);
-
-  // Parse JSON only after signature is verified — never process tampered payloads.
+  // Parse body to extract identity fields for signature verification.
   const body = JSON.parse(rawBody) as T;
 
   if (!body.user_id || !body.account_id) {
-    throw new Error("Missing user_id or account_id in verified payload");
+    throw new Error("Missing user_id or account_id in request payload");
   }
+
+  // Stripe signs only {user_id, account_id} in that exact order — not the full body.
+  // See: https://docs.stripe.com/stripe-apps/build-backend
+  const signedPayload = JSON.stringify({
+    user_id: body.user_id,
+    account_id: body.account_id,
+  });
+
+  // verifyHeader throws StripeSignatureVerificationError on invalid signatures.
+  getStripe().webhooks.signature.verifyHeader(signedPayload, signature, appSecret);
 
   const identity: StripeAppIdentity = {
     userId: body.user_id,

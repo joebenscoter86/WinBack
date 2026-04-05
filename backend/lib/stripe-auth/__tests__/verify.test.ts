@@ -11,9 +11,10 @@ import { verifyStripeAppSignature } from "../verify";
 
 const stripe = new Stripe("sk_test_fake");
 
-function generateSignature(payload: string): string {
+function generateSignature(userId: string, accountId: string): string {
+  const signedPayload = JSON.stringify({ user_id: userId, account_id: accountId });
   return stripe.webhooks.generateTestHeaderString({
-    payload,
+    payload: signedPayload,
     secret: TEST_APP_SECRET,
   });
 }
@@ -24,7 +25,7 @@ describe("verifyStripeAppSignature", () => {
       user_id: "usr_123",
       account_id: "acct_456",
     });
-    const signature = generateSignature(body);
+    const signature = generateSignature("usr_123", "acct_456");
 
     const result = verifyStripeAppSignature(body, signature);
 
@@ -40,7 +41,8 @@ describe("verifyStripeAppSignature", () => {
       account_id: "acct_456",
       dispute_id: "dp_789",
     });
-    const signature = generateSignature(body);
+    // Signature is over {user_id, account_id} only, not the full body
+    const signature = generateSignature("usr_123", "acct_456");
 
     const result = verifyStripeAppSignature(body, signature);
 
@@ -59,12 +61,8 @@ describe("verifyStripeAppSignature", () => {
     ).toThrow();
   });
 
-  it("should reject a tampered body", () => {
-    const originalBody = JSON.stringify({
-      user_id: "usr_123",
-      account_id: "acct_456",
-    });
-    const signature = generateSignature(originalBody);
+  it("should reject a tampered identity", () => {
+    const signature = generateSignature("usr_123", "acct_456");
     const tamperedBody = JSON.stringify({
       user_id: "usr_HACKER",
       account_id: "acct_456",
@@ -77,18 +75,16 @@ describe("verifyStripeAppSignature", () => {
 
   it("should reject body missing user_id", () => {
     const body = JSON.stringify({ account_id: "acct_456" });
-    const signature = generateSignature(body);
 
-    expect(() => verifyStripeAppSignature(body, signature)).toThrow(
+    expect(() => verifyStripeAppSignature(body, "t=1,v1=fake")).toThrow(
       "Missing user_id or account_id",
     );
   });
 
   it("should reject body missing account_id", () => {
     const body = JSON.stringify({ user_id: "usr_123" });
-    const signature = generateSignature(body);
 
-    expect(() => verifyStripeAppSignature(body, signature)).toThrow(
+    expect(() => verifyStripeAppSignature(body, "t=1,v1=fake")).toThrow(
       "Missing user_id or account_id",
     );
   });

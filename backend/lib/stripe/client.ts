@@ -14,51 +14,38 @@ function getStripe(): Stripe {
 }
 
 export async function listDisputes(
-  accountId: string,
+  _accountId: string,
   params?: Stripe.DisputeListParams,
 ): Promise<Stripe.Dispute[]> {
-  const resp = await getStripe().disputes.list(
-    { limit: 100, ...params },
-    { stripeAccount: accountId },
-  );
+  const resp = await getStripe().disputes.list({ limit: 100, ...params });
   return resp.data;
 }
 
 export async function getDispute(
-  accountId: string,
+  _accountId: string,
   disputeId: string,
   expand?: string[],
 ): Promise<Stripe.Dispute> {
-  return getStripe().disputes.retrieve(
-    disputeId,
-    { expand },
-    { stripeAccount: accountId },
-  );
+  return getStripe().disputes.retrieve(disputeId, { expand });
 }
 
 export async function getCharge(
-  accountId: string,
+  _accountId: string,
   chargeId: string,
 ): Promise<Stripe.Charge> {
-  return getStripe().charges.retrieve(chargeId, {
-    stripeAccount: accountId,
-  });
+  return getStripe().charges.retrieve(chargeId);
 }
 
 export async function getCustomer(
-  accountId: string,
+  _accountId: string,
   customerId: string,
 ): Promise<Stripe.Customer | Stripe.DeletedCustomer> {
-  return getStripe().customers.retrieve(customerId, {
-    stripeAccount: accountId,
-  });
+  return getStripe().customers.retrieve(customerId);
 }
 
 export async function getPaymentIntent(
-  accountId: string,
+  _accountId: string,
   piId: string,
 ): Promise<Stripe.PaymentIntent> {
-  return getStripe().paymentIntents.retrieve(piId, {
-    stripeAccount: accountId,
-  });
+  return getStripe().paymentIntents.retrieve(piId);
 }

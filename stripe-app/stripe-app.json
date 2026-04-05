@@ -1,8 +1,32 @@
 {
+  "$schema": "https://stripe.com/stripe-app.schema.json",
   "id": "com.jkbtech.winback",
-  "version": "0.0.1",
   "name": "WinBack",
+  "version": "0.0.1",
   "icon": "",
+  "ui_extension": {
+    "views": [
+      {
+        "viewport": "stripe.dashboard.payment.detail",
+        "component": "PaymentDisputeView"
+      },
+      {
+        "viewport": "stripe.dashboard.drawer.default",
+        "component": "DisputeListView"
+      },
+      {
+        "viewport": "settings",
+        "component": "AppSettings"
+      }
+    ],
+    "content_security_policy": {
+      "connect-src": [
+        "https://winbackpay.com/api/"
+      ],
+      "purpose": ""
+    }
+  },
+  "extensions": null,
   "permissions": [
     {
       "permission": "dispute_read",
@@ -33,26 +57,6 @@
       "purpose": "Read payment intent details for dispute context"
     }
   ],
-  "ui_extension": {
-    "views": [
-      {
-        "viewport": "stripe.dashboard.payment.detail",
-        "component": "PaymentDisputeView"
-      },
-      {
-        "viewport": "stripe.dashboard.drawer.default",
-        "component": "DisputeListView"
-      },
-      {
-        "viewport": "settings",
-        "component": "AppSettings"
-      }
-    ],
-    "content_security_policy": {
-      "connect-src": ["https://winback-api.vercel.app/api/"],
-      "image-src": null
-    }
-  },
   "post_install_action": {
     "type": "settings"
   }
