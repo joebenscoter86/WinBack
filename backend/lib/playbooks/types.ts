@@ -47,6 +47,10 @@ export interface PlaybookData {
   category: PlaybookCategory;
   legacy_code: string | null;
   description: string;
+  coach_headline: string;
+  coach_summary: string;
+  coach_issuer_summary: string;
+  coach_acquirer_summary: string;
   issuer_evaluation: string;
   acquirer_prereview: string;
   evidence_checklist: EvidenceChecklistItem[];
