@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Button,
@@ -43,6 +43,10 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
     playbook: null,
   });
 
+  // Ref to avoid context reference identity changes triggering re-fetches
+  const contextRef = useRef(context);
+  contextRef.current = context;
+
   useEffect(() => {
     if (!shown) return;
 
@@ -52,8 +56,8 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
 
       // Fetch enriched dispute and playbook in parallel
       const [disputeResult, playbookResult] = await Promise.allSettled([
-        fetchBackend<{ data: Dispute }>(`/api/disputes/${initialDispute.id}`, context),
-        fetchBackend<{ data: PlaybookData }>('/api/playbooks', context, {
+        fetchBackend<{ data: Dispute }>(`/api/disputes/${initialDispute.id}`, contextRef.current),
+        fetchBackend<{ data: PlaybookData }>('/api/playbooks', contextRef.current, {
           network: initialDispute.network,
           reason_code: initialDispute.reason_code,
         }),
@@ -87,7 +91,7 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
     };
 
     fetchData();
-  }, [shown, initialDispute.id, initialDispute.network, initialDispute.reason_code, context]);
+  }, [shown, initialDispute.id, initialDispute.network, initialDispute.reason_code]);
 
   const currentIndex = WIZARD_STEPS.indexOf(currentStep);
   const isFirstStep = currentIndex === 0;

@@ -6,7 +6,7 @@ interface ReasonCodeBreakdownProps {
   defaultExpanded: boolean;
 }
 
-const ReasonCodeBreakdown = ({ playbook }: ReasonCodeBreakdownProps) => {
+const ReasonCodeBreakdown = ({ playbook, defaultExpanded }: ReasonCodeBreakdownProps) => {
   return (
     <Box css={{ stack: 'y', gap: 'medium' }}>
       <Inline css={{ font: 'subheading', fontWeight: 'semibold' }}>
@@ -18,6 +18,7 @@ const ReasonCodeBreakdown = ({ playbook }: ReasonCodeBreakdownProps) => {
       <Accordion>
         <AccordionItem
           title="What the issuer looks for"
+          defaultOpen={defaultExpanded}
         >
           <Box css={{ whiteSpace: 'pre-wrap' }}>
             {playbook.issuer_evaluation}
@@ -25,6 +26,7 @@ const ReasonCodeBreakdown = ({ playbook }: ReasonCodeBreakdownProps) => {
         </AccordionItem>
         <AccordionItem
           title="What happens before the issuer sees your case"
+          defaultOpen={defaultExpanded}
         >
           <Box css={{ whiteSpace: 'pre-wrap' }}>
             {playbook.acquirer_prereview}
