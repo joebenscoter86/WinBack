@@ -115,7 +115,8 @@ const PaymentDisputeView = (context: ExtensionContextValue) => {
       </Box>
 
       <DisputeWorkflow
-        disputeId={dispute.id}
+        dispute={dispute}
+        context={context}
         shown={showWorkflow}
         setShown={setShowWorkflow}
       />

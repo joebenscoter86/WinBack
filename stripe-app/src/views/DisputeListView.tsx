@@ -69,7 +69,7 @@ const DisputeListView = (context: ExtensionContextValue) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
-  const [selectedDisputeId, setSelectedDisputeId] = useState<string | null>(null);
+  const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
   const [showWorkflow, setShowWorkflow] = useState(false);
 
   const loadDisputes = useCallback(async () => {
@@ -92,14 +92,14 @@ const DisputeListView = (context: ExtensionContextValue) => {
     loadDisputes();
   }, [loadDisputes]);
 
-  const handleSelectDispute = (disputeId: string) => {
-    setSelectedDisputeId(disputeId);
+  const handleSelectDispute = (dispute: Dispute) => {
+    setSelectedDispute(dispute);
     setShowWorkflow(true);
   };
 
   const handleCloseWorkflow = (shown: boolean) => {
     setShowWorkflow(shown);
-    if (!shown) setSelectedDisputeId(null);
+    if (!shown) setSelectedDispute(null);
   };
 
   // Sort by deadline (soonest first)
@@ -176,7 +176,7 @@ const DisputeListView = (context: ExtensionContextValue) => {
                         <DisputeCard
                           key={dispute.id}
                           dispute={dispute}
-                          onSelect={handleSelectDispute}
+                          onSelect={() => handleSelectDispute(dispute)}
                         />
                       ))
                     )}
@@ -200,9 +200,10 @@ const DisputeListView = (context: ExtensionContextValue) => {
         </Tabs>
       )}
 
-      {selectedDisputeId && (
+      {selectedDispute && (
         <DisputeWorkflow
-          disputeId={selectedDisputeId}
+          dispute={selectedDispute}
+          context={context}
           shown={showWorkflow}
           setShown={handleCloseWorkflow}
         />
