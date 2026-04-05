@@ -9,6 +9,14 @@ export const visa136: PlaybookData = {
   description:
     "The cardholder returned merchandise or cancelled a service and is claiming the merchant never issued the promised refund (credit). This is one of the cleaner dispute types to defend -- if you issued the refund, prove it; if you didn't, the cardholder is probably right.\n\nCommon scenarios:\n- Merchant issued the refund, but it hasn't posted yet (timing lag)\n- Merchant issued the refund to the wrong account or card\n- Merchant promised a refund verbally or in writing but never processed it\n- Merchandise was returned but the merchant disputes the return condition\n\nThe deadline for cardholders to file is typically 120 calendar days from the date the credit was expected (or from the transaction date if no credit date was promised).",
 
+  coach_headline: "The cardholder says they returned the item but never got a refund.",
+  coach_summary:
+    "The customer claims they're owed a refund that was never processed. If you already issued the refund, show proof. If the return doesn't qualify under your policy, you'll need to show the customer agreed to that policy at purchase.",
+  coach_issuer_summary:
+    "The bank checks: Was a refund actually issued? If not, does the merchant's return policy apply? Did the customer follow the return process? Was the return policy clearly disclosed before purchase?",
+  coach_acquirer_summary:
+    "Your response goes through a compliance check before the bank sees it. Either show proof the refund was already processed (with date and amount) or provide your return policy and evidence it was disclosed to the customer at checkout.",
+
   issuer_evaluation: `The issuer evaluates Visa 13.6 disputes using the following criteria:
 
 1. Was a refund actually issued? The issuer checks whether a credit posting exists. If it does, the dispute should be withdrawn.

@@ -9,6 +9,14 @@ export const visa131: PlaybookData = {
   description:
     "The cardholder claims they paid for goods or services but never received them. This could mean a physical package never arrived, a digital product was never accessible, or a service was never performed. This is one of the most common dispute types and often one of the easiest to win -- if you have delivery proof.",
 
+  coach_headline: "The cardholder says they never received what they paid for.",
+  coach_summary:
+    "This is one of the most winnable dispute types. If you can prove delivery, you're in a strong position. The bank's main question: was the item actually delivered to the right address? Tracking numbers and delivery confirmation are your best friends here.",
+  coach_issuer_summary:
+    "The bank checks: Was there a confirmed delivery date? Does tracking show it was delivered? Was it delivered to the correct address (the one on the order, not a random location)? For digital products, can you prove the customer accessed or downloaded it?",
+  coach_acquirer_summary:
+    "Your response goes through a compliance check before the bank sees it. For this dispute type, delivery proof is non-negotiable. Without a tracking number or access log, your response will likely be rejected before the bank even reviews it.",
+
   issuer_evaluation: `The issuer evaluates Visa 13.1 disputes using the following criteria:
 
 1. Was there an agreed delivery date? If yes, did the merchant meet it?

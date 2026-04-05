@@ -9,6 +9,14 @@ export const mastercard4853: PlaybookData = {
   description:
     "The cardholder claims the merchandise or service they received differs significantly from what was described at the time of purchase. This could mean the item arrived damaged, was defective, was the wrong product entirely, or the service quality didn't match what was promised. This is one of the most subjective dispute types -- 'not as described' is inherently a judgment call -- which makes it both harder to win and a magnet for friendly fraud.\n\nUnlike Visa 13.3 (which covers similar ground), Mastercard 4853 is a catch-all code that spans many dispute scenarios. The 'Not as Described / Defective' sub-type is the one most relevant to product-selling merchants.",
 
+  coach_headline: "The cardholder says what they received didn't match what was promised.",
+  coach_summary:
+    "Similar to a Visa 'not as described' dispute. The bank will look at whether your product matched its listing and whether the customer tried to resolve it with you first. Clear product descriptions and customer communication records are your best defense.",
+  coach_issuer_summary:
+    "The bank checks: Does the product match the description provided at the time of purchase? Did the cardholder attempt to return the merchandise or resolve the issue with the merchant? Was the merchandise or service received at all?",
+  coach_acquirer_summary:
+    "Your response goes through a compliance check before the bank sees it. You need the original product description, proof of delivery, and evidence of any customer interaction. If the customer never contacted you before filing the dispute, that works in your favor.",
+
   issuer_evaluation: `The issuer evaluates Mastercard 4853 disputes using the following criteria:
 
 1. Does the cardholder's description of what they received differ materially from the merchant's product listing? The issuer compares the cardholder's claim against available product descriptions, images, and terms.
