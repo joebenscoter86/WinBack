@@ -113,11 +113,11 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
 
     return (
       <Box css={{ padding: 'medium', stack: 'y', gap: 'medium' }}>
-        {isUrgent && playbook && <UrgencyBanner daysRemaining={daysRemaining} />}
+        {isUrgent && playbook && <UrgencyBanner daysRemaining={daysRemaining} essentials={playbook.urgency_essentials} />}
 
         {errors.dispute && <ErrorBanner message={errors.dispute} />}
 
-        <DisputeOverview dispute={dispute} />
+        <DisputeOverview dispute={dispute} loading={loading.dispute} />
 
         {isLoadingPlaybook ? (
           <Box css={{ alignX: 'center', padding: 'medium' }}>

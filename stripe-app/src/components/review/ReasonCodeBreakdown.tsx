@@ -17,7 +17,6 @@ const ReasonCodeBreakdown = ({ playbook }: ReasonCodeBreakdownProps) => {
       </Inline>
       <Accordion>
         <AccordionItem
-          id="issuer-evaluation"
           title="What the issuer looks for"
         >
           <Box css={{ whiteSpace: 'pre-wrap' }}>
@@ -25,7 +24,6 @@ const ReasonCodeBreakdown = ({ playbook }: ReasonCodeBreakdownProps) => {
           </Box>
         </AccordionItem>
         <AccordionItem
-          id="acquirer-prereview"
           title="What happens before the issuer sees your case"
         >
           <Box css={{ whiteSpace: 'pre-wrap' }}>
