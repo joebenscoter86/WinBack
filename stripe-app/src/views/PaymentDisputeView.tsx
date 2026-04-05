@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Badge,
@@ -23,6 +23,10 @@ const PaymentDisputeView = (context: ExtensionContextValue) => {
   const [dispute, setDispute] = useState<Dispute | null>(null);
   const [showWorkflow, setShowWorkflow] = useState(false);
 
+  // Ref to avoid context reference identity changes triggering re-fetches
+  const contextRef = useRef(context);
+  contextRef.current = context;
+
   const loadDispute = useCallback(async () => {
     if (!paymentIntentId) {
       setViewState('no_dispute');
@@ -33,7 +37,7 @@ const PaymentDisputeView = (context: ExtensionContextValue) => {
     try {
       const result = await fetchBackend<{ data: Dispute }>(
         `/api/disputes/by-payment-intent/${paymentIntentId}`,
-        context,
+        contextRef.current,
       );
       setDispute(result.data);
       setViewState('ready');
@@ -44,7 +48,7 @@ const PaymentDisputeView = (context: ExtensionContextValue) => {
         setViewState('error');
       }
     }
-  }, [paymentIntentId, context]);
+  }, [paymentIntentId]);
 
   useEffect(() => {
     loadDispute();
@@ -115,7 +119,8 @@ const PaymentDisputeView = (context: ExtensionContextValue) => {
       </Box>
 
       <DisputeWorkflow
-        disputeId={dispute.id}
+        dispute={dispute}
+        context={context}
         shown={showWorkflow}
         setShown={setShowWorkflow}
       />

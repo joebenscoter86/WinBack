@@ -1,27 +1,103 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Button,
+  Banner,
+  Divider,
   FocusView,
   Inline,
+  Spinner,
   Tabs,
   Tab,
   TabList,
   TabPanels,
   TabPanel,
-  Banner,
 } from '@stripe/ui-extension-sdk/ui';
+import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
+import type { WizardStep, Dispute, PlaybookData } from '../lib/types';
 import { WIZARD_STEPS, WIZARD_STEP_LABELS } from '../lib/types';
-import type { WizardStep } from '../lib/types';
+import { fetchBackend, ApiError } from '../lib/apiClient';
+import { getDaysRemaining, isResolved } from '../lib/utils';
+import ErrorBanner from './ErrorBanner';
+import DisputeOverview from './review/DisputeOverview';
+import CoachHeader from './review/CoachHeader';
+import QuickActions from './review/QuickActions';
+import LearnMore from './review/LearnMore';
+import UrgencyBanner from './review/UrgencyBanner';
 
 interface DisputeWorkflowProps {
-  disputeId: string;
+  dispute: Dispute;
+  context: ExtensionContextValue;
   shown: boolean;
   setShown: (shown: boolean) => void;
 }
 
-const DisputeWorkflow = ({ disputeId, shown, setShown }: DisputeWorkflowProps) => {
+const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: DisputeWorkflowProps) => {
   const [currentStep, setCurrentStep] = useState<WizardStep>('review');
+  const [dispute, setDispute] = useState<Dispute>(initialDispute);
+  const [playbook, setPlaybook] = useState<PlaybookData | null>(null);
+  const [loading, setLoading] = useState<{ dispute: boolean; playbook: boolean }>({
+    dispute: false,
+    playbook: false,
+  });
+  const [errors, setErrors] = useState<{ dispute: string | null; playbook: string | null }>({
+    dispute: null,
+    playbook: null,
+  });
+
+  // Ref to avoid context reference identity changes triggering re-fetches
+  const contextRef = useRef(context);
+  contextRef.current = context;
+
+  useEffect(() => {
+    if (!shown) return;
+
+    const fetchData = async () => {
+      setLoading({ dispute: true, playbook: true });
+      setErrors({ dispute: null, playbook: null });
+
+      // Fetch enriched dispute and playbook in parallel
+      // Skip playbook fetch if reason_code is empty (test disputes, unknown codes)
+      const shouldFetchPlaybook = !!initialDispute.reason_code;
+      const [disputeResult, playbookResult] = await Promise.allSettled([
+        fetchBackend<{ data: Dispute }>(`/api/disputes/${initialDispute.id}`, contextRef.current),
+        shouldFetchPlaybook
+          ? fetchBackend<{ data: PlaybookData }>('/api/playbooks', contextRef.current, {
+              network: initialDispute.network,
+              reason_code: initialDispute.reason_code,
+            })
+          : Promise.reject(new ApiError('No reason code', 404)),
+      ]);
+
+      if (disputeResult.status === 'fulfilled') {
+        setDispute(disputeResult.value.data);
+      } else {
+        const err = disputeResult.reason;
+        setErrors((prev) => ({
+          ...prev,
+          dispute: err instanceof ApiError ? err.message : 'Failed to load dispute details.',
+        }));
+      }
+      setLoading((prev) => ({ ...prev, dispute: false }));
+
+      if (playbookResult.status === 'fulfilled') {
+        setPlaybook(playbookResult.value.data);
+      } else {
+        const err = playbookResult.reason;
+        // 404 is not an error -- just means no playbook for this reason code
+        if (!(err instanceof ApiError && err.status === 404)) {
+          setErrors((prev) => ({
+            ...prev,
+            playbook: err instanceof ApiError ? err.message : 'Failed to load playbook.',
+          }));
+        }
+        setPlaybook(null);
+      }
+      setLoading((prev) => ({ ...prev, playbook: false }));
+    };
+
+    fetchData();
+  }, [shown, initialDispute.id, initialDispute.network, initialDispute.reason_code]);
 
   const currentIndex = WIZARD_STEPS.indexOf(currentStep);
   const isFirstStep = currentIndex === 0;
@@ -39,9 +115,57 @@ const DisputeWorkflow = ({ disputeId, shown, setShown }: DisputeWorkflowProps) =
     }
   };
 
+  const daysRemaining = getDaysRemaining(dispute.due_by);
+  const isUrgent = daysRemaining < 5 && !isResolved(dispute.status);
+
+  const renderReviewTab = () => {
+    const isLoadingPlaybook = loading.playbook;
+
+    return (
+      <Box css={{ padding: 'medium', stack: 'y', gap: 'medium' }}>
+        {isUrgent && playbook && <UrgencyBanner daysRemaining={daysRemaining} essentials={playbook.urgency_essentials} />}
+
+        {errors.dispute && <ErrorBanner message={errors.dispute} />}
+
+        <DisputeOverview dispute={dispute} loading={loading.dispute} />
+
+        <Divider />
+
+        {isLoadingPlaybook ? (
+          <Box css={{ alignX: 'center', padding: 'medium' }}>
+            <Spinner size="medium" />
+            <Inline css={{ font: 'caption', color: 'secondary' }}>Loading playbook...</Inline>
+          </Box>
+        ) : errors.playbook ? (
+          <ErrorBanner message={errors.playbook} />
+        ) : playbook ? (
+          <>
+            <CoachHeader
+              headline={playbook.coach_headline}
+              summary={playbook.coach_summary}
+              urgencyMode={isUrgent}
+              daysRemaining={daysRemaining}
+            />
+            <QuickActions playbook={playbook} urgencyMode={isUrgent} />
+            <LearnMore
+              issuerSummary={playbook.coach_issuer_summary}
+              acquirerSummary={playbook.coach_acquirer_summary}
+            />
+          </>
+        ) : (
+          <Banner
+            type="default"
+            title="No playbook available"
+            description="We don't have a specific playbook for this reason code yet. Use the general evidence guidelines to build your response."
+          />
+        )}
+      </Box>
+    );
+  };
+
   return (
     <FocusView
-      title={`Dispute ${disputeId.slice(0, 12)}...`}
+      title={`Dispute ${initialDispute.id.slice(0, 12)}...`}
       shown={shown}
       setShown={setShown}
       confirmCloseMessages={{
@@ -87,16 +211,7 @@ const DisputeWorkflow = ({ disputeId, shown, setShown }: DisputeWorkflowProps) =
           </TabList>
           <TabPanels>
             <TabPanel id="review">
-              <Box css={{ padding: 'medium', stack: 'y', gap: 'medium' }}>
-                <Banner
-                  type="default"
-                  title="Step 1: Review Dispute"
-                  description="Review the dispute details and understand the reason code. Playbook guidance will appear here."
-                />
-                <Inline css={{ font: 'caption', color: 'secondary' }}>
-                  Dispute ID: {disputeId} — Detailed dispute info, reason code breakdown, and playbook recommendations will be populated by WIN-12 and WIN-13.
-                </Inline>
-              </Box>
+              {renderReviewTab()}
             </TabPanel>
             <TabPanel id="evidence">
               <Box css={{ padding: 'medium', stack: 'y', gap: 'medium' }}>

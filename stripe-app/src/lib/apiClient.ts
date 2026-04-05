@@ -1,7 +1,12 @@
 import fetchStripeSignature from '@stripe/ui-extension-sdk/signature';
 import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 
-const BACKEND_URL = 'https://winbackpay.com';
+const PROD_BACKEND = 'https://winbackpay.com';
+const LOCAL_BACKEND = 'http://localhost:3000';
+
+function getBackendUrl(mode?: string): string {
+  return mode === 'development' ? LOCAL_BACKEND : PROD_BACKEND;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -30,7 +35,8 @@ export async function fetchBackend<T = unknown>(
     account_id: context.userContext?.account.id,
   });
 
-  const response = await fetch(`${BACKEND_URL}${path}`, {
+  const backendUrl = getBackendUrl(context.environment?.mode);
+  const response = await fetch(`${backendUrl}${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

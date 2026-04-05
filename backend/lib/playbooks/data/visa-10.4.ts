@@ -9,6 +9,14 @@ export const visa104: PlaybookData = {
   description:
     "The cardholder claims they didn't authorize a card-not-present transaction (online, phone, or mail order). This is either true fraud (someone stole the card and used it) or friendly fraud (the cardholder made the purchase but claims they didn't). This is the hardest dispute type to win because the burden of proof is entirely on the merchant -- in a CNP environment, you can't prove the cardholder was physically present. The good news: Visa Compelling Evidence 3.0 (CE3.0) gives merchants a powerful new tool. If you can show the same cardholder made previous undisputed purchases from the same device/IP, Visa presumes the disputed transaction is also legitimate.",
 
+  coach_headline: "The cardholder says they didn't authorize this purchase.",
+  coach_summary:
+    "This is the most common type of dispute. The key question the bank will ask: can you prove this customer actually made the purchase? If you used 3D Secure, you're in great shape. If not, we'll focus on gathering verification data and any proof the customer engaged with your store.",
+  coach_issuer_summary:
+    "The bank checks six things: Did you use 3D Secure? (If yes, you almost certainly win.) Did you verify the billing address? Did the customer enter the CVV code? Is your store name recognizable on their statement? Is there a history of legitimate purchases from this customer? And was the dispute filed within 120 days?",
+  coach_acquirer_summary:
+    "Your response goes through a compliance check before the bank sees it. If anything is missing or doesn't address this specific dispute type, it gets rejected automatically and you don't get another chance. That's why we walk you through exactly what to include.",
+
   issuer_evaluation: `The issuer evaluates Visa 10.4 disputes using the following criteria:
 
 1. Was the transaction authenticated? 3D Secure / Visa Secure shifts liability to the issuer. If you used it, this dispute shouldn't exist.

@@ -9,6 +9,14 @@ export const mastercard4808: PlaybookData = {
   description:
     "The cardholder's bank claims the transaction lacked a valid authorization. This can mean no authorization was obtained, the authorization had already expired before settlement, the authorized amount doesn't match the settled amount, or the card network approved the transaction via stand-in processing after the issuer declined it (CNP transactions). Authorization disputes are different from fraud or consumer disputes -- the question isn't whether the cardholder made the purchase, it's whether the merchant followed proper authorization procedures. These are often technical processing errors rather than cardholder complaints.",
 
+  coach_headline: "The bank says this transaction didn't have a valid authorization.",
+  coach_summary:
+    "This dispute is about process, not the purchase itself. The bank isn't questioning whether the customer bought something. They're saying the authorization paperwork wasn't in order: either it expired before you settled, the amounts didn't match, or the card was declined but the transaction went through anyway. The fix is almost always in your payment processor records.",
+  coach_issuer_summary:
+    "The bank checks: Was a valid authorization obtained before the charge settled? Does the authorized amount match the settled amount? Was the authorization still active (not expired) when you settled? If there's a currency conversion difference, does it fall within the allowed 10% range?",
+  coach_acquirer_summary:
+    "Your response goes through a compliance check before the bank sees it. This dispute type is won entirely on authorization records, not customer communications or delivery proof. If you can't produce the authorization record and settlement record together, your response will be rejected.",
+
   issuer_evaluation: `The issuer evaluates Mastercard 4808 disputes using the following criteria:
 
 1. Was a valid authorization obtained before settlement? The auth must have been active (not expired) at the time of settlement.

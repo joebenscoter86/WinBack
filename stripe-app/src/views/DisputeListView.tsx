@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   ContextView,
@@ -69,13 +69,17 @@ const DisputeListView = (context: ExtensionContextValue) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
-  const [selectedDisputeId, setSelectedDisputeId] = useState<string | null>(null);
+  const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
   const [showWorkflow, setShowWorkflow] = useState(false);
+
+  // Ref to avoid context reference identity changes triggering re-fetches
+  const contextRef = useRef(context);
+  contextRef.current = context;
 
   const loadDisputes = useCallback(async () => {
     setViewState('loading');
     try {
-      const result = await fetchBackend<{ data: Dispute[] }>('/api/disputes', context);
+      const result = await fetchBackend<{ data: Dispute[] }>('/api/disputes', contextRef.current);
       setDisputes(result.data);
       setViewState('ready');
     } catch (err) {
@@ -86,20 +90,20 @@ const DisputeListView = (context: ExtensionContextValue) => {
       setErrorMessage(message);
       setViewState('error');
     }
-  }, [context]);
+  }, []);
 
   useEffect(() => {
     loadDisputes();
   }, [loadDisputes]);
 
-  const handleSelectDispute = (disputeId: string) => {
-    setSelectedDisputeId(disputeId);
+  const handleSelectDispute = (dispute: Dispute) => {
+    setSelectedDispute(dispute);
     setShowWorkflow(true);
   };
 
   const handleCloseWorkflow = (shown: boolean) => {
     setShowWorkflow(shown);
-    if (!shown) setSelectedDisputeId(null);
+    if (!shown) setSelectedDispute(null);
   };
 
   // Sort by deadline (soonest first)
@@ -176,7 +180,7 @@ const DisputeListView = (context: ExtensionContextValue) => {
                         <DisputeCard
                           key={dispute.id}
                           dispute={dispute}
-                          onSelect={handleSelectDispute}
+                          onSelect={() => handleSelectDispute(dispute)}
                         />
                       ))
                     )}
@@ -200,9 +204,10 @@ const DisputeListView = (context: ExtensionContextValue) => {
         </Tabs>
       )}
 
-      {selectedDisputeId && (
+      {selectedDispute && (
         <DisputeWorkflow
-          disputeId={selectedDisputeId}
+          dispute={selectedDispute}
+          context={context}
           shown={showWorkflow}
           setShown={handleCloseWorkflow}
         />

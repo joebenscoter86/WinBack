@@ -9,6 +9,14 @@ export const visa133: PlaybookData = {
   description:
     "The cardholder claims the merchandise they received was defective, damaged, not as described, or that services didn't match what was promised. This is the most subjective dispute type -- 'not as described' is in the eye of the beholder. The good news: as of October 2024, cardholders must attempt to return the merchandise before filing, which gives merchants a stronger defense if no return was attempted.",
 
+  coach_headline: "The cardholder says what they got wasn't what was advertised.",
+  coach_summary:
+    "The customer is claiming the product or service didn't match what you described. The bank will compare what you promised against what was delivered. Your product listing, photos, and any communication with the customer are key evidence here.",
+  coach_issuer_summary:
+    "The bank checks: Does the product match its description? Did the merchant misrepresent quality, features, or condition? Did the customer contact the merchant first and give them a chance to resolve it? Was a return offered and refused?",
+  coach_acquirer_summary:
+    "Your response goes through a compliance check before the bank sees it. You need your original product description, proof of what was delivered, and ideally any customer communication showing they were satisfied or didn't raise concerns through your support channels.",
+
   issuer_evaluation: `The issuer evaluates Visa 13.3 disputes using the following criteria:
 
 1. Does the product match its description? The bank compares what was advertised/described against what was received.

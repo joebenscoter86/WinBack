@@ -9,6 +9,14 @@ export const visa132: PlaybookData = {
   description:
     "The cardholder claims they were charged for a recurring transaction (subscription, membership, installment) after they cancelled. This is extremely common with SaaS, streaming, and subscription box services. Many of these are \"friendly fraud\" -- the cardholder forgot they agreed to a billing cycle, or cancelled after the billing cutoff but before the next charge.",
 
+  coach_headline: "The cardholder says they cancelled but were still charged.",
+  coach_summary:
+    "The bank wants to know: did the customer actually cancel, and did you process the cancellation correctly? If you can show the customer didn't cancel through your process, or that the charge was for a period before cancellation, you have a solid case.",
+  coach_issuer_summary:
+    "The bank checks: Did the customer follow your cancellation process? Was the cancellation request received before or after the billing date? Did you clearly communicate your cancellation policy at signup? Do your records show the subscription was still active when charged?",
+  coach_acquirer_summary:
+    "Your response goes through a compliance check before the bank sees it. You need to show your cancellation policy and proof the customer either didn't cancel or was billed for a valid period. Generic terms of service alone won't clear the check.",
+
   issuer_evaluation: `The issuer evaluates Visa 13.2 disputes using the following criteria:
 
 1. Did the cardholder request cancellation? When and how?
