@@ -13,11 +13,11 @@ interface ChecklistItemProps {
 function getCategoryBadge(category: EvidenceChecklistItem['category']) {
   switch (category) {
     case 'mandatory':
-      return <Badge type="critical">REQUIRED</Badge>;
+      return <Badge type="negative">REQUIRED</Badge>;
     case 'recommended':
       return <Badge type="warning">HELPFUL</Badge>;
     case 'situational':
-      return <Badge type="default">IF APPLICABLE</Badge>;
+      return <Badge type="neutral">IF APPLICABLE</Badge>;
   }
 }
 
@@ -30,7 +30,7 @@ const ChecklistItem = ({
   onExpandToggle,
 }: ChecklistItemProps) => {
   return (
-    <Box css={{ stack: 'y', gap: 'xsmall', padding: 'small', background: 'surface', borderRadius: 'medium' }}>
+    <Box css={{ stack: 'y', gap: 'xsmall', padding: 'small', borderRadius: 'medium' }}>
       <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
         <Checkbox
           label=""
@@ -40,7 +40,7 @@ const ChecklistItem = ({
         />
         <Box css={{ stack: 'y', gap: 'xxsmall', width: 'fill' }}>
           <Box css={{ stack: 'x', gap: 'xsmall', alignY: 'center', wrap: 'wrap' }}>
-            <Inline css={{ font: 'body', fontWeight: 'medium' }}>
+            <Inline css={{ font: 'body', fontWeight: 'semibold' }}>
               {item.item}
             </Inline>
             {autoPopulated && <Badge type="info">FROM STRIPE</Badge>}
@@ -57,7 +57,7 @@ const ChecklistItem = ({
         </Box>
       </Box>
       {expanded && (
-        <Box css={{ marginLeft: 'xlarge', padding: 'small', background: 'container', borderRadius: 'small' }}>
+        <Box css={{ marginLeft: 'xlarge', padding: 'small', borderRadius: 'small' }}>
           <Inline css={{ font: 'caption', color: 'secondary' }}>
             {item.why_matters}
           </Inline>
