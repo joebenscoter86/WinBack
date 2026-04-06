@@ -26,6 +26,7 @@ export interface WinBackDispute {
   is_charge_refundable: boolean;
   metadata: Record<string, string>;
   checklist_state?: Record<string, boolean>;
+  checklist_notes?: Record<string, string>;
 }
 
 function flattenAddress(address: Stripe.Address | null | undefined): string | undefined {

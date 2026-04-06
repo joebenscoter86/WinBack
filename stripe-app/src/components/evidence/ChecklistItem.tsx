@@ -1,4 +1,4 @@
-import { Box, Checkbox, Badge, Inline, Link, Icon } from '@stripe/ui-extension-sdk/ui';
+import { Box, Checkbox, Badge, Inline, Link, Icon, TextArea } from '@stripe/ui-extension-sdk/ui';
 import type { EvidenceChecklistItem } from '../../lib/types';
 
 interface ChecklistItemProps {
@@ -6,8 +6,10 @@ interface ChecklistItemProps {
   checked: boolean;
   autoPopulated: boolean;
   expanded: boolean;
+  notes: string;
   onToggle: () => void;
   onExpandToggle: () => void;
+  onNotesChange: (value: string) => void;
 }
 
 function getCategoryBadge(category: EvidenceChecklistItem['category']) {
@@ -26,8 +28,10 @@ const ChecklistItem = ({
   checked,
   autoPopulated,
   expanded,
+  notes,
   onToggle,
   onExpandToggle,
+  onNotesChange,
 }: ChecklistItemProps) => {
   return (
     <Box css={{ stack: 'y', gap: 'xsmall', padding: 'small', borderRadius: 'medium' }}>
@@ -49,7 +53,7 @@ const ChecklistItem = ({
           <Link onPress={onExpandToggle}>
             <Box css={{ stack: 'x', gap: 'xxsmall', alignY: 'center' }}>
               <Inline css={{ font: 'caption', color: 'info' }}>
-                Why this matters
+                {expanded ? 'Hide details' : 'Why this matters'}
               </Inline>
               <Icon name={expanded ? 'chevronUp' : 'chevronDown'} size="xsmall" />
             </Box>
@@ -57,10 +61,19 @@ const ChecklistItem = ({
         </Box>
       </Box>
       {expanded && (
-        <Box css={{ marginLeft: 'xlarge', padding: 'small', borderRadius: 'small' }}>
-          <Inline css={{ font: 'caption', color: 'secondary' }}>
-            {item.why_matters}
-          </Inline>
+        <Box css={{ marginLeft: 'xlarge', stack: 'y', gap: 'small' }}>
+          <Box css={{ padding: 'small', borderRadius: 'small' }}>
+            <Inline css={{ font: 'caption', color: 'secondary' }}>
+              {item.why_matters}
+            </Inline>
+          </Box>
+          <TextArea
+            label="Your notes"
+            placeholder="e.g. tracking #, file name, where to find this..."
+            value={notes}
+            onChange={(e) => onNotesChange(e.target.value)}
+            rows={2}
+          />
         </Box>
       )}
     </Box>

@@ -15,6 +15,7 @@ interface EvidenceChecklistProps {
 }
 
 type ChecklistState = Record<string, boolean>;
+type NotesState = Record<string, string>;
 
 const CATEGORY_ORDER: EvidenceChecklistItem['category'][] = ['mandatory', 'recommended', 'situational'];
 
@@ -56,14 +57,11 @@ function buildInitialState(
 ): ChecklistState {
   const state: ChecklistState = {};
   for (const item of items) {
-    // Layer 1: default false
     state[item.item] = false;
-    // Layer 2: auto-populated
     if (isAutoPopulated(item, dispute)) {
       state[item.item] = true;
     }
   }
-  // Layer 3: saved state overrides
   if (dispute.checklist_state) {
     for (const [key, value] of Object.entries(dispute.checklist_state)) {
       if (key in state) {
@@ -79,24 +77,29 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
   const [checklistState, setChecklistState] = useState<ChecklistState>(() =>
     buildInitialState(items, dispute),
   );
+  const [notesState, setNotesState] = useState<NotesState>(
+    () => dispute.checklist_notes ?? {},
+  );
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [showFullChecklist, setShowFullChecklist] = useState(false);
 
-  // Ref for debounced save
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Refs for debounced saves
+  const checklistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notesTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contextRef = useRef(context);
   contextRef.current = context;
 
   // Rebuild state when dispute or playbook changes
   useEffect(() => {
     setChecklistState(buildInitialState(items, dispute));
-  }, [dispute.id, dispute.checklist_state, playbook?.reason_code]);
+    setNotesState(dispute.checklist_notes ?? {});
+  }, [dispute.id, dispute.checklist_state, dispute.checklist_notes, playbook?.reason_code]);
 
-  const persistState = useCallback((newState: ChecklistState) => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
+  const persistChecklist = useCallback((newState: ChecklistState) => {
+    if (checklistTimeoutRef.current) {
+      clearTimeout(checklistTimeoutRef.current);
     }
-    saveTimeoutRef.current = setTimeout(() => {
+    checklistTimeoutRef.current = setTimeout(() => {
       patchBackend(`/api/disputes/${dispute.id}`, contextRef.current, {
         checklist_state: newState,
       }).catch((err) => {
@@ -105,13 +108,34 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
     }, 500);
   }, [dispute.id]);
 
+  const persistNotes = useCallback((newNotes: NotesState) => {
+    if (notesTimeoutRef.current) {
+      clearTimeout(notesTimeoutRef.current);
+    }
+    notesTimeoutRef.current = setTimeout(() => {
+      patchBackend(`/api/disputes/${dispute.id}`, contextRef.current, {
+        checklist_notes: newNotes,
+      }).catch((err) => {
+        console.error('Failed to save checklist notes:', err);
+      });
+    }, 1000);
+  }, [dispute.id]);
+
   const handleToggle = useCallback((itemName: string) => {
     setChecklistState((prev) => {
       const newState = { ...prev, [itemName]: !prev[itemName] };
-      persistState(newState);
+      persistChecklist(newState);
       return newState;
     });
-  }, [persistState]);
+  }, [persistChecklist]);
+
+  const handleNotesChange = useCallback((itemName: string, value: string) => {
+    setNotesState((prev) => {
+      const newNotes = { ...prev, [itemName]: value };
+      persistNotes(newNotes);
+      return newNotes;
+    });
+  }, [persistNotes]);
 
   const handleExpandToggle = useCallback((itemName: string) => {
     setExpandedItems((prev) => {
@@ -160,6 +184,17 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
 
   return (
     <Box css={{ padding: 'medium', stack: 'y', gap: 'medium' }}>
+      <Box css={{ stack: 'y', gap: 'xsmall' }}>
+        <Inline css={{ font: 'subheading', fontWeight: 'semibold' }}>
+          Gather your evidence
+        </Inline>
+        <Inline css={{ font: 'body', color: 'secondary' }}>
+          Here's what you'll need to build your case. Don't let the list intimidate you.
+          Expand each item to see why it matters and jot down notes as you go.
+          On the next step, you'll put it all together.
+        </Inline>
+      </Box>
+
       <ChecklistProgress completed={completedItems} total={totalItems} />
 
       {isUrgent && (
@@ -191,8 +226,10 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
               checked={!!checklistState[item.item]}
               autoPopulated={isAutoPopulated(item, dispute)}
               expanded={expandedItems.has(item.item)}
+              notes={notesState[item.item] ?? ''}
               onToggle={() => handleToggle(item.item)}
               onExpandToggle={() => handleExpandToggle(item.item)}
+              onNotesChange={(value) => handleNotesChange(item.item, value)}
             />
           ))}
         </Box>
@@ -201,7 +238,7 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
       <Divider />
 
       <Inline css={{ font: 'caption', color: 'secondary' }}>
-        Check off items as you gather evidence. Your progress is saved automatically.
+        Your progress and notes are saved automatically.
       </Inline>
     </Box>
   );

@@ -61,18 +61,27 @@ export const PATCH = withStripeAuth(async (
   ensureMerchant(accountId, userId);
 
   const body = JSON.parse(await request.clone().text());
-  const { checklist_state } = body;
+  const { checklist_state, checklist_notes } = body;
 
-  if (!checklist_state || typeof checklist_state !== "object") {
+  // Build update payload from provided fields
+  const updatePayload: Record<string, unknown> = {};
+  if (checklist_state && typeof checklist_state === "object") {
+    updatePayload.checklist_state = checklist_state;
+  }
+  if (checklist_notes && typeof checklist_notes === "object") {
+    updatePayload.checklist_notes = checklist_notes;
+  }
+
+  if (Object.keys(updatePayload).length === 0) {
     return NextResponse.json(
-      { error: "Invalid checklist_state", code: "invalid_request" },
+      { error: "No valid fields to update", code: "invalid_request" },
       { status: 400 },
     );
   }
 
   const { data, error } = await supabase
     .from("disputes")
-    .update({ checklist_state })
+    .update(updatePayload)
     .eq("stripe_dispute_id", disputeId)
     .select()
     .single();
@@ -93,7 +102,7 @@ export const PATCH = withStripeAuth(async (
             merchant_id: merchant?.id,
             amount: 0,
             reason_code: "",
-            checklist_state,
+            ...updatePayload,
           },
           { onConflict: "stripe_dispute_id" },
         )
@@ -101,9 +110,9 @@ export const PATCH = withStripeAuth(async (
         .single();
 
       if (insertError) {
-        console.error("Failed to upsert dispute checklist state:", insertError);
+        console.error("Failed to upsert dispute checklist:", insertError);
         return NextResponse.json(
-          { error: "Failed to save checklist state", code: "db_error" },
+          { error: "Failed to save checklist", code: "db_error" },
           { status: 500 },
         );
       }
@@ -111,9 +120,9 @@ export const PATCH = withStripeAuth(async (
       return NextResponse.json({ data: inserted });
     }
 
-    console.error("Failed to update checklist state:", error);
+    console.error("Failed to update checklist:", error);
     return NextResponse.json(
-      { error: "Failed to save checklist state", code: "db_error" },
+      { error: "Failed to save checklist", code: "db_error" },
       { status: 500 },
     );
   }
