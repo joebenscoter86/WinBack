@@ -59,6 +59,7 @@ export interface EvidenceChecklistItem {
   context: string;
   required: boolean;
   why_matters: string;
+  where_to_find?: string;
   urgency_essential: boolean;
   urgency_order: number | null;
 }

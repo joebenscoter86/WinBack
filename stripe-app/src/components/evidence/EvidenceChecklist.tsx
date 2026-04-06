@@ -5,6 +5,7 @@ import type { Dispute, PlaybookData, EvidenceChecklistItem } from '../../lib/typ
 import { patchBackend } from '../../lib/apiClient';
 import ChecklistProgress from './ChecklistProgress';
 import ChecklistItem from './ChecklistItem';
+import type { ExpandedSection } from './ChecklistItem';
 
 interface EvidenceChecklistProps {
   dispute: Dispute;
@@ -80,7 +81,7 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
   const [notesState, setNotesState] = useState<NotesState>(
     () => dispute.checklist_notes ?? {},
   );
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [expandedSections, setExpandedSections] = useState<Map<string, Set<ExpandedSection>>>(new Map());
   const [showFullChecklist, setShowFullChecklist] = useState(false);
 
   // Refs for debounced saves
@@ -137,14 +138,16 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
     });
   }, [persistNotes]);
 
-  const handleExpandToggle = useCallback((itemName: string) => {
-    setExpandedItems((prev) => {
-      const next = new Set(prev);
-      if (next.has(itemName)) {
-        next.delete(itemName);
+  const handleSectionToggle = useCallback((itemName: string, section: ExpandedSection) => {
+    setExpandedSections((prev) => {
+      const next = new Map(prev);
+      const sections = new Set(prev.get(itemName) ?? []);
+      if (sections.has(section)) {
+        sections.delete(section);
       } else {
-        next.add(itemName);
+        sections.add(section);
       }
+      next.set(itemName, sections);
       return next;
     });
   }, []);
@@ -225,10 +228,10 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
               item={item}
               checked={!!checklistState[item.item]}
               autoPopulated={isAutoPopulated(item, dispute)}
-              expanded={expandedItems.has(item.item)}
+              expandedSections={expandedSections.get(item.item) ?? new Set()}
               notes={notesState[item.item] ?? ''}
               onToggle={() => handleToggle(item.item)}
-              onExpandToggle={() => handleExpandToggle(item.item)}
+              onSectionToggle={(section) => handleSectionToggle(item.item, section)}
               onNotesChange={(value) => handleNotesChange(item.item, value)}
             />
           ))}
