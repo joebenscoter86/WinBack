@@ -266,42 +266,39 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
     ],
   },
 
-  narrative_template: `The cardholder claims this transaction was unauthorized. Our records indicate this is a legitimate transaction by the cardholder based on the following:
+  narrative_template: `**Transaction Authentication**
+[The bank's first question: was this transaction properly verified? These results are auto-filled from Stripe.]
+3D Secure result: {{three_d_secure_result}} (auto-filled from Stripe)
+AVS address check: {{avs_address_check}} (auto-filled from Stripe)
+AVS zip check: {{avs_zip_check}} (auto-filled from Stripe)
+CVC check: {{cvc_check}} (auto-filled from Stripe)
+Authorization code: {{authorization_code}} (auto-filled from Stripe)
 
-**Transaction Details:**
-- Order date: [date]
-- Amount: [amount]
-- Order ID: [ID]
-- Items/services: [description]
+**Customer Identity Match**
+[The bank checks: does the person who made this purchase match the cardholder?]
+Customer name: [the name on the order]
+Customer email: [the email used at checkout]
+Billing address on file: [from your order details]
 
-**Authentication & Verification:**
-- Bank verification (3D Secure): [Authenticated / Not used]
-- Address verification result: [Match / Partial / No match]
-- Security code (CVV) result: [Match / No match]
-- IP Address: [IP] ([geographic location])
+**Delivery to Cardholder**
+[For physical goods: delivery to the billing address undermines a fraud claim. For digital goods: access logs show the customer used the product.]
+Tracking number: [from your shipping carrier -- e.g., 1Z999AA10123456784]
+Carrier: [e.g., UPS, FedEx, USPS]
+Delivery date: [date carrier shows "delivered"]
+Delivery address matches billing address: [Yes/No]
+[For digital goods instead: describe access logs -- IP address, timestamps, what was accessed]
 
-**Purchase History Proof (Visa Compelling Evidence 3.0):**
-[If applicable: The cardholder has made prior undisputed purchases from our store using the same payment credentials and device:]
+**Prior Transaction History**
+[If this customer has made previous undisputed purchases from your store, list them here. This is especially powerful for Visa's purchase history proof rule.]
+Prior purchase 1: [date] -- [amount] -- [status: no dispute]
+Prior purchase 2: [date] -- [amount] -- [status: no dispute]
+Matching data: [what matches across transactions -- IP address, device, shipping address, account ID]
 
-Transaction | Date | Amount | IP Address | Device ID | Status
-Disputed | [date] | [amt] | [IP] | [device] | Disputed
-Historical 1 | [date] | [amt] | [IP] | [device] | Undisputed
-Historical 2 | [date] | [amt] | [IP] | [device] | Undisputed
+**Customer Communication**
+[Any post-purchase engagement from the customer weakens the fraud claim.]
+[Describe: order confirmation emails opened, support tickets filed, chat messages, etc.]
 
-Both historical transactions are between 120-365 days before the disputed transaction, undisputed, and share matching IP address and [second element] with the disputed transaction.
-
-**Delivery:**
-- Shipped to: [address]
-- Tracking: [number]
-- Delivered: [date]
-- Address matches billing: [Yes/No]
-
-**Customer Account:**
-- Account created: [date]
-- Total prior orders: [count]
-- Account email: [email]
-
-Based on the authentication data, matching purchase history, and delivery to the cardholder's verified address, we believe this transaction was made by the cardholder. We respectfully request this dispute be resolved in our favor.`,
+Based on the authentication data and evidence above, this transaction was authorized by the cardholder. We respectfully request this dispute be resolved in our favor.`,
 
   response_deadline_days: 30,
   filing_window_days: 120,
