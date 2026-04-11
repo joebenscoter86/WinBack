@@ -66,6 +66,7 @@ const NarrativeReview = ({
         <AccordionItem
           title="AI Strategy & Reasoning"
           subtitle={`${annotations.length} section${annotations.length === 1 ? '' : 's'} analyzed`}
+          defaultOpen
         >
           <Box css={{ stack: 'y', gap: 'small' }}>
             {annotations.map((annotation, index) => (
@@ -116,7 +117,7 @@ const NarrativeReview = ({
       {showRegenConfirm && (
         <Banner
           type="caution"
-          title="Regenerating will replace your edits"
+          title="Regenerating will replace your edits. Continue?"
           actions={
             <Box css={{ stack: 'x', gap: 'small' }}>
               <Button type="destructive" onPress={handleConfirmRegenerate}>

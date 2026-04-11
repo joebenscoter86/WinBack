@@ -116,8 +116,9 @@ const NarrativePanel = ({
       setGenerationId(response.generation_id);
       setGenerationNumber((prev) => prev + 1);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 429) {
+      if (err instanceof ApiError && err.status === 429 && err.code === 'generation_limit') {
         setIsGenerationLimit(true);
+        setErrorMessage(err.message);
       } else if (err instanceof Error) {
         setErrorMessage(err.message);
       } else {

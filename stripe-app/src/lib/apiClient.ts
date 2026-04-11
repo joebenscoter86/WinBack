@@ -12,6 +12,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
+    public code?: string,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -48,8 +49,9 @@ export async function fetchBackend<T = unknown>(
       message: response.statusText,
     }));
     throw new ApiError(
-      error.message || `API error: ${response.status}`,
+      error.error || error.message || `API error: ${response.status}`,
       response.status,
+      error.code,
     );
   }
   return response.json() as Promise<T>;
@@ -84,8 +86,9 @@ export async function patchBackend<T = unknown>(
       message: response.statusText,
     }));
     throw new ApiError(
-      error.message || error.error || `API error: ${response.status}`,
+      error.error || error.message || `API error: ${response.status}`,
       response.status,
+      error.code,
     );
   }
   return response.json() as Promise<T>;
@@ -120,8 +123,9 @@ export async function deleteBackend<T = unknown>(
       message: response.statusText,
     }));
     throw new ApiError(
-      error.message || error.error || `API error: ${response.status}`,
+      error.error || error.message || `API error: ${response.status}`,
       response.status,
+      error.code,
     );
   }
   return response.json() as Promise<T>;
