@@ -1,4 +1,4 @@
-import { Box, Inline } from '@stripe/ui-extension-sdk/ui';
+import { Box, Badge, Inline } from '@stripe/ui-extension-sdk/ui';
 
 interface CoachHeaderProps {
   headline: string;
@@ -9,8 +9,9 @@ interface CoachHeaderProps {
 
 const CoachHeader = ({ headline, summary, urgencyMode, daysRemaining }: CoachHeaderProps) => {
   return (
-    <Box css={{ stack: 'y', gap: 'small' }}>
-      <Inline css={{ font: 'subheading', fontWeight: 'semibold' }}>
+    <Box css={{ stack: 'y', gap: 'small', backgroundColor: 'container', padding: 'medium', borderRadius: 'medium' }}>
+      <Badge type="info">AI Coach</Badge>
+      <Inline css={{ font: 'heading', fontWeight: 'semibold' }}>
         {headline}
       </Inline>
       <Inline css={{ font: 'body', color: 'secondary' }}>

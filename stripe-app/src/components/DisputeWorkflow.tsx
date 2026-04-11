@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   Banner,
-  Divider,
   FocusView,
   Inline,
   Spinner,
@@ -123,17 +122,13 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
     const isLoadingPlaybook = loading.playbook;
 
     return (
-      <Box css={{ padding: 'medium', stack: 'y', gap: 'medium' }}>
+      <Box css={{ padding: 'medium', stack: 'y', gap: 'large' }}>
         {isUrgent && playbook && <UrgencyBanner daysRemaining={daysRemaining} essentials={playbook.urgency_essentials} />}
 
         {errors.dispute && <ErrorBanner message={errors.dispute} />}
 
-        <DisputeOverview dispute={dispute} loading={loading.dispute} />
-
-        <Divider />
-
         {isLoadingPlaybook ? (
-          <Box css={{ alignX: 'center', padding: 'medium' }}>
+          <Box css={{ alignX: 'center', padding: 'medium', stack: 'y', gap: 'small' }}>
             <Spinner size="medium" />
             <Inline css={{ font: 'caption', color: 'secondary' }}>Loading playbook...</Inline>
           </Box>
@@ -148,16 +143,21 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
               daysRemaining={daysRemaining}
             />
             <QuickActions playbook={playbook} urgencyMode={isUrgent} />
-            <LearnMore
-              issuerSummary={playbook.coach_issuer_summary}
-              acquirerSummary={playbook.coach_acquirer_summary}
-            />
           </>
         ) : (
           <Banner
             type="default"
             title="No playbook available"
             description="We don't have a specific playbook for this reason code yet. Use the general evidence guidelines to build your response."
+          />
+        )}
+
+        <DisputeOverview dispute={dispute} loading={loading.dispute} />
+
+        {playbook && (
+          <LearnMore
+            issuerSummary={playbook.coach_issuer_summary}
+            acquirerSummary={playbook.coach_acquirer_summary}
           />
         )}
       </Box>
@@ -196,7 +196,7 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
         )
       }
     >
-      <Box css={{ padding: 'medium' }}>
+      <Box>
         <Tabs
           fitted
           size="medium"
