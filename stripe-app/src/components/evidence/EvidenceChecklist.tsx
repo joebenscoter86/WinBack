@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Box, Banner, Inline, Link, Divider } from '@stripe/ui-extension-sdk/ui';
 import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
-import type { Dispute, PlaybookData, EvidenceChecklistItem } from '../../lib/types';
-import { patchBackend } from '../../lib/apiClient';
+import type { Dispute, PlaybookData, EvidenceChecklistItem, EvidenceFile } from '../../lib/types';
+import { patchBackend, fetchBackend } from '../../lib/apiClient';
 import ChecklistProgress from './ChecklistProgress';
 import ChecklistItem from './ChecklistItem';
 import type { ExpandedSection } from './ChecklistItem';
@@ -82,6 +82,7 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
     () => dispute.checklist_notes ?? {},
   );
   const [expandedSections, setExpandedSections] = useState<Map<string, Set<ExpandedSection>>>(new Map());
+  const [filesState, setFilesState] = useState<Record<string, EvidenceFile | null>>({});
   const [showFullChecklist, setShowFullChecklist] = useState(false);
 
   // Refs for debounced saves
@@ -95,6 +96,26 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
     setChecklistState(buildInitialState(items, dispute));
     setNotesState(dispute.checklist_notes ?? {});
   }, [dispute.id, dispute.checklist_state, dispute.checklist_notes, playbook?.reason_code]);
+
+  // Fetch evidence files on mount / dispute change
+  useEffect(() => {
+    const fetchFiles = async () => {
+      try {
+        const result = await fetchBackend<{ data: EvidenceFile[] }>(
+          `/api/disputes/${dispute.id}/evidence-files`,
+          contextRef.current,
+        );
+        const fileMap: Record<string, EvidenceFile | null> = {};
+        for (const file of result.data) {
+          fileMap[file.checklist_item_key] = file;
+        }
+        setFilesState(fileMap);
+      } catch (err) {
+        console.error('Failed to fetch evidence files:', err);
+      }
+    };
+    fetchFiles();
+  }, [dispute.id]);
 
   const persistChecklist = useCallback((newState: ChecklistState) => {
     if (checklistTimeoutRef.current) {
@@ -137,6 +158,10 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
       return newNotes;
     });
   }, [persistNotes]);
+
+  const handleFileChange = useCallback((itemName: string, file: EvidenceFile | null) => {
+    setFilesState((prev) => ({ ...prev, [itemName]: file }));
+  }, []);
 
   const handleSectionToggle = useCallback((itemName: string, section: ExpandedSection) => {
     setExpandedSections((prev) => {
@@ -230,9 +255,13 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
               autoPopulated={isAutoPopulated(item, dispute)}
               expandedSections={expandedSections.get(item.item) ?? new Set()}
               notes={notesState[item.item] ?? ''}
+              existingFile={filesState[item.item] ?? null}
+              disputeId={dispute.id}
+              context={contextRef.current}
               onToggle={() => handleToggle(item.item)}
               onSectionToggle={(section) => handleSectionToggle(item.item, section)}
               onNotesChange={(value) => handleNotesChange(item.item, value)}
+              onFileChange={(file) => handleFileChange(item.item, file)}
             />
           ))}
         </Box>
