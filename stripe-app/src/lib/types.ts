@@ -83,3 +83,13 @@ export interface PlaybookData {
   narrative_template: string;
   response_deadline_days: number;
 }
+
+export interface EvidenceFile {
+  id: string;
+  stripe_file_id: string;
+  checklist_item_key: string;
+  file_name: string;
+  file_size: number;
+  mime_type: string;
+  uploaded_at: string;
+}

@@ -90,3 +90,37 @@ export async function patchBackend<T = unknown>(
   }
   return response.json() as Promise<T>;
 }
+
+/**
+ * Makes an authenticated DELETE request to the WinBack backend.
+ */
+export async function deleteBackend<T = unknown>(
+  path: string,
+  context: ExtensionContextValue,
+): Promise<T> {
+  const signature = await fetchStripeSignature();
+
+  const body = JSON.stringify({
+    user_id: context.userContext?.id,
+    account_id: context.userContext?.account.id,
+  });
+
+  const response = await fetch(`${BACKEND_URL}${path}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      'Stripe-Signature': signature,
+    },
+    body,
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({
+      message: response.statusText,
+    }));
+    throw new ApiError(
+      error.message || error.error || `API error: ${response.status}`,
+      response.status,
+    );
+  }
+  return response.json() as Promise<T>;
+}
