@@ -136,7 +136,7 @@ const FileUploadSection = ({
             onError={handleUploadError}
           />
           <Inline css={{ font: 'caption', color: 'secondary' }}>
-            PDF, PNG, JPG, GIF, CSV, or TXT. Max 10MB.
+            PDF, PNG, JPG, or GIF. Max 10MB.
           </Inline>
         </Box>
       )}
