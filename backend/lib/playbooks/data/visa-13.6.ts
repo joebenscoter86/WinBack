@@ -43,6 +43,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: true,
       why_matters:
         "Shows the refund was processed, the amount, and the date. This is usually sufficient to close the dispute on its own.",
+      where_to_find:
+        "Stripe Dashboard > Payments > click the original payment > look for the Refund section. Screenshot showing the refund date, amount, and status ('Succeeded'). This is usually the only thing you need to submit.",
       urgency_essential: true,
       urgency_order: 1,
     },
@@ -53,6 +55,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: true,
       why_matters:
         "The amount and timing must be traceable back to this specific transaction. An unmatched refund record won't satisfy the issuer.",
+      where_to_find:
+        "Same Stripe payment detail page as above. Make sure the refund amount matches the disputed amount and the refund is linked to this specific payment (not a different transaction). If you issued a partial refund, note the amount difference and why.",
       urgency_essential: true,
       urgency_order: 2,
     },
@@ -63,6 +67,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "If the refund has already posted, a processor screenshot showing the credit is conclusive. Removes any ambiguity about whether the funds reached the cardholder.",
+      where_to_find:
+        "Stripe Dashboard > Payments > click the payment > check if the refund status shows 'Succeeded' (meaning the credit has posted). If you process through a different gateway, check that processor's dashboard for the credit posting confirmation.",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -73,6 +79,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: true,
       why_matters:
         "Establishes whether a refund was owed at all and under what conditions. If the cardholder couldn't reasonably find your refund terms at checkout, the issuer won't enforce them in your favor.",
+      where_to_find:
+        "Screenshot your checkout page showing the return/refund policy link or text. Then screenshot the policy page itself. Shopify: Settings > Policies > Refund policy. If the policy is in your footer or a terms page, grab that too. The issuer needs to see the customer could have found it before buying.",
       urgency_essential: true,
       urgency_order: 2,
     },
@@ -83,6 +91,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: true,
       why_matters:
         "Photos or inspection records showing the returned item was not in acceptable condition per your policy. Without this, you cannot dispute a return condition claim.",
+      where_to_find:
+        "Check your phone's camera roll or warehouse documentation for photos taken when you received the returned item. If your team fills out inspection forms or checklists on returns, pull the record for this order. The photos should show the condition that caused you to deny the refund.",
       urgency_essential: true,
       urgency_order: 4,
     },
@@ -93,6 +103,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: true,
       why_matters:
         "Any documentation showing no return was initiated or received. If no return occurred, you have no obligation to issue a refund.",
+      where_to_find:
+        "Search your returns management system (Returnly, Loop Returns, or your platform's built-in returns), helpdesk, and email for any return requests from this customer. If you find nothing, document that search. Also check your shipping/receiving logs for any inbound packages from this customer.",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -103,6 +115,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "If you notified the customer the return was rejected and why, show that communication. Demonstrates you followed your policy and informed the cardholder.",
+      where_to_find:
+        "Search your helpdesk or email for the message where you told the customer their return was denied (or their refund was reduced). Include the reason you gave them. This shows you communicated the decision, not just made it silently.",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -113,6 +127,20 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "Establishes what the cardholder agreed to at time of purchase. Provides the baseline against which the return and refund obligation is evaluated.",
+      where_to_find:
+        "Check your email service provider (SendGrid, Postmark) for the order confirmation email sent to this customer. Alternatively, pull the order details from your e-commerce platform (Shopify Admin > Orders, WooCommerce > Orders). The confirmation should show what was purchased and any terms referenced at checkout.",
+      urgency_essential: false,
+      urgency_order: null,
+    },
+    {
+      item: "Cancellation policy disclosure (if the missing credit relates to a cancelled subscription)",
+      category: "recommended",
+      context: "all",
+      required: false,
+      why_matters:
+        "Stripe treats the refund/return policy and the proof of disclosure as two separate things. You need to show not just what your policy says, but how and when the customer was shown it. A clickwrap log or checkbox timestamp at checkout is ideal. Without disclosure proof, the issuer may not enforce your policy.",
+      where_to_find:
+        "Screenshot your checkout page showing where the cancellation/refund policy appears (checkbox, footer link, terms acceptance). If you log clickwrap acceptance (when the customer checked the 'I agree to terms' box), pull that record with its timestamp. For subscriptions, also check whether your signup flow showed the cancellation policy before the customer entered payment details.",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -123,6 +151,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "Email or chat showing the return discussion -- especially any acknowledgment from the cardholder. Any written refund promise you made is heavily weighted by the issuer.",
+      where_to_find:
+        "Search your helpdesk (Zendesk, Intercom, Freshdesk) and email (Gmail > search by customer name) for any conversations about a return or refund for this order. Pay special attention to any message where you or the customer discussed refund terms, timing, or conditions.",
       urgency_essential: true,
       urgency_order: 3,
     },
