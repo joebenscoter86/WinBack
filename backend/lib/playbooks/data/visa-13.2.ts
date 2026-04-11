@@ -239,30 +239,36 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
     ],
   },
 
-  narrative_template: `The customer claims this recurring transaction was processed after cancellation. Our records show the following:
+  narrative_template: `**Subscription Status**
+[The bank's main question: was the subscription active when this charge was processed?]
+Service/product: [name of your subscription product]
+Subscription start date: [when the customer signed up]
+Billing cycle: [monthly/annual/etc.]
+Disputed charge date: [date of the charge]
+Billing period covered: [start date] to [end date]
+Subscription status at time of charge: [Active/Cancelled -- if active, say so clearly]
 
-**Subscription Details:**
-- Service/product: [name]
-- Subscription start date: [date]
-- Billing cycle: [monthly/annual/etc.]
-- Amount: [amount per cycle]
+**Cancellation Policy**
+[The bank checks whether the customer agreed to your cancellation terms and followed the process.]
+Cancellation policy: [your policy -- e.g., "Cancel anytime, effective at end of current billing period"]
+How policy was shown: [e.g., "Displayed at checkout and in Terms of Service accepted on [date]"]
+Cancellation request received: [date, or "No cancellation request on file"]
+[If cancellation was received: Cancellation effective date: [date per your terms]]
 
-**Billing Timeline:**
-- Last billing date: [date of disputed charge]
-- Billing period covered: [start date] to [end date]
-- Cancellation requested: [date, or "No cancellation on file"]
-- Cancellation effective date: [date, per terms]
+**Post-Cancellation Usage**
+[If the customer continued using the service after they say they cancelled, this undermines their claim.]
+[Describe: login timestamps, features used, content accessed after the alleged cancellation date]
 
-**Evidence of Valid Charge:**
-[Choose applicable]:
-- The cancellation was received on [date], which is after the billing date of [date]. Per our terms, the charge covers the billing period that was already in progress.
-- Our records show no cancellation request was received prior to this charge. [Include screenshots of cancellation policy and account status]
-- The customer continued to use the service during this billing period. [Include usage logs]
+**Customer Communication**
+[Any correspondence about the subscription, billing, or cancellation.]
+[Describe: emails exchanged, support tickets, cancellation confirmations sent]
 
-**Terms of Service:**
-Per the terms accepted at signup on [date], cancellations take effect at the end of the current billing period. The disputed charge covers services through [end date].
+**Refund Policy**
+[Reference your billing terms. If a refund was already issued, state the details.]
+Refund issued: {{refunds}} (auto-filled from Stripe if applicable)
+[If no refund: explain why per your terms]
 
-We respectfully request this dispute be resolved in our favor.`,
+Based on the evidence above, the subscription was active and the charge was valid. We respectfully request this dispute be resolved in our favor.`,
 
   response_deadline_days: 30,
   filing_window_days: 120,

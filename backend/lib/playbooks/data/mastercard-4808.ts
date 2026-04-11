@@ -221,35 +221,41 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
     ],
   },
 
-  narrative_template: `We are responding to dispute reason code 4808 (Authorization-Related Dispute).
+  narrative_template: `**Authorization Confirmation**
+[The bank's main question: was a valid authorization obtained for this transaction?]
+Authorization code: {{authorization_code}} (auto-filled from Stripe)
+Network status: {{network_status}} (auto-filled from Stripe)
+Transaction date: [date]
+Amount authorized: [amount]
+Amount charged: [amount]
 
-**Transaction Details:**
-- Transaction date: [date]
-- Date charge was finalized: [date]
-- Amount authorized: [amount]
-- Amount charged: [amount]
-- Transaction approval number: [code]
+**Transaction Authentication**
+[Security verification results from the payment network.]
+AVS address check: {{avs_address_check}} (auto-filled from Stripe)
+AVS zip check: {{avs_zip_check}} (auto-filled from Stripe)
+CVC check: {{cvc_check}} (auto-filled from Stripe)
+3D Secure: {{three_d_secure_result}} (auto-filled from Stripe)
 
-**Authorization Record:**
-A valid authorization was obtained on [date] at [time] for [amount].
-Transaction approval number: [code].
-[Attach: authorization record from processor]
+**Transaction Details**
+[The bank checks that the final charge matches what was authorized.]
+Transaction date: [date]
+Authorized amount: [amount]
+Final charge amount: [amount]
+[If amounts match: "The final charge matches the authorized amount."]
+[If amounts differ due to currency conversion: "The difference of [amount] ([X]%) is within Mastercard's 10% currency conversion allowance."]
+[If tip adjustment: "The tip of [amount] was added by the customer. This is within Mastercard's 20% restaurant tip allowance."]
 
-[If amounts differ due to currency conversion:]
-**Currency Conversion Note:**
-The difference between the authorized amount ([auth amount]) and the final charge amount ([charged amount]) is [difference], representing [X]% of the authorized amount. This is within Mastercard's 10% currency conversion allowance (Mastercard allows up to 10% difference when amounts are converted between currencies) and does not qualify as grounds for a 4808 dispute.
+**Customer Identity**
+[Ties the transaction to the cardholder.]
+Customer name: [name on the order]
+Customer email: [email used at checkout]
+Billing address: [address on file]
 
-[If tip adjustment:]
-**Tip Authorization:**
-This transaction included a tip of [amount], added by the customer at the point of interaction. Restaurant tip adjustments up to 20% of the pre-tip authorization are permitted under Mastercard rules.
-[Attach: signed receipt with tip line]
+**Supporting Documentation**
+[Any additional records that corroborate the authorization.]
+[Describe: receipts, order confirmations, processor transaction logs]
 
-[If a renewed authorization was obtained:]
-**Renewed Authorization:**
-The original authorization was obtained on [date]. A renewed authorization was obtained on [date] (transaction approval number: [code]) prior to the final charge on [date].
-[Attach: renewed authorization record]
-
-The final charge falls within the valid authorization window and matches the authorized amount. We respectfully request this dispute be resolved in our favor.`,
+The transaction was properly authorized and the final charge matches the authorization. We respectfully request this dispute be resolved in our favor.`,
 
   response_deadline_days: 45,
   filing_window_days: 90,

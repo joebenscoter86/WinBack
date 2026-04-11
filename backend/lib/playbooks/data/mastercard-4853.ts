@@ -272,41 +272,37 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
     ],
   },
 
-  narrative_template: `The cardholder claims the merchandise/service did not match the description provided at the time of purchase. We respectfully dispute this claim based on the following evidence:
+  narrative_template: `**Product/Service Description**
+[The bank checks: did the merchandise match the description at time of purchase?]
+Product listed as: [exact description from your product page, catalog, or order confirmation]
+What was delivered: [describe what the customer actually received]
+Supporting documentation: [reference product listing screenshots, photos of actual item, quality control records]
 
-**Transaction Details:**
-- Order placed: [date]
-- Items ordered: [description]
-- Order total: [amount]
-- Delivery address: [address]
+**Customer Communication**
+[Mastercard requires the cardholder to attempt merchant resolution before filing. If they didn't, say so.]
+Customer contacted us: [Yes on [date] / No -- no pre-dispute contact received]
+[If yes: describe the issue raised, your response, and the outcome]
+[If no: "The cardholder did not contact us before filing this dispute. Mastercard requires the cardholder to attempt resolution with the merchant first. This is a procedural defect in the filing."]
 
-**Product/Service Description:**
-The item/service was listed as: [exact description from listing]
-[Attach: screenshot of product listing at time of purchase]
+**Return/Refund Policy**
+[The bank checks whether the customer had a path to resolve this.]
+Return policy: [your policy]
+How displayed: [e.g., "Shown at checkout, included in order confirmation, accepted in Terms of Service"]
+Return attempted: [Yes/No]
+[If refund denied: explain why]
 
-**What Was Delivered:**
-- Shipped: [date]
-- Carrier: [carrier name]
-- Tracking: [number]
-- Delivery confirmed: [date]
-[Attach: photos of item before shipment, packing documentation]
+**Delivery and Condition**
+[Delivery confirmation and condition at time of shipment.]
+Tracking number: [from your carrier]
+Delivery confirmed: [date]
+Pre-shipment photos: [describe if available -- timestamped packing photos, QC records]
 
-**Customer Communication:**
-[If customer contacted merchant:]
-The cardholder contacted us on [date] regarding [issue]. We responded on [date] and offered [resolution -- replacement, return, or refund].
-[Describe outcome of communication]
+**Dispute Rebuttal**
+[Your specific response to the customer's claim.]
+[Address the exact complaint and explain why the product/service matched its description]
+[If the customer did not attempt a return, note this]
 
-[If customer did NOT contact merchant:]
-Our records show no communication from the cardholder regarding any issue with this order prior to the dispute filing. The cardholder did not attempt to resolve this matter with us directly, as required by Mastercard dispute guidelines.
-
-**Return Policy:**
-Our return policy, displayed at checkout and included in the order confirmation email, allows returns within [X] days for any reason. The cardholder did not initiate a return.
-[Attach: screenshot of return policy]
-
-**Additional Context:**
-[Prior purchase history, quality control records, or other supporting evidence]
-
-Based on the evidence provided, the merchandise/service delivered matched the description provided at the time of purchase. The cardholder had access to our return process but did not utilize it. We respectfully request this dispute be resolved in our favor.`,
+Based on the evidence above, the product/service matched its description. We respectfully request this dispute be resolved in our favor.`,
 
   response_deadline_days: 45,
   filing_window_days: 120,

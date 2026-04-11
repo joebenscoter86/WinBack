@@ -237,25 +237,39 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
     ],
   },
 
-  narrative_template: `The cardholder claims merchandise/services were not received. However, our records confirm delivery was completed as follows:
+  narrative_template: `**Delivery Confirmation**
+[The bank needs carrier proof that the order was delivered. This is the single most important piece of evidence for this dispute type.]
+Tracking number: [from your carrier -- e.g., 1Z999AA10123456784]
+Carrier: [e.g., UPS, FedEx, USPS]
+Delivery date: [the date carrier shows "delivered"]
+Delivery status: [e.g., "Delivered, left at front door"]
+[For orders over $100: Signed by: [name from signature confirmation]]
 
-**Order Details:**
-- Order placed: [date]
-- Items ordered: [description]
-- Shipping address: [address]
-- Shipping method: [carrier + service level]
+**Address Verification**
+[The bank checks that you shipped to the address the customer gave you.]
+Shipping address on order: [from your order details page]
+Delivery address confirmed by carrier: [from tracking page]
+AVS result: {{avs_address_check}} (auto-filled from Stripe)
+ZIP match: {{avs_zip_check}} (auto-filled from Stripe)
 
-**Delivery Confirmation:**
-- Tracking number: [number]
-- Carrier: [carrier name]
-- Delivery date: [date]
-- Delivery status: [status from carrier]
-[If signed: Signed by: [name]]
+**Digital Access Proof**
+[For digital goods only -- skip this section for physical goods.]
+[The bank needs proof the customer accessed or downloaded the product.]
+Access log timestamps: [dates and times the customer logged in or downloaded]
+IP address: [the IP address used to access the product]
+What was accessed: [describe what the customer did -- downloaded files, used features, etc.]
+Email delivery confirmation: [date the license key or download link was sent]
 
-**Additional Context:**
-[Any relevant customer communications, access logs for digital goods, or other supporting evidence]
+**Service Completion**
+[For services only -- skip this section for physical goods.]
+Service performed on: [date]
+Service documentation: [describe what was delivered -- reports, work product, etc.]
 
-Based on the carrier confirmation, the merchandise was delivered to the address provided by the cardholder on [date]. We respectfully request this dispute be resolved in our favor.`,
+**Customer Communication**
+[Any communication where the customer acknowledged receiving the item is especially valuable.]
+[Describe: delivery notification emails sent, tracking shared, customer responses, etc.]
+
+Based on the delivery confirmation and evidence above, the merchandise/service was delivered as ordered. We respectfully request this dispute be resolved in our favor.`,
 
   response_deadline_days: 30,
   filing_window_days: 120,

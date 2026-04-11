@@ -222,31 +222,37 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
     ],
   },
 
-  narrative_template: `We are responding to a Credit Not Processed dispute (Visa 13.6).
+  narrative_template: `**Refund Status**
+[If you already issued a refund, lead with this -- it's the strongest and simplest defense.]
+Refund issued: {{refunds}} (auto-filled from Stripe if applicable)
+Refund amount: [amount refunded]
+Refund date: [date processed]
+[Note: Refunds may take 5-10 business days to appear on the cardholder's statement.]
+[If no refund was issued, skip this section and explain why below.]
 
-[If refund was already issued:]
-**Refund Already Processed:**
-A refund of [amount] was processed on [date] to the cardholder's account.
-Refund confirmation ID: [ID]
-[Attach: refund transaction record from processor]
+**Refund/Return Policy**
+[The bank checks whether the customer agreed to your refund terms.]
+Return/refund policy: [your policy -- e.g., "Full refund within 30 days if item returned in original condition"]
+How displayed: [e.g., "Shown at checkout, included in order confirmation email"]
 
-Please note that refunds may take 5-10 business days to appear on the cardholder's statement depending on their bank's processing timeline. We respectfully request this dispute be withdrawn.
+**Refund Denial Reason**
+[If you did not issue a refund, explain why.]
+Reason: [e.g., "Return not received", "Return window expired", "Item returned in damaged condition"]
+Documentation: [reference inspection photos, return tracking, or policy terms]
 
-[If disputing that a refund is owed:]
-**Return/Refund Policy:**
-Our return policy, accepted at checkout on [date], states: [policy terms].
-[Attach: screenshot of return policy at checkout]
+**Customer Communication**
+[Any correspondence about the refund request.]
+Customer requested refund on: [date]
+Your response: [what you communicated and when]
+Outcome: [what happened]
 
-**Return Status:**
-[Choose applicable:]
-- No return was received from the cardholder as of [date]. Our return policy requires merchandise to be returned before a refund is issued.
-- A return was received on [date]. Upon inspection, the merchandise was found to be [condition -- damaged / used / missing components], which does not meet the condition required for a refund under our stated policy.
-  [Attach: photos of returned merchandise, return inspection record]
+**Transaction Context**
+[Brief context about the original purchase.]
+Order date: [date]
+Items/services: [description]
+Order total: [amount]
 
-**Customer Communication:**
-[Summary of any communications regarding the return/refund, including any notifications sent to the cardholder about the return status]
-
-Based on the above, [a refund is not owed under our stated return policy / the refund has already been issued]. We respectfully request this dispute be resolved in our favor.`,
+Based on the evidence above, [the refund was already processed / the refund is not owed under our stated policy]. We respectfully request this dispute be resolved in our favor.`,
 
   response_deadline_days: 30,
   filing_window_days: 120,
