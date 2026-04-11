@@ -211,7 +211,6 @@ describe("POST /api/disputes/[disputeId]/evidence-files", () => {
 
     expect(res.status).toBe(400);
     expect(json.code).toBe("invalid_request");
-    expect(ensureMerchant).not.toHaveBeenCalled();
   });
 });
 

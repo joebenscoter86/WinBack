@@ -73,14 +73,43 @@ export const POST = withStripeAuth(async (
   }
   const { checklist_item_key, stripe_file_id, file_name, file_size, mime_type } = body;
 
+  ensureMerchant(accountId, userId);
+
+  // If no file fields provided, treat as a list request
+  if (!checklist_item_key && !stripe_file_id && !file_name) {
+    const { data: dispute, error: disputeError } = await supabase
+      .from("disputes")
+      .select("id")
+      .eq("stripe_dispute_id", disputeId)
+      .single();
+
+    if (disputeError || !dispute) {
+      return NextResponse.json({ data: [] });
+    }
+
+    const { data: files, error: filesError } = await supabase
+      .from("evidence_files")
+      .select("id, dispute_id, checklist_item_key, stripe_file_id, file_name, file_size, mime_type, uploaded_at")
+      .eq("dispute_id", dispute.id);
+
+    if (filesError) {
+      console.error("Failed to fetch evidence files:", filesError);
+      return NextResponse.json(
+        { error: "Failed to fetch evidence files", code: "db_error" },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({ data: files ?? [] });
+  }
+
+  // Otherwise, this is an upsert -- validate required fields
   if (!checklist_item_key || !stripe_file_id || !file_name) {
     return NextResponse.json(
       { error: "Missing required fields: checklist_item_key, stripe_file_id, file_name", code: "invalid_request" },
       { status: 400 },
     );
   }
-
-  ensureMerchant(accountId, userId);
 
   // Look up or create the dispute row
   let disputeRow: { id: string } | null = null;
