@@ -11,7 +11,7 @@ import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 import DisputeWorkflow from '../components/DisputeWorkflow';
 import { fetchBackend, ApiError } from '../lib/apiClient';
 import type { Dispute } from '../lib/types';
-import { getStatusBadge } from '../lib/utils';
+import { getStatusBadge, getReasonCodeLabel } from '../lib/utils';
 
 type ViewState = 'loading' | 'no_dispute' | 'error' | 'ready';
 
@@ -77,6 +77,7 @@ const PaymentDisputeView = (context: ExtensionContextValue) => {
   }
 
   const statusBadge = getStatusBadge(dispute.status);
+  const reasonLabel = getReasonCodeLabel(dispute.network, dispute.reason_code);
 
   return (
     <ContextView title="WinBack">
@@ -96,13 +97,13 @@ const PaymentDisputeView = (context: ExtensionContextValue) => {
         </Box>
 
         <Box css={{ stack: 'y', gap: 'xsmall' }}>
-          <Inline css={{ font: 'body' }}>
+          <Inline css={{ font: 'body', fontWeight: 'semibold' }}>
+            {reasonLabel ?? dispute.reason.replace(/_/g, ' ')}
+          </Inline>
+          <Inline css={{ font: 'caption', color: 'secondary' }}>
             {dispute.network.charAt(0).toUpperCase() +
               dispute.network.slice(1)}{' '}
             {dispute.reason_code}
-          </Inline>
-          <Inline css={{ font: 'caption', color: 'secondary' }}>
-            {dispute.reason.replace(/_/g, ' ')}
           </Inline>
         </Box>
 

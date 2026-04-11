@@ -1,4 +1,18 @@
-import type { DisputeStatus } from './types';
+import type { CardNetwork, DisputeStatus } from './types';
+
+const REASON_CODE_LABELS: Record<string, string> = {
+  'visa:10.4': 'Fraud -- Card Not Present',
+  'visa:13.1': 'Merchandise / Services Not Received',
+  'visa:13.2': 'Cancelled Recurring Transaction',
+  'visa:13.3': 'Not as Described or Defective',
+  'visa:13.6': 'Credit Not Processed',
+  'mastercard:4808': 'Authorization-Related Dispute',
+  'mastercard:4853': 'Not as Described / Defective',
+};
+
+export function getReasonCodeLabel(network: CardNetwork, reasonCode: string): string | null {
+  return REASON_CODE_LABELS[`${network}:${reasonCode}`] ?? null;
+}
 
 const RESOLVED_STATUSES: DisputeStatus[] = ['won', 'lost', 'warning_closed', 'charge_refunded'];
 

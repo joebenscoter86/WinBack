@@ -1,6 +1,6 @@
 import { Box, Badge, Button, Inline } from '@stripe/ui-extension-sdk/ui';
 import type { Dispute } from '../lib/types';
-import { getStatusBadge, getUrgencyBadge } from '../lib/utils';
+import { getStatusBadge, getUrgencyBadge, getReasonCodeLabel } from '../lib/utils';
 
 interface DisputeCardProps {
   dispute: Dispute;
@@ -17,6 +17,7 @@ function formatAmount(amount: number, currency: string): string {
 const DisputeCard = ({ dispute, onSelect }: DisputeCardProps) => {
   const statusBadge = getStatusBadge(dispute.status);
   const urgencyBadge = getUrgencyBadge(dispute.due_by, dispute.status);
+  const reasonLabel = getReasonCodeLabel(dispute.network, dispute.reason_code);
 
   return (
     <Button
@@ -46,6 +47,11 @@ const DisputeCard = ({ dispute, onSelect }: DisputeCardProps) => {
         <Inline css={{ font: 'caption' }}>
           {dispute.customer_name || 'Unknown customer'}
         </Inline>
+        {reasonLabel && (
+          <Inline css={{ font: 'caption', color: 'secondary' }}>
+            {reasonLabel}
+          </Inline>
+        )}
         <Box css={{ stack: 'x', gap: 'small' }}>
           <Inline css={{ font: 'caption', color: 'secondary' }}>
             {dispute.network.charAt(0).toUpperCase() + dispute.network.slice(1)} {dispute.reason_code}

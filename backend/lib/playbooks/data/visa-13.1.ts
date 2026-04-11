@@ -15,27 +15,27 @@ export const visa131: PlaybookData = {
   coach_issuer_summary:
     "The bank checks: Was there a confirmed delivery date? Does tracking show it was delivered? Was it delivered to the correct address (the one on the order, not a random location)? For digital products, can you prove the customer accessed or downloaded it?",
   coach_acquirer_summary:
-    "Your response goes through a compliance check before the bank sees it. For this dispute type, delivery proof is non-negotiable. Without a tracking number or access log, your response will likely be rejected before the bank even reviews it.",
+    "Your dispute response goes through a compliance check at your payment processor before the bank sees it. For this dispute type, delivery proof is non-negotiable. Without a tracking number or access log, your response will likely be rejected before the bank even reviews it.",
 
-  issuer_evaluation: `The issuer evaluates Visa 13.1 disputes using the following criteria:
+  issuer_evaluation: `The customer's bank evaluates Visa 13.1 disputes using the following criteria:
 
 1. Was there an agreed delivery date? If yes, did the merchant meet it?
 2. Is there carrier confirmation of delivery? Tracking number, delivery scan, signature.
 3. Did the cardholder attempt to resolve with the merchant first? (Required before filing.)
-4. Filing window compliance: 120 calendar days from transaction date or expected delivery date (max 540 days from transaction).
+4. Deadline compliance: The customer had 120 calendar days from the transaction date or expected delivery date to open this dispute (max 540 days from transaction).
 5. For late delivery: Did the cardholder wait at least 10 days after expected delivery before filing?
 6. If no delivery date specified: At least 15 calendar days must pass before the cardholder can file.
 
-The issuer is primarily looking for proof of delivery to the correct address. If you have it, you win. If you don't, the evidence burden shifts heavily in the cardholder's favor.`,
+The bank is primarily looking for proof of delivery to the correct address. If you have it, you win. If you don't, the evidence burden shifts heavily in the cardholder's favor.`,
 
-  acquirer_prereview: `Before your evidence reaches the issuing bank, it passes through your acquirer first. The acquirer reviews the package for completeness and formatting compliance with network rules. If your submission is incomplete or doesn't address the assigned reason code, it gets bounced before the issuer ever sees it. Merchants are rarely notified clearly when this happens -- the submission just fails.
+  acquirer_prereview: `Before your evidence reaches the customer's bank, it passes through your payment processor first. Your processor reviews the package for completeness and formatting compliance with network rules. If your submission is incomplete or doesn't address the assigned reason code, it gets bounced before the bank ever sees it. Merchants are rarely notified clearly when this happens -- the submission just fails.
 
 This means:
 - Your package must directly address reason code 13.1 (Merchandise/Services Not Received) -- generic transaction records won't clear pre-review.
 - All required documents (see checklist below) must be present.
-- Your acquirer may impose an internal deadline shorter than Visa's 30-day window.
+- Your processor may impose an internal deadline shorter than Visa's 30-day window.
 
-Getting bounced at the acquirer stage is an automatic loss with no second chance. The checklist below tells you exactly what both the acquirer and issuer need to see.`,
+Getting bounced at the processor stage is an automatic loss with no second chance. The checklist below tells you exactly what both your processor and the customer's bank need to see.`,
 
   evidence_checklist: [
     {
@@ -80,7 +80,7 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       context: "physical_goods",
       required: false,
       why_matters:
-        "Establishes the timeline the bank will evaluate against. Without this, the issuer has no reference for whether delivery was timely.",
+        "Establishes the timeline the bank will evaluate against. Without this, the bank has no reference for whether delivery was timely.",
       where_to_find:
         "Check your order confirmation email (search your sent folder for the order number) or your e-commerce platform's order details page. Shopify: Orders > click order > look for 'Estimated delivery'. If you quoted a delivery window on your product page or at checkout, screenshot that too.",
       urgency_essential: true,
@@ -92,7 +92,7 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       context: "physical_goods",
       required: false,
       why_matters:
-        "Shows exactly what was ordered and how it was shipped. Gives the issuer a complete picture of the transaction.",
+        "Shows exactly what was ordered and how it was shipped. Gives the bank a complete picture of the transaction.",
       where_to_find:
         "Your e-commerce platform's order page. Shopify: Admin > Orders > click the order. WooCommerce: Orders > click the order. Screenshot the section showing line items, quantities, and shipping method selected.",
       urgency_essential: false,
