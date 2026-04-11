@@ -82,7 +82,7 @@ import { StripeFileUploader } from '@stripe/ui-extension-sdk/ui';
 />
 ```
 
-Accepted file types and 10MB limit are enforced by the Stripe Files API and the storage bucket config. Supported types: PDF, PNG, JPG, JPEG, GIF, CSV, TXT.
+Accepted file types and 10MB limit are enforced by the Stripe Files API. Confirmed working: PDF, PNG, JPG, JPEG. Stripe rejects TXT for `dispute_evidence` purpose (and likely CSV). GIF untested but listed in Stripe's bucket config.
 
 ### Changes to `ChecklistItem`
 
@@ -115,7 +115,7 @@ export interface EvidenceFile {
 
 ### Changes to `apiClient.ts`
 
-Add a `deleteBackend` helper following the same pattern as `fetchBackend` and `patchBackend`, for the file removal endpoint.
+Add a `deleteBackend` helper that sends a POST (not DELETE) to the removal endpoint. Uses POST because Stripe App signature verification requires a body, and some proxies strip DELETE bodies.
 
 ## Backend
 
@@ -135,12 +135,12 @@ Location: `backend/app/api/disputes/[disputeId]/evidence-files/route.ts`
 - If dispute row doesn't exist yet, create it (same pattern as the PATCH route's upsert)
 - Return `{ data: EvidenceFile }`
 
-**DELETE** -- Remove evidence file association
+**POST (remove)** -- Remove evidence file association
 
 Location: `backend/app/api/disputes/[disputeId]/evidence-files/[fileId]/route.ts`
 
-- Delete the `evidence_files` record by ID
-- Verify the file belongs to a dispute owned by the authenticated merchant
+- Uses POST (not DELETE) because Stripe App signature verification requires a body
+- Delete the `evidence_files` record by ID, verify row was removed (404 if not found)
 - Does NOT delete the file from Stripe (Files API doesn't support deletion)
 - Return `{ success: true }`
 
@@ -185,6 +185,36 @@ Backend routes use `stripe_file_id` for all reads/writes. The `file_path` column
 - **File preview/thumbnails** -- not needed; filename + size + type badge is sufficient
 - **Drag-and-drop** -- SDK doesn't support it; `StripeFileUploader` opens a native file picker
 - **Multi-file per checklist item** -- deferred; can be added later if merchants request it
+
+## Implementation Learnings
+
+Discoveries from building and smoke-testing WIN-16 that future work should account for:
+
+### All routes must use POST (not GET or DELETE)
+
+The Stripe Apps SDK authenticates via `fetchStripeSignature()`, which produces a signature over a JSON body containing `user_id` and `account_id`. The `withStripeAuth` middleware consumes `request.text()` to verify this signature. This means:
+
+1. **No GET requests from the frontend.** `fetchBackend` always sends POST with a signed body. The backend handles "list" vs "upsert" by checking whether file fields are present in the body.
+2. **No DELETE requests.** Some proxies/CDNs strip bodies from DELETE requests, and the Stripe iframe context can have issues with DELETE method bodies. All "delete" operations use POST to a `/[fileId]` sub-route instead.
+3. **Never re-read `request.text()` in a handler.** `withStripeAuth` already consumed the body stream. Use the `body` object from `{ identity, body }` that the middleware passes through. Re-reading via `request.clone().text()` returns empty and causes silent 400 errors.
+
+### Stripe Files API accepted types for dispute_evidence
+
+Stripe's documentation is vague on which MIME types are accepted for `purpose: 'dispute_evidence'`. Through testing:
+
+- **Confirmed working:** PDF, PNG, JPG/JPEG
+- **Rejected:** TXT (plain text files)
+- **Untested:** GIF, CSV, WEBP
+
+The `StripeFileUploader` component does not pre-filter by file type. Rejection happens server-side after upload, surfaced via the `onError` callback. The helper text in `FileUploadSection` lists only confirmed types.
+
+### StripeFileUploader exists but is undocumented
+
+The SDK constraints research initially said "No native file upload component." This was wrong. `StripeFileUploader` is exported from `@stripe/ui-extension-sdk/ui` with full TypeScript types (found at `ui/index.d.ts:1375`). It handles the native file picker, multipart upload to Stripe, and returns the complete File object. The component is not mentioned in Stripe's public SDK documentation or component gallery, only discoverable via the type definitions.
+
+### Replace/remove UX with orphaned Stripe files
+
+When a merchant replaces a file, the old Stripe File object (`file_xxx`) becomes orphaned. Stripe's Files API has no delete endpoint. Stripe manages cleanup of unused files on their end. Our `evidence_files` table only ever has one record per `(dispute_id, checklist_item_key)` due to the unique constraint and upsert semantics, so the DB stays clean.
 
 ## Competitive Context
 
