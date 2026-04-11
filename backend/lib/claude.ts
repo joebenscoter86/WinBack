@@ -57,13 +57,49 @@ export async function generateNarrative(
   // Strip markdown code fences if Claude wraps the JSON in ```json ... ```
   rawText = rawText.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "");
 
+  // Trim any trailing whitespace or incomplete trailing content after the JSON
+  rawText = rawText.trim();
+
   let parsed: unknown;
   try {
     parsed = JSON.parse(rawText);
   } catch {
-    throw new Error(
-      `Invalid JSON in Claude response: ${rawText.slice(0, 200)}`,
+    // Retry once: ask Claude to fix its own JSON
+    const fixResponse = await anthropic.messages.create(
+      {
+        model: "claude-sonnet-4-6",
+        max_tokens: 4096,
+        messages: [
+          { role: "user", content: prompt.user },
+          { role: "assistant", content: rawText },
+          {
+            role: "user",
+            content:
+              "Your previous response was not valid JSON. Return the SAME content as valid JSON. No code fences, no explanation, just the raw JSON object.",
+          },
+        ],
+      },
+      { timeout: 60_000 },
     );
+
+    const fixBlock = fixResponse.content.find((b: any) => b.type === "text");
+    if (fixBlock && fixBlock.type === "text") {
+      let fixText = fixBlock.text
+        .replace(/^```(?:json)?\s*\n?/i, "")
+        .replace(/\n?```\s*$/i, "")
+        .trim();
+      try {
+        parsed = JSON.parse(fixText);
+      } catch {
+        throw new Error(
+          `Invalid JSON in Claude response after retry (${rawText.length} chars). First 500: ${rawText.slice(0, 500)}`,
+        );
+      }
+    } else {
+      throw new Error(
+        `Invalid JSON in Claude response (${rawText.length} chars). First 500: ${rawText.slice(0, 500)}`,
+      );
+    }
   }
 
   if (
