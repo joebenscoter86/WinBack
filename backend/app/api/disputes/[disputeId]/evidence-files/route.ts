@@ -49,7 +49,7 @@ export const GET = withStripeAuth(async (
 
 export const POST = withStripeAuth(async (
   request: NextRequest,
-  { identity },
+  { identity, body },
 ) => {
   const { accountId, userId } = identity;
   const segments = request.nextUrl.pathname.split("/");
@@ -62,16 +62,13 @@ export const POST = withStripeAuth(async (
     );
   }
 
-  let body: Record<string, unknown>;
-  try {
-    body = JSON.parse(await request.clone().text());
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON body", code: "invalid_request" },
-      { status: 400 },
-    );
-  }
-  const { checklist_item_key, stripe_file_id, file_name, file_size, mime_type } = body;
+  const { checklist_item_key, stripe_file_id, file_name, file_size, mime_type } = body as {
+    checklist_item_key?: string;
+    stripe_file_id?: string;
+    file_name?: string;
+    file_size?: number;
+    mime_type?: string;
+  };
 
   ensureMerchant(accountId, userId);
 
