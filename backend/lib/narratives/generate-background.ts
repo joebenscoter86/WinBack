@@ -19,14 +19,21 @@ export interface BackgroundGenerationParams {
 // ---------------------------------------------------------------------------
 
 async function markFailed(generationId: string, errorMessage: string): Promise<void> {
-  await supabase
-    .from("narrative_generations")
-    .update({
-      status: "failed",
-      error_message: errorMessage,
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", generationId);
+  try {
+    await supabase
+      .from("narrative_generations")
+      .update({
+        status: "failed",
+        error_message: errorMessage,
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", generationId);
+  } catch (err) {
+    console.error(
+      `[generate-background] Failed to mark generation ${generationId} as failed:`,
+      err,
+    );
+  }
 }
 
 function classifyError(message: string): string {
