@@ -24,7 +24,7 @@ async function markFailed(generationId: string, errorMessage: string): Promise<v
       .from("narrative_generations")
       .update({
         status: "failed",
-        error_message: errorMessage,
+        error: errorMessage,
         completed_at: new Date().toISOString(),
       })
       .eq("id", generationId);

@@ -229,8 +229,8 @@ describe("runBackgroundGeneration", () => {
 
     const updatePayload = capturedUpdateData as Record<string, unknown>;
     expect(updatePayload.status).toBe("failed");
-    expect(typeof updatePayload.error_message).toBe("string");
-    expect(updatePayload.error_message).toMatch(/busy|try again/i);
+    expect(typeof updatePayload.error).toBe("string");
+    expect(updatePayload.error).toMatch(/busy|try again/i);
 
     // narrative_generations must have been touched
     const narrativeGenCalls = mockFrom.mock.calls.filter(
@@ -264,8 +264,8 @@ describe("runBackgroundGeneration", () => {
     expect(capturedUpdateData).toBeTruthy();
     const updatePayload = capturedUpdateData as Record<string, unknown>;
     expect(updatePayload.status).toBe("failed");
-    expect(typeof updatePayload.error_message).toBe("string");
-    expect(updatePayload.error_message).toMatch(/playbook/i);
+    expect(typeof updatePayload.error).toBe("string");
+    expect(updatePayload.error).toMatch(/playbook/i);
 
     // narrative_generations must have been touched
     const narrativeGenCalls = mockFrom.mock.calls.filter(

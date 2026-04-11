@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
+// Mock next/server's after() API
+vi.mock("next/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/server")>();
+  return {
+    ...actual,
+    after: vi.fn(),
+  };
+});
+
 vi.mock("@/lib/stripe-auth", () => ({
   withStripeAuth: (handler: Function) => async (req: NextRequest) => {
     const body = await req.clone().json();
@@ -17,7 +26,7 @@ vi.mock("@/lib/narratives/generate-background", () => ({
   runBackgroundGeneration: vi.fn().mockResolvedValue(undefined),
 }));
 
-// Supabase mock — configured per-test via mockSupabaseSetup
+// Supabase mock -- configured per-test via result variables
 let mockMerchantResult: { data: unknown; error: unknown } = {
   data: { id: "merchant-uuid-1" },
   error: null,
@@ -26,7 +35,10 @@ let mockDisputeResult: { data: unknown; error: unknown } = {
   data: { id: "dispute-uuid-1", narrative_generations_count: 0 },
   error: null,
 };
-let mockUpdateResult: { data: unknown; error: unknown } = { data: {}, error: null };
+let mockUpdateResult: { data: unknown; error: unknown } = {
+  data: { narrative_generations_count: 1 },
+  error: null,
+};
 let mockInsertResult: { data: unknown; error: unknown } = {
   data: { id: "gen-uuid-1" },
   error: null,
@@ -52,7 +64,13 @@ function makeMockFrom(table: string) {
         }),
       }),
       update: () => ({
-        eq: () => Promise.resolve(mockUpdateResult),
+        eq: () => ({
+          eq: () => ({
+            select: () => ({
+              single: () => Promise.resolve(mockUpdateResult),
+            }),
+          }),
+        }),
       }),
     };
   }
@@ -85,30 +103,29 @@ function makeRequest(body: unknown): NextRequest {
 describe("POST /api/narratives/generate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset to defaults
     mockMerchantResult = { data: { id: "merchant-uuid-1" }, error: null };
     mockDisputeResult = {
       data: { id: "dispute-uuid-1", narrative_generations_count: 0 },
       error: null,
     };
-    mockUpdateResult = { data: {}, error: null };
+    mockUpdateResult = {
+      data: { narrative_generations_count: 1 },
+      error: null,
+    };
     mockInsertResult = { data: { id: "gen-uuid-1" }, error: null };
   });
 
   it("returns 400 when required fields are missing", async () => {
     const { POST } = await import("../generate/route");
 
-    // Missing all required fields
     const res1 = await POST(makeRequest({}));
     expect(res1.status).toBe(400);
     const json1 = await res1.json();
     expect(json1.code).toBe("invalid_request");
 
-    // Missing reason_code and network
     const res2 = await POST(makeRequest({ dispute_id: "dp_123" }));
     expect(res2.status).toBe(400);
 
-    // Missing network
     const res3 = await POST(
       makeRequest({ dispute_id: "dp_123", reason_code: "13.1" }),
     );
@@ -144,9 +161,7 @@ describe("POST /api/narratives/generate", () => {
 
   it("returns 202 with generation_id on success", async () => {
     const { POST } = await import("../generate/route");
-    const { runBackgroundGeneration } = await import(
-      "@/lib/narratives/generate-background"
-    );
+    const { after } = await import("next/server");
 
     const res = await POST(
       makeRequest({
@@ -160,7 +175,7 @@ describe("POST /api/narratives/generate", () => {
     const json = await res.json();
     expect(json.generation_id).toBe("gen-uuid-1");
     expect(json.status).toBe("pending");
-    // Background generation should have been fired (not awaited)
-    expect(runBackgroundGeneration).toHaveBeenCalledOnce();
+    // Background generation should be scheduled via after()
+    expect(after).toHaveBeenCalledOnce();
   });
 });
