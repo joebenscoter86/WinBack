@@ -27,6 +27,15 @@ export interface WinBackDispute {
   metadata: Record<string, string>;
   checklist_state?: Record<string, boolean>;
   checklist_notes?: Record<string, string>;
+  // Auto-pull fields (WIN-37)
+  avs_address_check?: string;
+  avs_zip_check?: string;
+  cvc_check?: string;
+  three_d_secure_result?: string;
+  three_d_secure_version?: string;
+  authorization_code?: string;
+  network_status?: string;
+  refunds?: Array<{ amount: number; created: number; status: string }>;
 }
 
 function flattenAddress(address: Stripe.Address | null | undefined): string | undefined {
@@ -61,6 +70,36 @@ function hasAnyEvidence(evidence: Stripe.Dispute.Evidence | null | undefined): b
   return Object.values(evidence).some((v) => v !== null && v !== undefined && v !== "");
 }
 
+function extractThreeDSecureResult(
+  pi: string | Stripe.PaymentIntent | null | undefined,
+): string | undefined {
+  if (!pi || typeof pi === "string") return undefined;
+  const options = pi.payment_method_options as {
+    card?: { three_d_secure?: { result?: string } };
+  } | null;
+  return options?.card?.three_d_secure?.result ?? undefined;
+}
+
+function extractThreeDSecureVersion(
+  pi: string | Stripe.PaymentIntent | null | undefined,
+): string | undefined {
+  if (!pi || typeof pi === "string") return undefined;
+  const options = pi.payment_method_options as {
+    card?: { three_d_secure?: { version?: string } };
+  } | null;
+  return options?.card?.three_d_secure?.version ?? undefined;
+}
+
+function extractRefunds(
+  charge: Stripe.Charge | null,
+): Array<{ amount: number; created: number; status: string }> | undefined {
+  if (!charge) return undefined;
+  const refunds = (charge as { refunds?: { data?: Array<{ amount: number; created: number; status: string }> } })
+    ?.refunds?.data;
+  if (!refunds || refunds.length === 0) return undefined;
+  return refunds.map((r) => ({ amount: r.amount, created: r.created, status: r.status }));
+}
+
 export function normalizeDispute(d: Stripe.Dispute): WinBackDispute {
   const charge = typeof d.charge === "string" ? null : d.charge;
   const chargeId = typeof d.charge === "string" ? d.charge : d.charge?.id ?? "";
@@ -70,7 +109,17 @@ export function normalizeDispute(d: Stripe.Dispute): WinBackDispute {
       : null;
   const cardDetails = (
     charge?.payment_method_details as {
-      card?: { brand?: string; last4?: string; network?: string };
+      card?: {
+        brand?: string;
+        last4?: string;
+        network?: string;
+        authorization_code?: string;
+        checks?: {
+          address_line1_check?: string | null;
+          address_postal_code_check?: string | null;
+          cvc_check?: string | null;
+        } | null;
+      };
     } | null
   )?.card;
 
@@ -123,5 +172,15 @@ export function normalizeDispute(d: Stripe.Dispute): WinBackDispute {
     evidence_submission_count: d.evidence_details?.submission_count ?? 0,
     is_charge_refundable: d.is_charge_refundable ?? false,
     metadata: (charge as { metadata?: Record<string, string> } | null)?.metadata ?? {},
+    // Auto-pull fields (WIN-37)
+    avs_address_check: cardDetails?.checks?.address_line1_check ?? undefined,
+    avs_zip_check: cardDetails?.checks?.address_postal_code_check ?? undefined,
+    cvc_check: cardDetails?.checks?.cvc_check ?? undefined,
+    three_d_secure_result: extractThreeDSecureResult(d.payment_intent),
+    three_d_secure_version: extractThreeDSecureVersion(d.payment_intent),
+    authorization_code: cardDetails?.authorization_code ?? undefined,
+    network_status: (charge as { outcome?: { network_status?: string } } | null)
+      ?.outcome?.network_status ?? undefined,
+    refunds: extractRefunds(charge),
   };
 }

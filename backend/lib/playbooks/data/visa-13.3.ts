@@ -17,28 +17,28 @@ export const visa133: PlaybookData = {
   coach_acquirer_summary:
     "Your response goes through a compliance check before the bank sees it. You need your original product description, proof of what was delivered, and ideally any customer communication showing they were satisfied or didn't raise concerns through your support channels.",
 
-  issuer_evaluation: `The issuer evaluates Visa 13.3 disputes using the following criteria:
+  issuer_evaluation: `The customer's bank evaluates Visa 13.3 disputes using the following criteria:
 
 1. Does the product match its description? The bank compares what was advertised/described against what was received.
 2. Did the cardholder attempt to return the merchandise? (Required as of Oct 2024)
 3. If no return attempt, why not? The cardholder must provide documented reasons why return was impossible.
 4. Did the merchant offer a resolution? Replacement, repair, refund, store credit?
 5. Was the merchant responsive to complaints? Unresponsive merchants lose by default.
-6. Filing window: 120 calendar days from transaction date. Merchant has 30 days to respond.
-7. For subjective claims: The issuer may require a neutral third-party opinion to corroborate the cardholder's claim.
+6. Deadline: The customer had 120 calendar days from the transaction date to open this dispute. You have 30 days to respond.
+7. For subjective claims: The bank may require a neutral third-party opinion to corroborate the cardholder's claim.
 
-The issuer leans toward the cardholder on quality disputes unless the merchant has firm evidence that the product matched its description. Your product listing and pre-shipment documentation are your primary defense.
+The customer's bank leans toward the cardholder on quality disputes unless the merchant has firm evidence that the product matched its description. Your product listing and pre-shipment documentation are your primary defense.
 
-The precise target for your representment: The issuer is checking whether the cardholder can prove you refused to remedy their complaint. If the cardholder has documentation showing they contacted you and you didn't resolve it, that satisfies the chargeback condition in their favor. Your job is not just to show you delivered the right product -- it's to directly refute their claim of unresolved contact, or prove they never contacted you at all. If they went straight to the bank without contacting you first, call it out explicitly. That undermines their entire filing.`,
+The precise target for your dispute response: The bank is checking whether the cardholder can prove you refused to remedy their complaint. If the cardholder has documentation showing they contacted you and you didn't resolve it, that satisfies the dispute condition in their favor. Your job is not just to show you delivered the right product -- it's to directly refute their claim of unresolved contact, or prove they never contacted you at all. If they went straight to the bank without contacting you first, call it out explicitly. That undermines their entire filing.`,
 
-  acquirer_prereview: `Before your evidence reaches the issuing bank, it passes through your acquirer first. The acquirer reviews the package for completeness and formatting compliance with network rules. If your submission is incomplete or doesn't address the assigned reason code, it gets bounced before the issuer ever sees it. Merchants are rarely notified clearly when this happens -- the submission just fails.
+  acquirer_prereview: `Before your evidence reaches the customer's bank, it passes through your payment processor first. Your processor reviews the package for completeness and formatting compliance with network rules. If your submission is incomplete or doesn't address the assigned reason code, it gets bounced before the bank ever sees it. Merchants are rarely notified clearly when this happens -- the submission just fails.
 
 This means:
 - Your package must directly address reason code 13.3 (Not as Described / Defective) -- generic evidence won't clear pre-review.
 - All required documents (see checklist below) must be present.
-- Your acquirer may impose an internal deadline shorter than Visa's 30-day window.
+- Your processor may impose an internal deadline shorter than Visa's 30-day window.
 
-Getting bounced at the acquirer stage is an automatic loss with no second chance. The checklist below tells you exactly what both the acquirer and issuer need to see.`,
+Getting bounced at the processor stage is an automatic loss with no second chance. The checklist below tells you exactly what both your processor and the customer's bank need to see.`,
 
   evidence_checklist: [
     {
@@ -47,7 +47,7 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       context: "all",
       required: true,
       why_matters:
-        "This is what the bank compares against the cardholder's claim. If the description matches what was sent, you win. Without this, you have no baseline to defend against 'not as described.'",
+        "This is what the customer's bank compares against the cardholder's claim. If the description matches what was sent, you win. Without this, you have no baseline to defend against 'not as described.'",
       where_to_find:
         "Screenshot your product page on your website or e-commerce platform (Shopify, WooCommerce, Etsy, Amazon). If the listing has changed since the purchase, try the Wayback Machine (web.archive.org) to find the version from the order date. Include the full description, specs, photos, and any disclaimers.",
       urgency_essential: true,
@@ -119,7 +119,7 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       context: "all",
       required: false,
       why_matters:
-        "If the customer tried to return the item and you denied it, Stripe's API requires a specific text explanation of why. Without this, the issuer only has the cardholder's side of the story. Be specific: 'outside the 30-day return window', 'item showed signs of use', 'missing original packaging.'",
+        "If the customer tried to return the item and you denied it, Stripe's API requires a specific text explanation of why. Without this, the bank only has the cardholder's side of the story. Be specific: 'outside the 30-day return window', 'item showed signs of use', 'missing original packaging.'",
       where_to_find:
         "Check your helpdesk or email for the message where you told the customer why their return or refund was denied. Pull the exact reason from that conversation. If you have a returns management system (Returnly, Loop), check the denial record there.",
       urgency_essential: false,
@@ -131,7 +131,7 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       context: "physical_goods",
       required: false,
       why_matters:
-        "Proves the cardholder knew how to return the item. If your policy was visible at checkout and they bypassed it to file a chargeback, that weakens their case.",
+        "Proves the cardholder knew how to return the item. If your policy was visible at checkout and they bypassed it to file a dispute, that weakens their case.",
       where_to_find:
         "Screenshot your checkout page showing where the return policy is displayed (footer link, checkbox, or sidebar). Also screenshot the return policy page itself. If you include return instructions in order confirmation emails, grab one of those too.",
       urgency_essential: false,
@@ -143,7 +143,7 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       context: "all",
       required: false,
       why_matters:
-        "Ends the dispute immediately if you already resolved it. A chargeback filed after a resolution was issued is a duplicate recovery attempt, which issuers take seriously.",
+        "Ends the dispute immediately if you already resolved it. A dispute filed after a resolution was issued is a duplicate recovery attempt, which the bank takes seriously.",
       where_to_find:
         "Stripe Dashboard > Payments > click the original payment > check for a Refund entry. If you sent a replacement, pull the new tracking number from your shipping provider. Also check your helpdesk for the resolution ticket where you confirmed the refund or replacement to the customer.",
       urgency_essential: false,
@@ -228,7 +228,7 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       tip: "Photograph items before shipping. Quick phone photos showing item condition and packaging take 30 seconds and provide critical evidence against 'arrived damaged' or 'defective' claims.",
     },
     {
-      tip: "Respond to every complaint within 24 hours. Even if you can't resolve it immediately, acknowledge the issue. 'We're looking into this' documented in email is evidence of responsiveness that goes directly to the issuer's evaluation criteria.",
+      tip: "Respond to every complaint within 24 hours. Even if you can't resolve it immediately, acknowledge the issue. 'We're looking into this' documented in email is evidence of responsiveness that goes directly to the bank's evaluation criteria.",
     },
     {
       tip: "Leverage the October 2024 return requirement. If the cardholder filed without attempting a return, this is a strong procedural defense. In your narrative, explicitly note: 'The cardholder did not attempt to return the merchandise per Visa guidelines effective October 2024. Our return policy is clearly stated and we have no record of a return request.'",
@@ -281,5 +281,5 @@ The merchandise delivered matches the description provided at purchase, and we h
   response_deadline_days: 30,
   filing_window_days: 120,
   key_differences:
-    "Visa 13.3 is a dedicated reason code covering only 'Not as Described / Defective' disputes, while Mastercard 4853 is a broad umbrella code that spans 7 or more dispute sub-types including not received, recurring cancellations, no-shows, and counterfeit goods. The response deadline differs: merchants have 30 days to respond to a Visa 13.3, versus 45 days for a Mastercard 4853. Both networks use a 120-day filing window (max 540 days). On return requirements, Visa 13.3 does not specify a waiting period after a return, but Mastercard 4853 requires the issuer to wait 15 days after the item was returned before the dispute can proceed. On the customer contact requirement, Visa recommends that cardholders attempt merchant resolution first, while Mastercard requires it -- giving merchants slightly more procedural leverage on 4853 disputes. Both networks handle subjective quality claims similarly, though the Mastercard 'attempted resolution' requirement gives merchants a marginally stronger procedural defense.",
+    "Visa 13.3 is a dedicated reason code covering only 'Not as Described / Defective' disputes, while Mastercard 4853 is a broad umbrella code that spans 7 or more dispute sub-types including not received, recurring cancellations, no-shows, and counterfeit goods. The dispute response deadline differs: merchants have 30 days to respond to a Visa 13.3, versus 45 days for a Mastercard 4853. Both networks give the customer a 120-day window to open a dispute (max 540 days). On return requirements, Visa 13.3 does not specify a waiting period after a return, but Mastercard 4853 requires the customer's bank to wait 15 days after the item was returned before the dispute can proceed. On the customer contact requirement, Visa recommends that cardholders attempt merchant resolution first, while Mastercard requires it -- giving merchants slightly more procedural leverage on 4853 disputes. Both networks handle subjective quality claims similarly, though the Mastercard 'attempted resolution' requirement gives merchants a marginally stronger procedural defense.",
 };

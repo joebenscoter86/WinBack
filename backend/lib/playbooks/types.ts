@@ -23,6 +23,7 @@ export interface EvidenceChecklistItem {
   required: boolean;
   why_matters: string;
   where_to_find?: string;
+  stripe_field?: string;
   urgency_essential: boolean;
   urgency_order: number | null;
 }

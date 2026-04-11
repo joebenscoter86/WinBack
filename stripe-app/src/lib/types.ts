@@ -49,6 +49,15 @@ export interface Dispute {
   metadata?: Record<string, string>;
   checklist_state?: Record<string, boolean>;
   checklist_notes?: Record<string, string>;
+  // Auto-pull fields (WIN-37)
+  avs_address_check?: string;
+  avs_zip_check?: string;
+  cvc_check?: string;
+  three_d_secure_result?: string;
+  three_d_secure_version?: string;
+  authorization_code?: string;
+  network_status?: string;
+  refunds?: Array<{ amount: number; created: number; status: string }>;
 }
 
 // Playbook types (mirrors backend PlaybookData)
@@ -60,6 +69,7 @@ export interface EvidenceChecklistItem {
   required: boolean;
   why_matters: string;
   where_to_find?: string;
+  stripe_field?: string;
   urgency_essential: boolean;
   urgency_order: number | null;
 }

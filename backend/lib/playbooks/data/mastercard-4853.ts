@@ -13,31 +13,31 @@ export const mastercard4853: PlaybookData = {
   coach_summary:
     "Similar to a Visa 'not as described' dispute. The bank will look at whether your product matched its listing and whether the customer tried to resolve it with you first. Clear product descriptions and customer communication records are your best defense.",
   coach_issuer_summary:
-    "The bank checks: Does the product match the description provided at the time of purchase? Did the cardholder attempt to return the merchandise or resolve the issue with the merchant? Was the merchandise or service received at all?",
+    "The customer's bank checks: Does the product match the description provided at the time of purchase? Did the cardholder attempt to return the merchandise or resolve the issue with the merchant? Was the merchandise or service received at all?",
   coach_acquirer_summary:
-    "Your response goes through a compliance check before the bank sees it. You need the original product description, proof of delivery, and evidence of any customer interaction. If the customer never contacted you before filing the dispute, that works in your favor.",
+    "Your response goes through a compliance check by your payment processor before the customer's bank sees it. You need the original product description, proof of delivery, and evidence of any customer interaction. If the customer never contacted you before filing the dispute, that works in your favor.",
 
-  issuer_evaluation: `The issuer evaluates Mastercard 4853 disputes using the following criteria:
+  issuer_evaluation: `The customer's bank evaluates Mastercard 4853 disputes using the following criteria:
 
-1. Does the cardholder's description of what they received differ materially from the merchant's product listing? The issuer compares the cardholder's claim against available product descriptions, images, and terms.
+1. Does the cardholder's description of what they received differ materially from the merchant's product listing? The bank compares the cardholder's claim against available product descriptions, images, and terms.
 2. Did the cardholder attempt to return the merchandise? Mastercard expects the cardholder to attempt resolution with the merchant before filing. If the merchant has a return policy and the cardholder didn't follow it, this weakens the claim.
-3. Was the item returned? If not, the issuer weighs whether the merchant offered a return path. If merchandise was returned, the issuer must wait at least 15 calendar days before filing the chargeback.
+3. Was the item returned? If not, the bank weighs whether the merchant offered a return path. If merchandise was returned, the bank must wait at least 15 calendar days before filing the dispute.
 4. Is there documented communication between cardholder and merchant? Evidence of the cardholder raising the issue and the merchant's response (or lack thereof) is heavily weighted.
-5. Filing window compliance: 120 calendar days from the transaction processing date, delivery date, or service end date (maximum 540 days from original transaction).
-6. Is the claim subjective or objective? "Wrong item shipped" is objective and easy to evaluate. "Quality wasn't what I expected" is subjective and harder -- the issuer leans toward the cardholder in subjective cases unless the merchant provides strong documentary evidence.
+5. Deadline compliance: The customer had 120 calendar days from the transaction processing date, delivery date, or service end date to open this dispute (maximum 540 days from original transaction).
+6. Is the claim subjective or objective? "Wrong item shipped" is objective and easy to evaluate. "Quality wasn't what I expected" is subjective and harder -- the bank leans toward the cardholder in subjective cases unless the merchant provides strong documentary evidence.
 
-The issuer is primarily looking for whether the merchant's description was accurate and whether the merchant attempted to resolve the issue. Unlike "not received" disputes where delivery proof is binary, "not as described" disputes are inherently more judgment-based.
+The customer's bank is primarily looking for whether the merchant's description was accurate and whether the merchant attempted to resolve the issue. Unlike "not received" disputes where delivery proof is binary, "not as described" disputes are inherently more judgment-based.
 
-The precise target for your representment: The issuer is checking whether the cardholder can prove you refused to remedy their complaint. Under Mastercard rules, the cardholder must attempt to resolve the issue with the merchant before filing -- if they have documentation showing they contacted you and you didn't resolve it, that satisfies the chargeback condition. Your job is to directly refute their claimed contact (show they never reached out, or show you did resolve it), not just to prove your product was good. If they never contacted you before filing, say so explicitly and prominently -- Mastercard requires merchant contact first, and skipping that step is a filing defect that works in your favor.`,
+The precise target for your dispute response: The customer's bank is checking whether the cardholder can prove you refused to remedy their complaint. Under Mastercard rules, the cardholder must attempt to resolve the issue with the merchant before filing -- if they have documentation showing they contacted you and you didn't resolve it, that satisfies the dispute condition. Your job is to directly refute their claimed contact (show they never reached out, or show you did resolve it), not just to prove your product was good. If they never contacted you before filing, say so explicitly and prominently -- Mastercard requires merchant contact first, and skipping that step is a filing defect that works in your favor.`,
 
-  acquirer_prereview: `Before your evidence reaches the issuing bank, it passes through your acquirer first. The acquirer reviews the package for completeness and formatting compliance with network rules. If your submission is incomplete or doesn't address the assigned reason code, it gets bounced before the issuer ever sees it. Merchants are rarely notified clearly when this happens -- the submission just fails.
+  acquirer_prereview: `Before your evidence reaches the customer's bank, it passes through your payment processor first. Your processor (sometimes called an acquirer) reviews the package for completeness and formatting compliance with network rules. If your submission is incomplete or doesn't address the assigned reason code, it gets bounced before the bank ever sees it. Merchants are rarely notified clearly when this happens -- the submission just fails.
 
 This means:
 - Your package must directly address reason code 4853 (Cardholder Dispute -- Not as Described / Defective) -- generic evidence won't clear pre-review.
 - All required documents (see checklist below) must be present.
-- Your acquirer may impose an internal deadline shorter than Mastercard's 45-day window.
+- Your processor may impose an internal deadline shorter than Mastercard's 45-day window.
 
-Getting bounced at the acquirer stage is an automatic loss with no second chance. The checklist below tells you exactly what both the acquirer and issuer need to see.`,
+Getting bounced at the processor stage is an automatic loss with no second chance. The checklist below tells you exactly what both your processor and the customer's bank need to see.`,
 
   evidence_checklist: [
     {
@@ -46,7 +46,7 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       context: "all",
       required: true,
       why_matters:
-        "This is your baseline. The issuer compares what you described against what the cardholder claims they received. Screenshot the listing -- don't just describe it.",
+        "This is your baseline. The customer's bank compares what you described against what the cardholder claims they received. Screenshot the listing -- don't just describe it.",
       where_to_find:
         "Screenshot your product page on your website or platform (Shopify, WooCommerce, Etsy, Amazon). If the listing changed since the purchase date, try the Wayback Machine (web.archive.org) for the original version. Include the full description, photos, specs, and any disclaimers.",
       urgency_essential: true,
@@ -70,7 +70,7 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       context: "all",
       required: true,
       why_matters:
-        "Shows you were responsive and attempted resolution. If the cardholder never contacted you before filing, this is powerful evidence of friendly fraud -- Mastercard requires merchant contact first.",
+        "Shows you were responsive and attempted resolution. If the cardholder never contacted you before filing, this is powerful evidence of friendly fraud -- Mastercard requires the customer to contact you first.",
       where_to_find:
         "Search your helpdesk (Zendesk, Intercom, Freshdesk) by customer name or email. Check Gmail sent/received for any conversations about this order. If you find zero contact from the customer, that's actually your strongest evidence -- Mastercard requires them to contact you first, and skipping that step weakens their case.",
       urgency_essential: true,
@@ -94,7 +94,7 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       context: "all",
       required: false,
       why_matters:
-        "If the customer attempted a return and you denied it, Stripe's API requires a specific text explanation of why you refused. The issuer needs to hear your side. Be concrete: 'returned after the 30-day window', 'item showed clear signs of use', 'missing components.'",
+        "If the customer attempted a return and you denied it, Stripe's API requires a specific text explanation of why you refused. The customer's bank needs to hear your side. Be concrete: 'returned after the 30-day window', 'item showed clear signs of use', 'missing components.'",
       where_to_find:
         "Check your helpdesk or email for the message where you told the customer why their return or refund was denied. Pull the exact reason. If you use a returns management system (Returnly, Loop), check the denial record with its timestamp and reason code.",
       urgency_essential: false,
@@ -202,7 +202,7 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
     {
       mistake: "Relying on generic product descriptions",
       explanation:
-        "'High quality item' means nothing in a dispute. Specific dimensions, materials, features, and limitations are what the issuer compares against. The more precise your listing, the easier it is to prove you delivered what you described.",
+        "'High quality item' means nothing in a dispute. Specific dimensions, materials, features, and limitations are what the customer's bank compares against. The more precise your listing, the easier it is to prove you delivered what you described.",
     },
     {
       mistake: "Not photographing items before shipment",
@@ -212,27 +212,27 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
     {
       mistake: "Ignoring or delaying responses to customer complaints",
       explanation:
-        "If the cardholder contacted you about the issue and you didn't respond (or took days to respond), the issuer assumes you're unresponsive. Prompt, documented communication is your strongest defense.",
+        "If the cardholder contacted you about the issue and you didn't respond (or took days to respond), the bank assumes you're unresponsive. Prompt, documented communication is your strongest defense.",
     },
     {
       mistake: "Telling the customer to contact the manufacturer",
       explanation:
-        "Mastercard holds the merchant responsible, not the manufacturer. Referring the customer elsewhere doesn't satisfy your obligation and makes you look evasive to the issuer.",
+        "Mastercard holds the merchant responsible, not the manufacturer. Referring the customer elsewhere doesn't satisfy your obligation and makes you look evasive to the bank.",
     },
     {
       mistake: "Accepting chargebacks for subjective 'not as described' claims",
       explanation:
-        "'Not as described' chargebacks are disproportionately friendly fraud. A customer who says 'the color was slightly different' or 'it felt cheaper than expected' may be fishing. Challenge these through representment with your product documentation.",
+        "'Not as described' disputes are disproportionately friendly fraud. A customer who says 'the color was slightly different' or 'it felt cheaper than expected' may be fishing. Challenge these with a strong dispute response backed by your product documentation.",
     },
     {
       mistake: "Not having a clear return policy",
       explanation:
-        "If you don't offer returns, the issuer sees a dead end for the cardholder. If you do offer returns but the cardholder didn't use them, that's evidence in your favor. Either way, a visible, accessible return policy helps you.",
+        "If you don't offer returns, the bank sees a dead end for the cardholder. If you do offer returns but the cardholder didn't use them, that's evidence in your favor. Either way, a visible, accessible return policy helps you.",
     },
     {
       mistake: "Missing the 45-day response window",
       explanation:
-        "Mastercard gives 45 calendar days from the chargeback processing date. Miss it and you lose automatically, even with perfect evidence. Your acquirer may impose a shorter internal deadline.",
+        "Mastercard gives 45 calendar days from the dispute processing date. Miss it and you lose automatically, even with perfect evidence. Your payment processor may impose a shorter internal deadline.",
     },
   ],
 
@@ -265,7 +265,7 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       "Focus on documentation quality above all else. These items in order are your best chance of winning when you have less than 5 days to respond.",
     ordered_items: [
       "Original product listing or description (screenshot or catalog page)",
-      "Customer communication logs (or evidence of no customer contact prior to chargeback)",
+      "Customer communication logs (or evidence of no customer contact prior to the dispute)",
       "Proof of delivery confirming the item was received",
       "Photos of the item before shipment (if available)",
       "Return policy showing the cardholder had a resolution path",
@@ -297,7 +297,7 @@ The cardholder contacted us on [date] regarding [issue]. We responded on [date] 
 [Describe outcome of communication]
 
 [If customer did NOT contact merchant:]
-Our records show no communication from the cardholder regarding any issue with this order prior to the chargeback filing. The cardholder did not attempt to resolve this matter with us directly, as required by Mastercard dispute guidelines.
+Our records show no communication from the cardholder regarding any issue with this order prior to the dispute filing. The cardholder did not attempt to resolve this matter with us directly, as required by Mastercard dispute guidelines.
 
 **Return Policy:**
 Our return policy, displayed at checkout and included in the order confirmation email, allows returns within [X] days for any reason. The cardholder did not initiate a return.
@@ -311,5 +311,5 @@ Based on the evidence provided, the merchandise/service delivered matched the de
   response_deadline_days: 45,
   filing_window_days: 120,
   key_differences:
-    "Mastercard 4853 vs. Visa 13.3 -- key differences for merchants:\n\nScope: Visa 13.3 is a dedicated code for 'Not as Described' disputes only. Mastercard 4853 is an umbrella code covering 7+ dispute sub-types; this playbook focuses on the Not as Described / Defective sub-type.\n\nResponse deadline: Visa 13.3 gives merchants 30 days to respond. Mastercard 4853 gives 45 days -- more time to build your case.\n\nFiling window: Both networks use 120 days (maximum 540 days from original transaction).\n\nReturn waiting period: Visa 13.3 has no specified waiting period. Under Mastercard 4853, if the merchandise was returned, the issuer must wait at least 15 calendar days before filing the chargeback.\n\nCustomer contact requirement: Visa 13.3 recommends the cardholder attempt merchant resolution. Mastercard 4853 requires it -- the cardholder must attempt to resolve with the merchant first. If they skipped this step and went straight to the bank, say so explicitly in your response. This is a filing defect that works in your favor.\n\nSubjectivity handling: Both networks lean toward the cardholder in subjective cases. However, Mastercard's required merchant contact step gives merchants slightly more leverage -- if the cardholder can't document that they tried to resolve the issue with you, their filing is procedurally weaker.",
+    "Mastercard 4853 vs. Visa 13.3 -- key differences for merchants:\n\nScope: Visa 13.3 is a dedicated code for 'Not as Described' disputes only. Mastercard 4853 is an umbrella code covering 7+ dispute sub-types; this playbook focuses on the Not as Described / Defective sub-type.\n\nResponse deadline: Visa 13.3 gives merchants 30 days to respond. Mastercard 4853 gives 45 days -- more time to build your case.\n\nDeadline to file: Both networks give the customer 120 days to open a dispute (maximum 540 days from original transaction).\n\nReturn waiting period: Visa 13.3 has no specified waiting period. Under Mastercard 4853, if the merchandise was returned, the customer's bank must wait at least 15 calendar days before filing the dispute.\n\nCustomer contact requirement: Visa 13.3 recommends the cardholder attempt merchant resolution. Mastercard 4853 requires it -- the cardholder must attempt to resolve with the merchant first. If they skipped this step and went straight to the bank, say so explicitly in your dispute response. This is a filing defect that works in your favor.\n\nSubjectivity handling: Both networks lean toward the cardholder in subjective cases. However, Mastercard's required merchant contact step gives merchants slightly more leverage -- if the cardholder can't document that they tried to resolve the issue with you, their filing is procedurally weaker.",
 };
