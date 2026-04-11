@@ -1,7 +1,9 @@
 import { Box, Checkbox, Badge, Inline, Link, Icon, TextArea } from '@stripe/ui-extension-sdk/ui';
-import type { EvidenceChecklistItem } from '../../lib/types';
+import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
+import type { EvidenceChecklistItem, EvidenceFile } from '../../lib/types';
+import FileUploadSection from './FileUploadSection';
 
-export type ExpandedSection = 'why' | 'where' | 'notes';
+export type ExpandedSection = 'why' | 'where' | 'notes' | 'file';
 
 interface ChecklistItemProps {
   item: EvidenceChecklistItem;
@@ -9,9 +11,13 @@ interface ChecklistItemProps {
   autoPopulated: boolean;
   expandedSections: Set<ExpandedSection>;
   notes: string;
+  existingFile: EvidenceFile | null;
+  disputeId: string;
+  context: ExtensionContextValue;
   onToggle: () => void;
   onSectionToggle: (section: ExpandedSection) => void;
   onNotesChange: (value: string) => void;
+  onFileChange: (file: EvidenceFile | null) => void;
 }
 
 function getCategoryBadge(category: EvidenceChecklistItem['category']) {
@@ -48,13 +54,18 @@ const ChecklistItem = ({
   autoPopulated,
   expandedSections,
   notes,
+  existingFile,
+  disputeId,
+  context,
   onToggle,
   onSectionToggle,
   onNotesChange,
+  onFileChange,
 }: ChecklistItemProps) => {
   const whyExpanded = expandedSections.has('why');
   const whereExpanded = expandedSections.has('where');
   const notesExpanded = expandedSections.has('notes');
+  const fileExpanded = expandedSections.has('file');
 
   return (
     <Box css={{ stack: 'y', gap: 'xsmall', padding: 'small', borderRadius: 'medium' }}>
@@ -91,6 +102,11 @@ const ChecklistItem = ({
               expanded={notesExpanded}
               onPress={() => onSectionToggle('notes')}
             />
+            <SectionToggle
+              label={existingFile ? existingFile.file_name : 'Attach file'}
+              expanded={fileExpanded}
+              onPress={() => onSectionToggle('file')}
+            />
           </Box>
         </Box>
       </Box>
@@ -119,6 +135,18 @@ const ChecklistItem = ({
             value={notes}
             onChange={(e) => onNotesChange(e.target.value)}
             rows={2}
+          />
+        </Box>
+      )}
+
+      {fileExpanded && (
+        <Box css={{ marginLeft: 'xlarge' }}>
+          <FileUploadSection
+            disputeId={disputeId}
+            checklistItemKey={item.item}
+            existingFile={existingFile}
+            context={context}
+            onFileChange={onFileChange}
           />
         </Box>
       )}
