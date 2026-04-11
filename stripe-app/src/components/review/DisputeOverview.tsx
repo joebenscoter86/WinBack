@@ -1,6 +1,6 @@
 import { Box, Badge, Divider, Inline, Link, Spinner } from '@stripe/ui-extension-sdk/ui';
 import type { Dispute } from '../../lib/types';
-import { getStatusBadge, getUrgencyBadge, getDaysRemaining } from '../../lib/utils';
+import { getStatusBadge } from '../../lib/utils';
 
 interface DisputeOverviewProps {
   dispute: Dispute;
@@ -38,30 +38,16 @@ function formatDate(timestamp: number): string {
 
 const DisputeOverview = ({ dispute, loading }: DisputeOverviewProps) => {
   const statusBadge = getStatusBadge(dispute.status);
-  const urgencyBadge = getUrgencyBadge(dispute.due_by, dispute.status);
-  const daysRemaining = dispute.due_by ? getDaysRemaining(dispute.due_by) : null;
 
   return (
     <Box css={{ stack: 'y', gap: 'medium', backgroundColor: 'container', padding: 'medium', borderRadius: 'medium' }}>
-      {/* Header: amount + badges */}
+      {/* Header: amount + status */}
       <Box css={{ stack: 'x', gap: 'small', distribute: 'space-between', alignY: 'center' }}>
         <Inline css={{ font: 'heading', fontWeight: 'bold' }}>
           {formatAmount(dispute.amount, dispute.currency)}
         </Inline>
-        <Box css={{ stack: 'x', gap: 'xsmall' }}>
-          <Badge type={statusBadge.type}>{statusBadge.label}</Badge>
-          {urgencyBadge && (
-            <Badge type={urgencyBadge.type}>{urgencyBadge.label}</Badge>
-          )}
-        </Box>
+        <Badge type={statusBadge.type}>{statusBadge.label}</Badge>
       </Box>
-
-      {/* Countdown */}
-      {daysRemaining !== null && daysRemaining > 0 && (
-        <Inline css={{ font: 'body', color: 'secondary' }}>
-          {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} to respond
-        </Inline>
-      )}
 
       {/* Customer info */}
       {(dispute.customer_name || dispute.customer_email) && (
