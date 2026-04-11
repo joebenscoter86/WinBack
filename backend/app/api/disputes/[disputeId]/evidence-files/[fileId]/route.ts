@@ -35,14 +35,22 @@ export const DELETE = withStripeAuth(async (
     );
   }
 
-  // Delete the evidence file
-  const { error: deleteError } = await supabase
+  // Delete the evidence file and verify a row was removed
+  const { data: deleted, error: deleteError } = await supabase
     .from("evidence_files")
     .delete()
     .eq("id", fileId)
-    .eq("dispute_id", dispute.id);
+    .eq("dispute_id", dispute.id)
+    .select("id")
+    .single();
 
   if (deleteError) {
+    if (deleteError.code === "PGRST116") {
+      return NextResponse.json(
+        { error: "Evidence file not found", code: "not_found" },
+        { status: 404 },
+      );
+    }
     console.error("Failed to delete evidence file:", deleteError);
     return NextResponse.json(
       { error: "Failed to delete evidence file", code: "db_error" },

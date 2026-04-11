@@ -62,7 +62,15 @@ export const POST = withStripeAuth(async (
     );
   }
 
-  const body = JSON.parse(await request.clone().text());
+  let body: Record<string, unknown>;
+  try {
+    body = JSON.parse(await request.clone().text());
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON body", code: "invalid_request" },
+      { status: 400 },
+    );
+  }
   const { checklist_item_key, stripe_file_id, file_name, file_size, mime_type } = body;
 
   if (!checklist_item_key || !stripe_file_id || !file_name) {
