@@ -9,15 +9,6 @@ export interface ValidationResult {
 const EVIDENCE_KEY_PATTERN = /"([a-z][a-z0-9_]+)"/g;
 
 /**
- * Splits narrative text into sentences. A sentence ends at `.`, `!`, or a
- * newline character. The delimiter is kept at the end of the returned chunk.
- */
-function splitSentences(text: string): string[] {
-  // Split on sentence-ending punctuation OR newline, keeping the delimiter
-  return text.split(/(?<=[.!])\s*|\n/).filter((s) => s.length > 0);
-}
-
-/**
  * Validates that a Claude-generated narrative does not reference evidence keys
  * that were not actually uploaded. Any sentence containing a hallucinated key
  * reference is stripped, along with the corresponding annotation.
@@ -64,7 +55,7 @@ export function validateHallucinations(
 
     // The line contains a hallucination. Split into sentences and strip only
     // the offending ones so we preserve any clean content on the same line.
-    const sentences = line.split(/(?<=[.!]) +/);
+    const sentences = line.split(/(?<=[.!?]) +/);
     const cleanSentences = sentences.filter((sentence) => {
       return ![...hallucinatedSet].some((key) =>
         sentence.includes(`"${key}"`),
