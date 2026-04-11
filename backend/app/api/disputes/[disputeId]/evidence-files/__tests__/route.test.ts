@@ -46,7 +46,8 @@ function makeChainBuilder(table: string): Record<string, Function> {
 
   // Make chain itself thenable so `await supabase.from("x").select().eq()` works
   // (when there's no .single() at the end)
-  (chain as any).then = (resolve: Function, reject?: Function) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (chain as any).then = (resolve: (v: any) => any, reject?: (e: any) => any) => {
     const result = getResult();
     return Promise.resolve(result).then(resolve, reject);
   };
