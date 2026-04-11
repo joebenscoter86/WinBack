@@ -15,7 +15,7 @@ const anthropic = new Proxy({} as Anthropic, {
       if (!apiKey) {
         throw new Error("Missing ANTHROPIC_API_KEY environment variable");
       }
-      _client = new Anthropic({ apiKey });
+      _client = new Anthropic({ apiKey, maxRetries: 2 });
     }
     return (_client as any)[prop];
   },
@@ -40,6 +40,7 @@ export async function generateNarrative(
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 4096,
+    timeout: 60_000,
     system: prompt.system,
     messages: [{ role: "user", content: prompt.user }],
   });

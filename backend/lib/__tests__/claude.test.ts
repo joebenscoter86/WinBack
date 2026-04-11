@@ -122,6 +122,7 @@ describe("generateNarrative", () => {
     expect(mockCreate).toHaveBeenCalledWith({
       model: "claude-sonnet-4-6",
       max_tokens: 4096,
+      timeout: 60_000,
       system: VALID_PROMPT.system,
       messages: [{ role: "user", content: VALID_PROMPT.user }],
     });
