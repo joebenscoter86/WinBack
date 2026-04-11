@@ -119,11 +119,12 @@ The Stripe Apps SDK runs in a **sandboxed iframe** with no DOM access, no custom
 - Has `primaryAction` and `secondaryAction` footer buttons
 
 ### 8. File Upload
-- No native file upload component in the SDK
-- **Stripe's file upload API** (`POST https://files.stripe.com/v1/files`) accepts multipart/form-data
+- The SDK provides `StripeFileUploader` component for native file uploads
+- Uploads directly to Stripe Files API (`POST https://files.stripe.com/v1/files`)
 - The app has `file_read` and `file_write` permissions configured
-- Evidence files: Upload to Stripe Files API (for submission) and/or our Supabase Storage (for staging)
-- Approach: Backend handles file uploads; frontend sends file data to backend which proxies to Stripe/Supabase
+- `onComplete` callback returns the Stripe File object (including `file.id`)
+- No drag-and-drop, but `StripeFileUploader` opens a native file picker dialog
+- Evidence files: Upload with `purpose: 'dispute_evidence'`, store `file_xxx` ID for submission
 
 ### 9. Viewport Dimensions
 - **Not explicitly documented** — adapts to the dashboard drawer width
@@ -140,7 +141,7 @@ The Stripe Apps SDK runs in a **sandboxed iframe** with no DOM access, no custom
 |----------------|-------------|-----------|
 | Dispute list dashboard | Table + Badge in drawer.default viewport | Yes |
 | Dispute detail with checklist | ContextView + Accordion + Checkbox on payment.detail | Yes |
-| Evidence file upload | Backend-proxied upload via fetchStripeSignature | Yes (no drag-and-drop) |
+| Evidence file upload | StripeFileUploader with purpose='dispute_evidence' | Yes (native file picker, no drag-and-drop) |
 | AI narrative review/edit | TextArea (plain text only) | Yes (no rich text) |
 | Step-by-step wizard | Tabs or sequential FocusView screens | Yes |
 | Submission confirmation | FocusView with confirmCloseMessages + Banner | Yes |
@@ -154,7 +155,7 @@ The Stripe Apps SDK runs in a **sandboxed iframe** with no DOM access, no custom
 
 | Blocker | Impact | Workaround |
 |---------|--------|------------|
-| No drag-and-drop file upload | Can't do intuitive file attachment | Button-triggered file upload via backend |
+| No drag-and-drop file upload | Can't do drag-and-drop attachment | StripeFileUploader provides native file picker dialog |
 | No rich text editor | Can't provide WYSIWYG narrative editing | Plain TextArea with structured templates |
 | No progress bar component | Can't show wizard progress visually | Use Tabs for step indication, or Badge sequence |
 | No custom modals | Can't use popup confirmations | FocusView as full-screen alternative |

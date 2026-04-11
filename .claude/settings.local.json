@@ -11,7 +11,12 @@
       "mcp__claude_ai_Linear__save_issue",
       "mcp__claude_ai_Linear__get_issue",
       "mcp__claude_ai_Supabase__list_projects",
-      "mcp__claude_ai_Supabase__list_organizations"
+      "mcp__claude_ai_Supabase__list_organizations",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "mcp__claude_ai_Stripe__list_disputes",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "Skill(ship)",
+      "Skill(ship:*)"
     ]
   }
 }

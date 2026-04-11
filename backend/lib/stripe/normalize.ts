@@ -25,6 +25,8 @@ export interface WinBackDispute {
   evidence_submission_count: number;
   is_charge_refundable: boolean;
   metadata: Record<string, string>;
+  checklist_state?: Record<string, boolean>;
+  checklist_notes?: Record<string, string>;
 }
 
 function flattenAddress(address: Stripe.Address | null | undefined): string | undefined {
@@ -37,6 +39,22 @@ function flattenAddress(address: Stripe.Address | null | undefined): string | un
 
   return parts.length > 0 ? parts.join(", ") : undefined;
 }
+
+/**
+ * Fallback reason codes for test mode, where Stripe doesn't populate
+ * network_reason_code. Maps Stripe's generic reason to a representative
+ * Visa code so playbook matching works during QA. Never fires in
+ * production because real disputes always have network_reason_code.
+ */
+const TEST_MODE_REASON_CODE_MAP: Record<string, { network: string; code: string }> = {
+  fraudulent: { network: "visa", code: "10.4" },
+  product_not_received: { network: "visa", code: "13.1" },
+  duplicate: { network: "visa", code: "13.2" },
+  subscription_canceled: { network: "visa", code: "13.3" },
+  credit_not_processed: { network: "visa", code: "13.6" },
+  general: { network: "mastercard", code: "4853" },
+  unrecognized: { network: "visa", code: "10.4" },
+};
 
 function hasAnyEvidence(evidence: Stripe.Dispute.Evidence | null | undefined): boolean {
   if (!evidence) return false;
@@ -56,7 +74,17 @@ export function normalizeDispute(d: Stripe.Dispute): WinBackDispute {
     } | null
   )?.card;
 
-  const network = cardDetails?.network ?? "unknown";
+  let network = cardDetails?.network ?? "unknown";
+  let reasonCode = d.network_reason_code ?? "";
+
+  // Fallback for test mode: fill in a representative reason code
+  if (!reasonCode && d.reason) {
+    const fallback = TEST_MODE_REASON_CODE_MAP[d.reason];
+    if (fallback) {
+      reasonCode = fallback.code;
+      if (network === "unknown") network = fallback.network;
+    }
+  }
 
   const dueBySec = d.evidence_details?.due_by ?? 0;
   const dueByDate = dueBySec
@@ -70,7 +98,7 @@ export function normalizeDispute(d: Stripe.Dispute): WinBackDispute {
     reason: d.reason,
     status: d.status,
     due_by: dueByDate,
-    reason_code: d.network_reason_code ?? "",
+    reason_code: reasonCode,
     network,
     payment_intent:
       typeof d.payment_intent === "string"

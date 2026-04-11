@@ -47,6 +47,8 @@ export interface Dispute {
   evidence_submission_count?: number;
   is_charge_refundable?: boolean;
   metadata?: Record<string, string>;
+  checklist_state?: Record<string, boolean>;
+  checklist_notes?: Record<string, string>;
 }
 
 // Playbook types (mirrors backend PlaybookData)
@@ -57,6 +59,7 @@ export interface EvidenceChecklistItem {
   context: string;
   required: boolean;
   why_matters: string;
+  where_to_find?: string;
   urgency_essential: boolean;
   urgency_order: number | null;
 }
@@ -79,4 +82,14 @@ export interface PlaybookData {
   urgency_essentials: { summary: string; ordered_items: string[] };
   narrative_template: string;
   response_deadline_days: number;
+}
+
+export interface EvidenceFile {
+  id: string;
+  stripe_file_id: string;
+  checklist_item_key: string;
+  file_name: string;
+  file_size: number;
+  mime_type: string;
+  uploaded_at: string;
 }
