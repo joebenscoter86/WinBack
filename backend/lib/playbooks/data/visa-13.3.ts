@@ -252,31 +252,39 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
     ],
   },
 
-  narrative_template: `The cardholder claims the merchandise/service was not as described or defective. We respectfully disagree based on the following evidence:
+  narrative_template: `**Product Description Accuracy**
+[The bank checks: did the product match what was advertised at the time of purchase?]
+Product listed as: [exact description from your product page or listing]
+What was delivered: [describe what the customer actually received]
+[If they match: "The product delivered matches the description provided at the time of purchase."]
 
-**Order Details:**
-- Product/service: [description]
-- Order date: [date]
-- Amount: [amount]
-- Delivery date: [date]
+**Customer Communication**
+[The bank checks whether you tried to resolve the issue. Visa requires the cardholder to attempt merchant resolution before filing.]
+Customer contacted us: [Yes on [date] / No -- no pre-dispute contact received]
+Issue raised: [what the customer complained about]
+Resolution offered: [what you offered -- replacement, return, partial refund, etc.]
+Outcome: [what happened -- customer accepted/declined/did not respond]
+[If no contact: "The cardholder did not contact us before filing this dispute. Visa requires the cardholder to attempt resolution with the merchant first."]
 
-**Product Description Accuracy:**
-The product listing at the time of purchase described [specific description]. The item delivered matches this description exactly. [Reference attached product listing screenshot]
+**Refund/Return Policy**
+[The bank checks whether the customer had a path to resolve this without a dispute.]
+Return policy: [your policy -- e.g., "30-day returns for any reason"]
+How displayed: [e.g., "Shown at checkout and included in order confirmation email"]
+Return attempted: [Yes/No]
+[If refund denied: explain why -- e.g., "Return window expired" or "Item returned in used condition"]
 
-**Delivery and Condition:**
-- Tracking: [number]
-- Delivered: [date]
-- Pre-shipment condition: [Reference attached photos showing item condition before shipping]
+**Shipping/Delivery Condition**
+[For physical goods: delivery confirmation and condition at time of shipment.]
+Tracking number: [from your carrier]
+Delivery confirmed: [date]
+Pre-shipment condition: [describe, reference photos if uploaded]
 
-**Return Attempt:**
-[Choose applicable]:
-- The cardholder has not attempted to return the merchandise. Per Visa guidelines effective October 2024, the cardholder must attempt a return before filing a dispute. Our return policy is clearly stated at checkout and no return request was received.
-- The cardholder contacted us on [date] about [issue]. We offered [resolution]. [Outcome of that communication]
+**Refund Denial Justification**
+[If you denied a refund, explain the specific reason here.]
+Reason: [e.g., "Return window expired", "Item not returned", "Item returned in unacceptable condition"]
+Policy reference: [which policy term applies]
 
-**Customer Communication:**
-[Summary of any communications, showing merchant responsiveness]
-
-The merchandise delivered matches the description provided at purchase, and we have received no return request. We respectfully request this dispute be resolved in our favor.`,
+Based on the evidence above, the product/service matched its description. We respectfully request this dispute be resolved in our favor.`,
 
   response_deadline_days: 30,
   filing_window_days: 120,
