@@ -48,6 +48,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: true,
       why_matters:
         "This is what the bank compares against the cardholder's claim. If the description matches what was sent, you win. Without this, you have no baseline to defend against 'not as described.'",
+      where_to_find:
+        "Screenshot your product page on your website or e-commerce platform (Shopify, WooCommerce, Etsy, Amazon). If the listing has changed since the purchase, try the Wayback Machine (web.archive.org) to find the version from the order date. Include the full description, specs, photos, and any disclaimers.",
       urgency_essential: true,
       urgency_order: 1,
     },
@@ -58,6 +60,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: true,
       why_matters:
         "Must first prove the item was delivered before you can argue it matched the description. No delivery proof means the dispute may shift to a 13.1 (not received) loss instead.",
+      where_to_find:
+        "Go to your shipping provider's tracking page (UPS, FedEx, USPS, DHL) and screenshot the delivery confirmation. Also check your e-commerce platform's order page for the tracking number. You need the final delivery scan, not just 'in transit.'",
       urgency_essential: true,
       urgency_order: 2,
     },
@@ -68,6 +72,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "Proves the item was in good condition when shipped. Critical for 'arrived damaged' claims. Without photos, you can't rebut a claim that the item was defective from the start.",
+      where_to_find:
+        "Check your phone's camera roll around the date you shipped this order. If your warehouse team photographs items before packing, pull from your warehouse management system or shared photo folder. For handmade or custom items, check your production documentation.",
       urgency_essential: true,
       urgency_order: 4,
     },
@@ -78,6 +84,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "The more specific your listing, the harder it is for the cardholder to claim 'not as described.' Vague marketing language is easy to dispute; specific dimensions, materials, and features are not.",
+      where_to_find:
+        "Pull the spec sheet or detailed product page from your website or supplier. If you sell on a marketplace (Amazon, Etsy), screenshot the listing's specifications tab. For products with manufacturer specs, grab those from the manufacturer's site or your purchasing records.",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -88,6 +96,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "Shows any discussions about the product, complaints, or resolution attempts. If the cardholder never contacted you before filing, document that absence. If they did contact you, show your responsive handling.",
+      where_to_find:
+        "Search your helpdesk (Zendesk, Intercom, Freshdesk) or email (Gmail > search by customer name or email) for any conversations about this order. If there are zero results, that's actually useful -- it means the customer went straight to their bank without contacting you first.",
       urgency_essential: true,
       urgency_order: 3,
     },
@@ -98,6 +108,20 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "As of October 2024, the cardholder must attempt a return before filing. If they didn't, this is a strong procedural defense. No return request in your records is evidence worth highlighting.",
+      where_to_find:
+        "Search your helpdesk, email, and returns management system (Returnly, Loop Returns, or your platform's built-in returns) for any return requests from this customer. If you find nothing, document that search -- the absence of a return request is your evidence here.",
+      urgency_essential: false,
+      urgency_order: null,
+    },
+    {
+      item: "Refund refusal explanation (if you denied a return or refund request)",
+      category: "recommended",
+      context: "all",
+      required: false,
+      why_matters:
+        "If the customer tried to return the item and you denied it, Stripe's API requires a specific text explanation of why. Without this, the issuer only has the cardholder's side of the story. Be specific: 'outside the 30-day return window', 'item showed signs of use', 'missing original packaging.'",
+      where_to_find:
+        "Check your helpdesk or email for the message where you told the customer why their return or refund was denied. Pull the exact reason from that conversation. If you have a returns management system (Returnly, Loop), check the denial record there.",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -108,6 +132,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "Proves the cardholder knew how to return the item. If your policy was visible at checkout and they bypassed it to file a chargeback, that weakens their case.",
+      where_to_find:
+        "Screenshot your checkout page showing where the return policy is displayed (footer link, checkbox, or sidebar). Also screenshot the return policy page itself. If you include return instructions in order confirmation emails, grab one of those too.",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -118,6 +144,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "Ends the dispute immediately if you already resolved it. A chargeback filed after a resolution was issued is a duplicate recovery attempt, which issuers take seriously.",
+      where_to_find:
+        "Stripe Dashboard > Payments > click the original payment > check for a Refund entry. If you sent a replacement, pull the new tracking number from your shipping provider. Also check your helpdesk for the resolution ticket where you confirmed the refund or replacement to the customer.",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -128,6 +156,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: true,
       why_matters:
         "Defines exactly what was promised. Without a written agreement, the cardholder can claim almost anything wasn't delivered. This document is the foundation of your services defense.",
+      where_to_find:
+        "Pull the signed contract, scope of work, or service agreement from your project management tool, CRM, or email. If you used a proposal tool (HoneyBook, Dubsado, PandaDoc), export the signed version. The document with the customer's signature or acceptance is what you need.",
       urgency_essential: true,
       urgency_order: 1,
     },
@@ -138,6 +168,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: true,
       why_matters:
         "Shows the service was performed as agreed. The bank needs to see what was actually delivered, not just what was promised.",
+      where_to_find:
+        "Gather the deliverables you sent to the client -- reports, files, designs, completed work. Check your project management tool (Asana, Trello, Notion, Monday) for completed tasks and milestones. For digital services, pull access logs or usage records from your app's admin panel.",
       urgency_essential: true,
       urgency_order: 2,
     },
@@ -148,6 +180,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "If the client approved the work, they can't credibly claim it wasn't as described. Signed acceptance or approval emails are some of the strongest evidence in services disputes.",
+      where_to_find:
+        "Search your email for approval messages from the client ('looks good', 'approved', 'go ahead'). Check your project management tool for completed/approved milestones. If you use a formal sign-off process (PandaDoc, DocuSign), pull the signed acceptance document.",
       urgency_essential: false,
       urgency_order: null,
     },

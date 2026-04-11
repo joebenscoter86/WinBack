@@ -45,8 +45,34 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: true,
       why_matters:
         "Shows the subscription was not cancelled when the charge was processed. This is the core factual question in every 13.2 dispute.",
+      where_to_find:
+        "Stripe Dashboard > Billing > Subscriptions > search by customer name or email. Click the subscription and screenshot the status history showing it was 'Active' on the charge date. If you use a separate billing tool (Chargebee, Recharge), check the subscription status there.",
       urgency_essential: true,
       urgency_order: 1,
+    },
+    {
+      item: "Billing period covered by the disputed charge (service_date)",
+      category: "mandatory",
+      context: "all",
+      required: true,
+      why_matters:
+        "Stripe's API expects a clear service_date field showing the exact billing period this charge covers. The issuer evaluates whether the charge was valid by comparing the cancellation date against the billing period. Without this, the timeline argument falls apart.",
+      where_to_find:
+        "Stripe Dashboard > Billing > Subscriptions > click the subscription > look at the billing period for the disputed invoice (e.g., 'Mar 1 - Apr 1'). If you use Chargebee or Recharge, check the invoice details for the period dates. This should show the charge covered a period that started before any cancellation.",
+      urgency_essential: true,
+      urgency_order: 2,
+    },
+    {
+      item: "Customer email address tied to the subscription",
+      category: "recommended",
+      context: "all",
+      required: false,
+      why_matters:
+        "Stripe marks the customer email as a priority field for recurring disputes. It ties the cancellation timeline directly to the customer's identity and shows where renewal reminders and cancellation confirmations were sent.",
+      where_to_find:
+        "Stripe Dashboard > Customers > search by name > the email is on the customer profile. Cross-reference with the email on the subscription and the email where you sent billing notifications. If the cardholder used a different email to contact support about cancellation, note both.",
+      urgency_essential: false,
+      urgency_order: null,
     },
     {
       item: "Cancellation policy (terms accepted at signup)",
@@ -55,8 +81,10 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: true,
       why_matters:
         "Proves the cardholder agreed to billing terms, including cancellation notice requirements. Without this, you cannot enforce a billing-cycle-end cancellation policy.",
+      where_to_find:
+        "Screenshot your checkout or signup page where the cancellation policy is displayed. If you have a Terms of Service page, screenshot the cancellation section. If you log when customers accept terms (a clickwrap log), pull the acceptance record for this customer with its timestamp.",
       urgency_essential: true,
-      urgency_order: 3,
+      urgency_order: 4,
     },
     {
       item: "Cancellation request timestamp vs. charge date",
@@ -65,8 +93,10 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "If the cancellation came AFTER the billing date, the charge was valid. Show the timeline side by side. This is your strongest argument when the charge preceded the cancellation.",
+      where_to_find:
+        "Check your app's admin panel or database for the cancellation request timestamp. If the customer cancelled through your helpdesk (Zendesk, Intercom, Freshdesk), pull the ticket creation date. Then compare it against the charge date in Stripe Dashboard > Payments > click the payment. Show both dates side by side.",
       urgency_essential: true,
-      urgency_order: 2,
+      urgency_order: 3,
     },
     {
       item: "Cancellation confirmation sent to cardholder",
@@ -75,6 +105,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "Proves you acknowledged and processed the cancellation. If you sent a confirmation email with an effective date, it shows you acted on the cancellation and the disputed charge fell before that date.",
+      where_to_find:
+        "Search your email service provider (SendGrid, Postmark, Mailchimp) for the cancellation confirmation email sent to this customer. Look for the send timestamp and the effective cancellation date in the email body. Also check your helpdesk for any cancellation acknowledgment tickets.",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -85,8 +117,10 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "If the cardholder used the service between billing cycles, the charge covers that usage. Login timestamps, feature access records, or download logs all qualify.",
+      where_to_find:
+        "Pull login and activity records from your app's admin panel or database for this customer during the disputed billing period. If you use analytics (Mixpanel, Amplitude, Google Analytics), search by user ID for sessions during that date range. Screenshot any logins, feature usage, or downloads that occurred after the last billing date.",
       urgency_essential: true,
-      urgency_order: 4,
+      urgency_order: 5,
     },
     {
       item: "Subscription agreement / terms of service",
@@ -95,6 +129,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "Shows the billing terms the cardholder agreed to, including when charges are triggered and what the cancellation policy is. Reinforces the mandatory cancellation policy item.",
+      where_to_find:
+        "Screenshot your Terms of Service page, focusing on the billing and subscription sections. If you have a separate subscription agreement (common for SaaS), pull that document. Include the URL and the date the terms were last updated.",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -105,6 +141,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "Any emails about the subscription, renewal reminders, or cancellation discussions. Renewal reminder emails sent before the charge are especially useful -- they show the cardholder was informed the charge was coming.",
+      where_to_find:
+        "Search your helpdesk (Zendesk, Intercom, Freshdesk) and email (Gmail > search by customer email) for any conversations about this subscription. Pay special attention to renewal reminder emails -- check your email service provider for the send/open timestamps on any pre-charge notification you sent.",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -115,6 +153,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "If you already issued a refund, this ends the dispute. Submit the refund confirmation and the dispute should be closed in your favor automatically.",
+      where_to_find:
+        "Stripe Dashboard > Payments > click the original payment > look for the Refund section. It shows the refund date, amount, and status. Screenshot this. If you refunded outside Stripe, pull the refund confirmation from whatever processor you used.",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -125,6 +165,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: true,
       why_matters:
         "If the transaction is a fixed installment (e.g., 3 payments of $100), reason code 13.2 doesn't apply. Provide the installment agreement showing the fixed schedule. This is a threshold defense -- if successful, the dispute code itself is invalid.",
+      where_to_find:
+        "Pull the original order or agreement showing the fixed installment schedule (e.g., '3 payments of $100'). Check your e-commerce platform's order details or your payment plan tool. The key is showing a predetermined number of payments, not an open-ended subscription.",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -189,6 +231,7 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       "Focus on the billing timeline above all else. These items in order are your best chance of winning when you have less than 5 days to respond.",
     ordered_items: [
       "Subscription status at time of charge (active = valid charge)",
+      "Billing period covered by the disputed charge (proves the charge covers a valid period)",
       "Cancellation timeline (if cancelled AFTER the charge, charge was valid)",
       "Terms of service showing billing and cancellation policy",
       "Any proof of service usage during the billing period",

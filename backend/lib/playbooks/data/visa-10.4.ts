@@ -147,6 +147,18 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       urgency_order: 5,
     },
     {
+      item: "Access/activity logs proving the customer used the product (for digital goods and SaaS)",
+      category: "mandatory",
+      context: "digital_goods",
+      required: true,
+      why_matters:
+        "For digital goods, this is your delivery proof AND your fraud rebuttal in one. Server logs showing the customer logged in, downloaded, or used the product from a recognizable IP address prove both that the product was delivered and that the cardholder engaged with it.",
+      where_to_find:
+        "Check your app's admin panel or database for login records tied to this customer's account. Look for timestamps, IP addresses, and what they accessed. If you use analytics (Mixpanel, Amplitude), search by user ID or email. For downloadable products, check your download logs or CDN access logs.",
+      urgency_essential: true,
+      urgency_order: 5,
+    },
+    {
       item: "Device fingerprint and IP address of the transaction",
       category: "recommended",
       context: "all",

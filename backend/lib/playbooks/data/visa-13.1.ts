@@ -45,6 +45,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: true,
       why_matters:
         "This is the single most important piece of evidence. A tracking number showing 'delivered' to the correct address wins most cases.",
+      where_to_find:
+        "Go to your shipping provider's tracking page (UPS, FedEx, USPS, DHL) and pull up the tracking number from this order. Screenshot the page showing the delivery status, delivery date, and destination address or zip code. If you use a fulfillment service like ShipBob or ShipStation, the tracking info is in your fulfillment dashboard too.",
       urgency_essential: true,
       urgency_order: 1,
     },
@@ -55,6 +57,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: true,
       why_matters:
         "Proves you shipped to the address the customer provided. If the addresses don't match, you lose regardless of delivery confirmation.",
+      where_to_find:
+        "Compare the shipping address on the order (Shopify Admin > Orders > click the order, or WooCommerce > Orders) against the delivery address on the carrier tracking page. Screenshot both side by side.",
       urgency_essential: true,
       urgency_order: 2,
     },
@@ -65,6 +69,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "Signature proof eliminates 'package stolen' claims. Visa gives extra weight to signed delivery. Without a signature on high-value orders, the cardholder can claim the package was stolen after delivery.",
+      where_to_find:
+        "Request a proof of delivery (POD) from your carrier. UPS: ups.com > Tracking > click 'View Proof of Delivery'. FedEx: fedex.com > Tracking > 'Obtain Proof of Delivery'. USPS: go to usps.com and request a signature confirmation receipt. You may need to call the carrier if the POD isn't available online.",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -75,6 +81,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "Establishes the timeline the bank will evaluate against. Without this, the issuer has no reference for whether delivery was timely.",
+      where_to_find:
+        "Check your order confirmation email (search your sent folder for the order number) or your e-commerce platform's order details page. Shopify: Orders > click order > look for 'Estimated delivery'. If you quoted a delivery window on your product page or at checkout, screenshot that too.",
       urgency_essential: true,
       urgency_order: 3,
     },
@@ -85,6 +93,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "Shows exactly what was ordered and how it was shipped. Gives the issuer a complete picture of the transaction.",
+      where_to_find:
+        "Your e-commerce platform's order page. Shopify: Admin > Orders > click the order. WooCommerce: Orders > click the order. Screenshot the section showing line items, quantities, and shipping method selected.",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -95,6 +105,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "Shows you were responsive and proactive. Any customer acknowledgment of receipt is especially valuable.",
+      where_to_find:
+        "Search your helpdesk (Zendesk, Intercom, Freshdesk) or email (Gmail > search by customer name or email) for any conversations about this order. Look for shipping updates you sent, delivery inquiries from the customer, or any message where they acknowledged receiving the package.",
       urgency_essential: true,
       urgency_order: 4,
     },
@@ -105,6 +117,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: true,
       why_matters:
         "This IS your delivery proof for digital goods. Access logs showing the customer logged in, downloaded, or used the product demonstrate delivery as conclusively as a carrier scan.",
+      where_to_find:
+        "Check your app's admin panel or database for login records tied to this customer's account. Look for timestamps, IP addresses, and what they accessed. If you use analytics (Mixpanel, Amplitude, Google Analytics), search by user ID or email. For downloadable products, check your download logs or CDN access logs.",
       urgency_essential: true,
       urgency_order: 1,
     },
@@ -115,6 +129,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: true,
       why_matters:
         "Proves the digital good was delivered to the customer's email address on file. Without this, there is no paper trail that delivery was even attempted.",
+      where_to_find:
+        "Check your email service provider (SendGrid, Postmark, Mailchimp, or your transactional email tool) for the delivery confirmation sent to this customer. Look for the email containing the license key or download link, and pull the send timestamp and delivery status. If you use Shopify Digital Downloads or a similar plugin, check its delivery log.",
       urgency_essential: true,
       urgency_order: 2,
     },
@@ -125,6 +141,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "Establishes what 'delivery' means for your product and that the customer agreed to those terms. Useful when the customer claims they didn't receive something that your ToS defines as delivered.",
+      where_to_find:
+        "Screenshot your checkout page showing the terms of service checkbox or link. If you log when customers accept terms (a clickwrap log), pull the acceptance timestamp for this customer. Check your website's Terms of Service page for the section defining how digital goods are delivered.",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -135,6 +153,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: true,
       why_matters:
         "For services, you must demonstrate the service was actually performed. This could be a completion report, signed work order, appointment records, or any documentation showing the service took place.",
+      where_to_find:
+        "Pull the signed work order, completion report, or service receipt from your project management tool or CRM. If you use a scheduling tool (Calendly, Acuity, Square Appointments), export the appointment record showing the service date and status. For consulting or freelance work, grab the deliverable handoff email or signed statement of work.",
       urgency_essential: true,
       urgency_order: 1,
     },
@@ -145,6 +165,8 @@ Getting bounced at the acquirer stage is an automatic loss with no second chance
       required: false,
       why_matters:
         "Shows the customer was scheduled and (if you have attendance records) appeared for the service. Especially useful for in-person services.",
+      where_to_find:
+        "Check your scheduling tool (Calendly, Acuity, Square Appointments, Google Calendar) for the booking confirmation. Screenshot the appointment details showing the customer name, date, time, and service type. If the customer confirmed or checked in, include that record too.",
       urgency_essential: false,
       urgency_order: null,
     },
