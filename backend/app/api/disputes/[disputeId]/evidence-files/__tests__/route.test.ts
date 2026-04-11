@@ -131,6 +131,19 @@ describe("GET /api/disputes/[disputeId]/evidence-files", () => {
     expect(ensureMerchant).toHaveBeenCalledWith("acct_test", "usr_test");
   });
 
+  it("returns 400 when dispute ID is missing", async () => {
+    const { GET } = await import("../route");
+    const req = new NextRequest(
+      "http://localhost/api/disputes//evidence-files",
+      { method: "GET" },
+    );
+    const res = await GET(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.code).toBe("invalid_request");
+  });
+
   it("returns empty array when dispute not found", async () => {
     setTableResult("disputes", { data: null, error: { code: "PGRST116" } });
 
