@@ -92,7 +92,9 @@ export async function patchBackend<T = unknown>(
 }
 
 /**
- * Makes an authenticated DELETE request to the WinBack backend.
+ * Makes an authenticated POST request to a "delete" endpoint on the WinBack backend.
+ * Uses POST because Stripe App signature verification requires a body,
+ * and some proxies strip bodies from DELETE requests.
  */
 export async function deleteBackend<T = unknown>(
   path: string,
@@ -106,7 +108,7 @@ export async function deleteBackend<T = unknown>(
   });
 
   const response = await fetch(`${BACKEND_URL}${path}`, {
-    method: 'DELETE',
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Stripe-Signature': signature,

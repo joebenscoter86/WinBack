@@ -3,7 +3,7 @@ import { withStripeAuth } from "@/lib/stripe-auth";
 import { ensureMerchant } from "@/lib/merchants";
 import { supabase } from "@/lib/supabase";
 
-export const DELETE = withStripeAuth(async (
+export const POST = withStripeAuth(async (
   request: NextRequest,
   { identity },
 ) => {

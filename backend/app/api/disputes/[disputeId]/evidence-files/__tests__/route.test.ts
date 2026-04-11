@@ -228,8 +228,8 @@ describe("DELETE /api/disputes/[disputeId]/evidence-files/[fileId]", () => {
     // evidence_files table: delete succeeds
     setTableResult("evidence_files", { data: null, error: null });
 
-    const { DELETE } = await import("../[fileId]/route");
-    const res = await DELETE(makeDeleteRequest("dp_test123", "file-uuid-1"));
+    const { POST } = await import("../[fileId]/route");
+    const res = await POST(makeDeleteRequest("dp_test123", "file-uuid-1"));
     const json = await res.json();
 
     expect(res.status).toBe(200);
