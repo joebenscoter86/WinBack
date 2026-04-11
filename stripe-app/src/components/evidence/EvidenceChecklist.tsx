@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Box, Banner, Inline, Link, Divider } from '@stripe/ui-extension-sdk/ui';
+import { Box, Banner, Divider, Inline, Link } from '@stripe/ui-extension-sdk/ui';
 import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 import type { Dispute, PlaybookData, EvidenceChecklistItem, EvidenceFile } from '../../lib/types';
 import { patchBackend, fetchBackend } from '../../lib/apiClient';
@@ -211,17 +211,12 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
   const completedItems = items.filter((item) => checklistState[item.item]).length;
 
   return (
-    <Box css={{ padding: 'medium', stack: 'y', gap: 'medium' }}>
-      <Box css={{ stack: 'y', gap: 'xsmall' }}>
-        <Inline css={{ font: 'subheading', fontWeight: 'semibold' }}>
-          Gather your evidence
-        </Inline>
-        <Inline css={{ font: 'body', color: 'secondary' }}>
-          Here's what you'll need to build your case. Don't let the list intimidate you.
-          Expand each item to see why it matters and jot down notes as you go.
-          On the next step, you'll put it all together.
-        </Inline>
-      </Box>
+    <Box css={{ padding: 'medium', stack: 'y', gap: 'large' }}>
+      <Banner
+        type="default"
+        title="Gather your evidence"
+        description="Here's what you'll need to build your case. Expand each item to see why it matters and jot down notes as you go."
+      />
 
       <ChecklistProgress completed={completedItems} total={totalItems} />
 
@@ -242,8 +237,9 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
         </Box>
       )}
 
-      {grouped.map(({ category, label, items: groupItems }) => (
+      {grouped.map(({ category, label, items: groupItems }, groupIndex) => (
         <Box key={category} css={{ stack: 'y', gap: 'small' }}>
+          {groupIndex > 0 && <Divider />}
           <Inline css={{ font: 'caption', fontWeight: 'bold', color: 'secondary', textTransform: 'uppercase' }}>
             {label}
           </Inline>
@@ -269,7 +265,7 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
 
       <Divider />
 
-      <Inline css={{ font: 'caption', color: 'secondary' }}>
+      <Inline css={{ font: 'caption', color: 'disabled' }}>
         Your progress and notes are saved automatically.
       </Inline>
     </Box>

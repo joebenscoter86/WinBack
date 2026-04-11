@@ -68,7 +68,7 @@ const ChecklistItem = ({
   const fileExpanded = expandedSections.has('file');
 
   return (
-    <Box css={{ stack: 'y', gap: 'xsmall', padding: 'small', borderRadius: 'medium' }}>
+    <Box css={{ stack: 'y', gap: 'small', padding: 'small', borderRadius: 'medium', backgroundColor: 'container' }}>
       <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
         <Checkbox
           label=""
@@ -78,7 +78,7 @@ const ChecklistItem = ({
         />
         <Box css={{ stack: 'y', gap: 'xxsmall', width: 'fill' }}>
           <Box css={{ stack: 'x', gap: 'xsmall', alignY: 'center', wrap: 'wrap' }}>
-            <Inline css={{ font: 'body', fontWeight: 'semibold' }}>
+            <Inline css={{ font: 'body', fontWeight: 'semibold', color: checked ? 'secondary' : undefined }}>
               {item.item}
             </Inline>
             {autoPopulated && <Badge type="info">FROM STRIPE</Badge>}

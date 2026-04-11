@@ -1,4 +1,4 @@
-import { Box, Badge, Inline, Link, Spinner } from '@stripe/ui-extension-sdk/ui';
+import { Box, Badge, Divider, Inline, Link, Spinner } from '@stripe/ui-extension-sdk/ui';
 import type { Dispute } from '../../lib/types';
 import { getStatusBadge, getUrgencyBadge, getDaysRemaining } from '../../lib/utils';
 
@@ -42,10 +42,10 @@ const DisputeOverview = ({ dispute, loading }: DisputeOverviewProps) => {
   const daysRemaining = dispute.due_by ? getDaysRemaining(dispute.due_by) : null;
 
   return (
-    <Box css={{ stack: 'y', gap: 'small' }}>
+    <Box css={{ stack: 'y', gap: 'medium', backgroundColor: 'container', padding: 'medium', borderRadius: 'medium' }}>
       {/* Header: amount + badges */}
       <Box css={{ stack: 'x', gap: 'small', distribute: 'space-between', alignY: 'center' }}>
-        <Inline css={{ font: 'heading', fontWeight: 'semibold' }}>
+        <Inline css={{ font: 'heading', fontWeight: 'bold' }}>
           {formatAmount(dispute.amount, dispute.currency)}
         </Inline>
         <Box css={{ stack: 'x', gap: 'xsmall' }}>
@@ -64,16 +64,22 @@ const DisputeOverview = ({ dispute, loading }: DisputeOverviewProps) => {
       )}
 
       {/* Customer info */}
-      {dispute.customer_name && (
-        <InfoRow label="Customer" value={dispute.customer_name} />
+      {(dispute.customer_name || dispute.customer_email) && (
+        <Box css={{ stack: 'y', gap: 'xsmall' }}>
+          {dispute.customer_name && (
+            <InfoRow label="Customer" value={dispute.customer_name} />
+          )}
+          {dispute.customer_email && (
+            <InfoRow label="Email" value={dispute.customer_email} />
+          )}
+        </Box>
       )}
-      {dispute.customer_email && (
-        <InfoRow label="Email" value={dispute.customer_email} />
-      )}
+
+      <Divider />
 
       {/* Enriched section */}
       {loading ? (
-        <Box css={{ padding: 'small' }}>
+        <Box css={{ padding: 'small', alignX: 'center' }}>
           <Spinner />
         </Box>
       ) : (
@@ -110,10 +116,11 @@ const DisputeOverview = ({ dispute, loading }: DisputeOverviewProps) => {
       )}
 
       {/* Footer: IDs */}
-      <Box css={{ stack: 'y', gap: 'xsmall' }}>
-        <Inline css={{ font: 'caption', color: 'secondary' }}>Dispute: {dispute.id}</Inline>
+      <Divider />
+      <Box css={{ stack: 'y', gap: 'xxsmall' }}>
+        <Inline css={{ font: 'caption', color: 'disabled' }}>Dispute: {dispute.id}</Inline>
         {dispute.charge_id && (
-          <Inline css={{ font: 'caption', color: 'secondary' }}>Charge: {dispute.charge_id}</Inline>
+          <Inline css={{ font: 'caption', color: 'disabled' }}>Charge: {dispute.charge_id}</Inline>
         )}
       </Box>
     </Box>

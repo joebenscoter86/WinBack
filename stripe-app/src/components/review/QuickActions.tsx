@@ -1,4 +1,4 @@
-import { Box, Icon, Inline } from '@stripe/ui-extension-sdk/ui';
+import { Box, Inline } from '@stripe/ui-extension-sdk/ui';
 import type { PlaybookData } from '../../lib/types';
 
 interface QuickActionsProps {
@@ -35,16 +35,38 @@ const QuickActions = ({ playbook, urgencyMode }: QuickActionsProps) => {
     : deriveActions(playbook);
 
   return (
-    <Box css={{ stack: 'y', gap: 'small' }}>
+    <Box css={{ stack: 'y', gap: 'medium' }}>
       <Inline css={{ font: 'subheading', fontWeight: 'semibold' }}>
         {urgencyMode ? 'Focus on these essentials' : 'Your next steps'}
       </Inline>
-      {items.map((text, index) => (
-        <Box key={index} css={{ stack: 'x', gap: 'small', alignY: 'top' }}>
-          <Icon name="info" size="xsmall" />
-          <Inline css={{ font: 'body' }}>{text}</Inline>
-        </Box>
-      ))}
+      <Box css={{ stack: 'y', gap: 'xsmall' }}>
+        {items.map((text, index) => (
+          <Box
+            key={index}
+            css={{
+              stack: 'x',
+              gap: 'small',
+              alignY: 'center',
+              backgroundColor: 'surface',
+              padding: 'small',
+              borderRadius: 'small',
+            }}
+          >
+            <Box
+              css={{
+                alignX: 'center',
+                alignY: 'center',
+                width: '1/12',
+              }}
+            >
+              <Inline css={{ font: 'caption', fontWeight: 'bold', color: 'secondary' }}>
+                {index + 1}.
+              </Inline>
+            </Box>
+            <Inline css={{ font: 'body' }}>{text}</Inline>
+          </Box>
+        ))}
+      </Box>
       <Inline css={{ font: 'caption', color: 'secondary' }}>
         Don't worry, we'll walk you through each of these on the next step.
       </Inline>
