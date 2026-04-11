@@ -81,6 +81,16 @@ describe("buildPrompt", () => {
     );
   });
 
+  it("shows not-uploaded entries for missing evidence", () => {
+    const result = buildPrompt(makeContext());
+    // The default context only uploads "Carrier tracking confirmation with delivery scan"
+    // Other evidence keys from the 13.1 template should show as (not uploaded)
+    expect(result.user).toContain("(not uploaded)");
+    expect(result.user).toContain(
+      '"Delivery address verification (matches billing or shipping address on order)": (not uploaded)'
+    );
+  });
+
   it("includes checklist notes", () => {
     const result = buildPrompt(makeContext());
     expect(result.user).toContain("FedEx tracking 7891234, delivered Mar 18");

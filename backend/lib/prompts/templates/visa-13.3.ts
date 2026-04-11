@@ -44,7 +44,7 @@ export const visa133Template: ReasonCodePromptTemplate = {
       priority: 1,
     },
     {
-      name: "Shipping and Condition",
+      name: "Shipping/Delivery Condition",
       bank_criterion: "Was the product in acceptable condition when shipped?",
       instruction:
         "Reference delivery confirmation and any pre-shipment condition documentation. If photos of the item before shipment exist, reference them.",
@@ -56,17 +56,16 @@ export const visa133Template: ReasonCodePromptTemplate = {
       priority: 2,
     },
     {
-      name: "Service Delivery",
-      bank_criterion: "Was the service performed as agreed?",
+      name: "Refund Denial Justification",
+      bank_criterion: "Is the merchant's refusal reasonable?",
       instruction:
-        "For services only. Reference the service agreement, proof of delivery, and any client sign-off.",
+        "If a refund was denied, state the specific reason: return window expired, item returned in unacceptable condition, no return attempted, etc. Reference the policy terms and any documentation supporting the denial.",
       auto_pull_fields: [],
       evidence_keys: [
-        "Service agreement or scope of work document",
-        "Proof of service delivery (reports, access logs, deliverables, work product)",
-        "Client sign-off or acceptance documentation",
+        "Refund refusal explanation (if you denied a return or refund request)",
+        "Refund or replacement confirmation (if already issued)",
       ],
-      priority: 1,
+      priority: 2,
     },
   ],
 };

@@ -56,17 +56,16 @@ export const mastercard4853Template: ReasonCodePromptTemplate = {
       priority: 2,
     },
     {
-      name: "Service Delivery",
-      bank_criterion: "Was the service performed as agreed?",
+      name: "Dispute Rebuttal",
+      bank_criterion: "What does the merchant say happened?",
       instruction:
-        "For services only. Reference the scope of work, proof of delivery, and any milestone sign-offs.",
+        "Provide a specific, factual response to the customer's claim. Address the exact complaint and explain why the product/service matched its description. If the customer did not contact the merchant or attempt a return before filing, state this as a procedural defect.",
       auto_pull_fields: [],
       evidence_keys: [
-        "Signed scope of work or service agreement",
-        "Proof of service delivery (reports, deliverables, login/access logs)",
-        "Milestone sign-offs or approval emails from the customer",
+        "Prior transaction history with the cardholder",
+        "Terms of service accepted at checkout",
       ],
-      priority: 1,
+      priority: 2,
     },
   ],
 };

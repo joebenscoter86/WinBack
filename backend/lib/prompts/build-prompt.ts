@@ -66,9 +66,22 @@ export function buildPrompt(context: PromptContext): PromptResult {
     return { system: SYSTEM_PROMPT, user: null };
   }
 
-  const evidenceFilesList = context.evidence_files
-    .map((f) => `- "${f.checklist_item_key}": ${f.file_name}`)
-    .join("\n");
+  const uploadedKeys = new Set(
+    context.evidence_files.map((f) => f.checklist_item_key)
+  );
+
+  const allEvidenceKeys = [
+    ...new Set(template.sections.flatMap((s) => s.evidence_keys)),
+  ];
+
+  const evidenceFilesList = [
+    ...context.evidence_files.map(
+      (f) => `- "${f.checklist_item_key}": ${f.file_name}`
+    ),
+    ...allEvidenceKeys
+      .filter((key) => !uploadedKeys.has(key))
+      .map((key) => `- "${key}": (not uploaded)`),
+  ].join("\n");
 
   const checklistNotesList = Object.entries(context.checklist_notes)
     .map(([key, note]) => `- "${key}": "${note}"`)
