@@ -24,6 +24,7 @@ export const POST = withStripeAuth(async (
   try {
     const dispute = await getDispute(accountId, disputeId, [
       "charge.customer",
+      "payment_intent",
     ]);
     const normalized = normalizeDispute(dispute);
 

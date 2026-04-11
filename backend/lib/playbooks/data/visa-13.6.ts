@@ -45,6 +45,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Shows the refund was processed, the amount, and the date. This is usually sufficient to close the dispute on its own.",
       where_to_find:
         "Stripe Dashboard > Payments > click the original payment > look for the Refund section. Screenshot showing the refund date, amount, and status ('Succeeded'). This is usually the only thing you need to submit.",
+      stripe_field: "refund_data",
       urgency_essential: true,
       urgency_order: 1,
     },
@@ -57,6 +58,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "The amount and timing must be traceable back to this specific transaction. An unmatched refund record won't satisfy the customer's bank.",
       where_to_find:
         "Same Stripe payment detail page as above. Make sure the refund amount matches the disputed amount and the refund is linked to this specific payment (not a different transaction). If you issued a partial refund, note the amount difference and why.",
+      stripe_field: "refund_data",
       urgency_essential: true,
       urgency_order: 2,
     },

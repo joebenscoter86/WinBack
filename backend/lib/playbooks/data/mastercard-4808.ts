@@ -44,6 +44,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Shows the authorization was obtained, the amount, the timestamp, and the transaction approval number. This is the core of the dispute -- without it, you have no defense.",
       where_to_find:
         "Stripe Dashboard > Payments > click the payment > scroll to the Timeline section. The authorization details (transaction approval number, timestamp, amount) are listed there. For more detailed processor-level data, check your payment processor's admin portal directly. Note: Stripe maps authorization data to uncategorized_text in evidence submissions, so copy the approval number and timestamps.",
+      stripe_field: "authorization",
       urgency_essential: true,
       urgency_order: 1,
     },
@@ -68,6 +69,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Links the specific authorization to the specific transaction. The transaction approval number is the primary identifier tying your authorization record to the final charge.",
       where_to_find:
         "Stripe Dashboard > Payments > click the payment > look in the Payment details or Timeline for 'Authorization code' or 'Approval code'. You can also find this in the Stripe API response under charges.data[0].outcome.network_advice_code or by expanding the payment's JSON data.",
+      stripe_field: "authorization",
       urgency_essential: false,
       urgency_order: null,
     },

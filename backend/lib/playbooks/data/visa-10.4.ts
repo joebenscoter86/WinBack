@@ -47,6 +47,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Proves the transaction was properly approved through the payment network. Without this, your payment processor will bounce your submission before the customer's bank ever sees it.",
       where_to_find:
         "Stripe Dashboard > Payments > click the payment > look for the authorization details section. You can also find this in the payment's API response under `charges.data[0].outcome`.",
+      stripe_field: "authorization",
       urgency_essential: true,
       urgency_order: 2,
     },
@@ -59,6 +60,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Shows you verified the billing address. A match strengthens your case significantly and demonstrates you took steps to verify the customer's identity.",
       where_to_find:
         "Stripe Dashboard > Payments > click the payment > scroll to Payment method details. The address verification result appears as 'Address line1 check' and 'ZIP check'. Stripe automatically includes this when you submit evidence.",
+      stripe_field: "avs_result",
       urgency_essential: true,
       urgency_order: 2,
     },
@@ -71,6 +73,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Proves the person had the physical card (or its details). A CVV match is one of the clearest signals that the legitimate cardholder -- or someone with access to the card -- made the purchase.",
       where_to_find:
         "Stripe Dashboard > Payments > click the payment > Payment method details section. The CVC check result shows as 'CVC check: pass/fail'. Stripe automatically includes this when you submit evidence.",
+      stripe_field: "cvc_check",
       urgency_essential: true,
       urgency_order: 2,
     },
@@ -119,6 +122,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "If you used the extra bank verification step at checkout (3D Secure), the bank takes responsibility instead of you and this dispute shouldn't have reached you. Authentication proof is the single strongest piece of evidence -- it effectively ends the dispute.",
       where_to_find:
         "Stripe Dashboard > Payments > click the payment > look for '3D Secure' in the payment details. If it says 'Authenticated' or shows a 3DS result, you have it. Stripe includes this automatically in dispute evidence submissions.",
+      stripe_field: "three_d_secure",
       urgency_essential: true,
       urgency_order: 1,
     },

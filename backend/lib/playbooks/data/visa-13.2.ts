@@ -71,6 +71,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Stripe marks the customer email as a priority field for recurring disputes. It ties the cancellation timeline directly to the customer's identity and shows where renewal reminders and cancellation confirmations were sent. The bank uses this to verify the customer's account.",
       where_to_find:
         "Stripe Dashboard > Customers > search by name > the email is on the customer profile. Cross-reference with the email on the subscription and the email where you sent billing notifications. If the customer used a different email to contact support about cancellation, note both.",
+      stripe_field: "customer_email",
       urgency_essential: false,
       urgency_order: null,
     },

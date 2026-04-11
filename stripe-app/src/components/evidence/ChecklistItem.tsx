@@ -1,6 +1,7 @@
 import { Box, Checkbox, Badge, Inline, Link, Icon, TextArea } from '@stripe/ui-extension-sdk/ui';
 import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 import type { EvidenceChecklistItem, EvidenceFile } from '../../lib/types';
+import type { StripeFieldResult } from './EvidenceChecklist';
 import FileUploadSection from './FileUploadSection';
 
 export type ExpandedSection = 'why' | 'where' | 'notes' | 'file';
@@ -8,7 +9,7 @@ export type ExpandedSection = 'why' | 'where' | 'notes' | 'file';
 interface ChecklistItemProps {
   item: EvidenceChecklistItem;
   checked: boolean;
-  autoPopulated: boolean;
+  stripeFieldResult?: StripeFieldResult;
   expandedSections: Set<ExpandedSection>;
   notes: string;
   existingFile: EvidenceFile | null;
@@ -28,6 +29,17 @@ function getCategoryBadge(category: EvidenceChecklistItem['category']) {
       return <Badge type="warning">HELPFUL</Badge>;
     case 'situational':
       return <Badge type="neutral">IF APPLICABLE</Badge>;
+  }
+}
+
+function getStripeStatusBadge(result: StripeFieldResult) {
+  switch (result.status) {
+    case 'positive':
+      return <Badge type="info">FROM STRIPE</Badge>;
+    case 'unavailable':
+      return <Badge type="neutral">NOT AVAILABLE</Badge>;
+    case 'negative':
+      return <Badge type="warning">HEADS UP</Badge>;
   }
 }
 
@@ -51,7 +63,7 @@ const SectionToggle = ({ label, expanded, onPress }: SectionToggleProps) => (
 const ChecklistItem = ({
   item,
   checked,
-  autoPopulated,
+  stripeFieldResult,
   expandedSections,
   notes,
   existingFile,
@@ -67,46 +79,73 @@ const ChecklistItem = ({
   const notesExpanded = expandedSections.has('notes');
   const fileExpanded = expandedSections.has('file');
 
+  const isUnavailable = stripeFieldResult?.status === 'unavailable';
+  const isNegative = stripeFieldResult?.status === 'negative';
+  const isPositive = stripeFieldResult?.status === 'positive';
+
   return (
-    <Box css={{ stack: 'y', gap: 'small', padding: 'small', borderRadius: 'medium', backgroundColor: 'container' }}>
+    <Box css={{
+      stack: 'y',
+      gap: 'small',
+      padding: 'small',
+      borderRadius: 'medium',
+      backgroundColor: 'container',
+    }}>
       <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
         <Checkbox
           label=""
           checked={checked}
           onChange={onToggle}
+          disabled={isUnavailable || isPositive}
           aria-label={item.item}
         />
         <Box css={{ stack: 'y', gap: 'xxsmall', width: 'fill' }}>
           <Box css={{ stack: 'x', gap: 'xsmall', alignY: 'center', wrap: 'wrap' }}>
-            <Inline css={{ font: 'body', fontWeight: 'semibold', color: checked ? 'secondary' : undefined }}>
+            <Inline css={{
+              font: 'body',
+              fontWeight: 'semibold',
+              color: isUnavailable ? 'disabled' : checked ? 'secondary' : undefined,
+            }}>
               {item.item}
             </Inline>
-            {autoPopulated && <Badge type="info">FROM STRIPE</Badge>}
+            {stripeFieldResult && getStripeStatusBadge(stripeFieldResult)}
             {getCategoryBadge(item.category)}
           </Box>
+          {stripeFieldResult && (
+            <Inline css={{
+              font: 'caption',
+              color: isNegative ? 'attention' : 'secondary',
+            }}>
+              {stripeFieldResult.value}
+            </Inline>
+          )}
           <Box css={{ stack: 'x', gap: 'small', wrap: 'wrap' }}>
             <SectionToggle
               label="Why this matters"
               expanded={whyExpanded}
               onPress={() => onSectionToggle('why')}
             />
-            {item.where_to_find && (
+            {(item.where_to_find || stripeFieldResult) && (
               <SectionToggle
-                label="Where to find this"
+                label={stripeFieldResult ? 'Details' : 'Where to find this'}
                 expanded={whereExpanded}
                 onPress={() => onSectionToggle('where')}
               />
             )}
-            <SectionToggle
-              label={notes ? 'Your notes' : 'Add notes'}
-              expanded={notesExpanded}
-              onPress={() => onSectionToggle('notes')}
-            />
-            <SectionToggle
-              label={existingFile ? existingFile.file_name : 'Attach file'}
-              expanded={fileExpanded}
-              onPress={() => onSectionToggle('file')}
-            />
+            {!isUnavailable && !isPositive && (
+              <>
+                <SectionToggle
+                  label={notes ? 'Your notes' : 'Add notes'}
+                  expanded={notesExpanded}
+                  onPress={() => onSectionToggle('notes')}
+                />
+                <SectionToggle
+                  label={existingFile ? existingFile.file_name : 'Attach file'}
+                  expanded={fileExpanded}
+                  onPress={() => onSectionToggle('file')}
+                />
+              </>
+            )}
           </Box>
         </Box>
       </Box>
@@ -119,15 +158,17 @@ const ChecklistItem = ({
         </Box>
       )}
 
-      {whereExpanded && item.where_to_find && (
+      {whereExpanded && (item.where_to_find || stripeFieldResult) && (
         <Box css={{ marginLeft: 'xlarge', padding: 'small', borderRadius: 'small' }}>
-          <Inline css={{ font: 'caption', color: 'secondary' }}>
-            {item.where_to_find}
+          <Inline css={{ font: 'caption', color: isNegative ? 'attention' : 'secondary' }}>
+            {stripeFieldResult
+              ? stripeFieldResult.guidance
+              : item.where_to_find}
           </Inline>
         </Box>
       )}
 
-      {notesExpanded && (
+      {notesExpanded && !isUnavailable && (
         <Box css={{ marginLeft: 'xlarge' }}>
           <TextArea
             label="Your notes"
@@ -139,7 +180,7 @@ const ChecklistItem = ({
         </Box>
       )}
 
-      {fileExpanded && (
+      {fileExpanded && !isUnavailable && (
         <Box css={{ marginLeft: 'xlarge' }}>
           <FileUploadSection
             disputeId={disputeId}
