@@ -13,7 +13,7 @@ import {
   TabPanel,
 } from '@stripe/ui-extension-sdk/ui';
 import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
-import type { WizardStep, Dispute, PlaybookData } from '../lib/types';
+import type { WizardStep, Dispute, PlaybookData, EvidenceFile } from '../lib/types';
 import { WIZARD_STEPS, WIZARD_STEP_LABELS } from '../lib/types';
 import { fetchBackend, ApiError } from '../lib/apiClient';
 import { getDaysRemaining, isResolved } from '../lib/utils';
@@ -24,6 +24,7 @@ import CoachHeader from './review/CoachHeader';
 import QuickActions from './review/QuickActions';
 import LearnMore from './review/LearnMore';
 import EvidenceChecklist from './evidence/EvidenceChecklist';
+import NarrativePanel from './narrative/NarrativePanel';
 
 interface DisputeWorkflowProps {
   dispute: Dispute;
@@ -44,6 +45,8 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
     dispute: null,
     playbook: null,
   });
+  const [editedNarrative, setEditedNarrative] = useState('');
+  const [evidenceFiles, setEvidenceFiles] = useState<EvidenceFile[]>([]);
 
   // Ref to avoid context reference identity changes triggering re-fetches
   const contextRef = useRef(context);
@@ -94,6 +97,18 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
         setPlaybook(null);
       }
       setLoading((prev) => ({ ...prev, playbook: false }));
+
+      // Fetch evidence files for narrative tab
+      try {
+        const filesResult = await fetchBackend<{ data: EvidenceFile[] }>(
+          `/api/disputes/${initialDispute.id}/evidence-files`,
+          contextRef.current,
+        );
+        setEvidenceFiles(filesResult.data);
+      } catch (err) {
+        console.error('Failed to fetch evidence files:', err);
+        setEvidenceFiles([]);
+      }
     };
 
     fetchData();
@@ -225,16 +240,19 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
               />
             </TabPanel>
             <TabPanel id="narrative">
-              <Box css={{ padding: 'medium', stack: 'y', gap: 'medium' }}>
-                <Banner
-                  type="default"
-                  title="Step 3: AI Narrative"
-                  description="Generate a compelling narrative based on your evidence. Review, edit, and approve before submission."
-                />
-                <Inline css={{ font: 'caption', color: 'secondary' }}>
-                  AI narrative generation and editing will be built in WIN-18 and WIN-19.
-                </Inline>
-              </Box>
+              <NarrativePanel
+                dispute={dispute}
+                playbook={playbook}
+                evidenceFiles={evidenceFiles}
+                context={contextRef.current}
+                editedNarrative={editedNarrative}
+                onEditedNarrativeChange={setEditedNarrative}
+                onApprove={(text) => {
+                  setEditedNarrative(text);
+                  setCurrentStep('submit');
+                }}
+                onNavigateBack={() => setCurrentStep('evidence')}
+              />
             </TabPanel>
             <TabPanel id="submit">
               <Box css={{ padding: 'medium', stack: 'y', gap: 'medium' }}>
