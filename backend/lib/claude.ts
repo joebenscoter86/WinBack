@@ -37,13 +37,15 @@ export async function generateNarrative(
     );
   }
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 4096,
-    timeout: 60_000,
-    system: prompt.system,
-    messages: [{ role: "user", content: prompt.user }],
-  });
+  const response = await anthropic.messages.create(
+    {
+      model: "claude-sonnet-4-6",
+      max_tokens: 4096,
+      system: prompt.system,
+      messages: [{ role: "user", content: prompt.user }],
+    },
+    { timeout: 60_000 },
+  );
 
   const textBlock = response.content.find((block: any) => block.type === "text");
   if (!textBlock || textBlock.type !== "text") {
