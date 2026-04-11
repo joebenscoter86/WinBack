@@ -52,7 +52,10 @@ export async function generateNarrative(
     throw new Error("No text content in Claude response");
   }
 
-  const rawText = (textBlock as { type: "text"; text: string }).text;
+  let rawText = (textBlock as { type: "text"; text: string }).text;
+
+  // Strip markdown code fences if Claude wraps the JSON in ```json ... ```
+  rawText = rawText.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "");
 
   let parsed: unknown;
   try {
