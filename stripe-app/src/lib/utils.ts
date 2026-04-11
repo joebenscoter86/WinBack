@@ -35,14 +35,41 @@ export function getDaysRemaining(dueBy: string): number {
   return Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+export interface TimeRemaining {
+  days: number;
+  hours: number;
+  isExpired: boolean;
+}
+
+export function getTimeRemaining(dueBy: string): TimeRemaining {
+  const totalMs = new Date(dueBy).getTime() - Date.now();
+  if (totalMs <= 0) return { days: 0, hours: 0, isExpired: true };
+  const totalHours = Math.floor(totalMs / (1000 * 60 * 60));
+  return {
+    days: Math.floor(totalHours / 24),
+    hours: totalHours % 24,
+    isExpired: false,
+  };
+}
+
+export type UrgencyTier = 'urgent' | 'warning' | 'positive';
+
+export function getUrgencyTier(days: number): UrgencyTier {
+  if (days < 5) return 'urgent';
+  if (days <= 13) return 'warning';
+  return 'positive';
+}
+
 export function getUrgencyBadge(
   dueBy: string,
   status: string,
-): { label: string; type: 'urgent' | 'warning' | 'positive' } | null {
+): { label: string; type: UrgencyTier } | null {
   if (isResolved(status)) return null;
 
-  const days = getDaysRemaining(dueBy);
-  if (days < 5) return { label: `${days}d left`, type: 'urgent' };
-  if (days <= 13) return { label: `${days}d left`, type: 'warning' };
-  return { label: `${days}d left`, type: 'positive' };
+  const time = getTimeRemaining(dueBy);
+  const tier = getUrgencyTier(time.days);
+
+  if (time.isExpired) return { label: 'Expired', type: 'urgent' };
+  if (time.days < 5) return { label: `${time.days}d ${time.hours}h left`, type: tier };
+  return { label: `${time.days}d left`, type: tier };
 }

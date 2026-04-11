@@ -18,11 +18,11 @@ import { WIZARD_STEPS, WIZARD_STEP_LABELS } from '../lib/types';
 import { fetchBackend, ApiError } from '../lib/apiClient';
 import { getDaysRemaining, isResolved } from '../lib/utils';
 import ErrorBanner from './ErrorBanner';
+import DeadlineTimer from './DeadlineTimer';
 import DisputeOverview from './review/DisputeOverview';
 import CoachHeader from './review/CoachHeader';
 import QuickActions from './review/QuickActions';
 import LearnMore from './review/LearnMore';
-import UrgencyBanner from './review/UrgencyBanner';
 import EvidenceChecklist from './evidence/EvidenceChecklist';
 
 interface DisputeWorkflowProps {
@@ -123,8 +123,6 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
 
     return (
       <Box css={{ padding: 'medium', stack: 'y', gap: 'large' }}>
-        {isUrgent && playbook && <UrgencyBanner daysRemaining={daysRemaining} essentials={playbook.urgency_essentials} />}
-
         {errors.dispute && <ErrorBanner message={errors.dispute} />}
 
         {isLoadingPlaybook ? (
@@ -196,7 +194,10 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
         )
       }
     >
-      <Box>
+      <Box css={{ stack: 'y' }}>
+        <Box css={{ padding: 'medium', paddingBottom: 'small' }}>
+          <DeadlineTimer dueBy={dispute.due_by} status={dispute.status} />
+        </Box>
         <Tabs
           fitted
           size="medium"
