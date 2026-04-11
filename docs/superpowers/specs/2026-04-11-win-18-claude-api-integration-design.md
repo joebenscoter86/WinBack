@@ -69,11 +69,13 @@ On completion, the final narrative is also written to `disputes.narrative_text` 
 
 **Response:** `202 { generation_id: string, status: "pending" }`
 
-### `GET /api/narratives/[generationId]/status`
+### `POST /api/narratives/[generationId]/status`
+
+Uses POST (not GET) because Stripe App SDK signs requests with a body containing `user_id` and `account_id`. GET requests with bodies are non-standard and some proxies strip them.
 
 **Flow:**
 
-1. Verify auth (`withStripeAuth`). The Stripe App frontend sends signed requests for all HTTP methods. For GET/POST the signature is in the `stripe-signature` header. The body for GET polling requests contains the standard `user_id` and `account_id` fields (the Stripe App SDK includes these in every signed request).
+1. Verify auth (`withStripeAuth`). The Stripe App frontend sends signed requests with `user_id` and `account_id` in the body and the signature in the `stripe-signature` header.
 2. Look up generation row, confirm the dispute belongs to this merchant
 3. Return current state
 
