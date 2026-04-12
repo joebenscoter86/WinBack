@@ -3,7 +3,14 @@ import path from "path";
 
 // Load .env.local so the test can talk to real dev Supabase.
 // process.loadEnvFile is built into Node 20.12+, no dotenv dependency needed.
-process.loadEnvFile(path.resolve(__dirname, ".env.local"));
+// In CI, .env.local doesn't exist — env vars are injected by the workflow,
+// so swallow ENOENT and let the test's own assertion in dispute-wizard-flow.test.ts
+// surface a clear error if required vars are actually missing.
+try {
+  process.loadEnvFile(path.resolve(__dirname, ".env.local"));
+} catch (err) {
+  if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+}
 
 export default defineConfig({
   test: {
