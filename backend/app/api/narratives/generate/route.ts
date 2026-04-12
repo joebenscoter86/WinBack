@@ -27,8 +27,9 @@ export const POST = withStripeAuth(async (
     );
   }
 
-  // 2. Upsert merchant row (fire-and-forget, consistent with all other routes)
-  ensureMerchant(accountId, userId);
+  // 2. Upsert merchant row -- must await because we look up merchant.id on the
+  // next line. Fire-and-forget would race against the SELECT on first visit.
+  await ensureMerchant(accountId, userId);
 
   // 3. Look up merchant
   const { data: merchant, error: merchantError } = await supabase
