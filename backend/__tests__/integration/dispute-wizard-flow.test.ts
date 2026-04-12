@@ -190,5 +190,33 @@ describe("WIN-43: dispute wizard integration flow", () => {
       .single();
     expect(disputeRowAfterUpload?.amount).toBe(14900);
     expect(disputeRowAfterUpload?.reason_code).toBe("10.4");
+
+    // ---- STEP 5: PATCH /api/disputes/{id} (checklist toggle) ----
+    const { PATCH: disputesPATCH } = await import(
+      "@/app/api/disputes/[disputeId]/route"
+    );
+
+    const step5Req = new NextRequest(
+      `http://localhost/api/disputes/${TEST_DISPUTE_ID}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          checklist_state: { [TEST_CHECKLIST_ITEM_KEY]: true },
+        }),
+      },
+    );
+    const step5Res = await disputesPATCH(step5Req);
+    expect(step5Res.status).toBe(200);
+
+    // DB assertion: checklist_state persisted
+    const { data: disputeAfterPatch } = await testDb
+      .from("disputes")
+      .select("checklist_state")
+      .eq("stripe_dispute_id", TEST_DISPUTE_ID)
+      .single();
+    expect(disputeAfterPatch?.checklist_state).toEqual({
+      [TEST_CHECKLIST_ITEM_KEY]: true,
+    });
   });
 });
