@@ -43,6 +43,11 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      # lib/claude.ts validates ANTHROPIC_API_KEY before the SDK mock can
+      # intervene, so we inject a dummy value here. The mock in
+      # __tests__/integration/mocks.ts intercepts every Anthropic call, so
+      # the value never hits the real API — it just needs to be non-empty.
+      ANTHROPIC_API_KEY: sk-ant-ci-dummy-not-real
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
