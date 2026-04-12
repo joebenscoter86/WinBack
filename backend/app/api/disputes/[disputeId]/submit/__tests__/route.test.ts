@@ -448,6 +448,20 @@ describe("POST /api/disputes/[disputeId]/submit", () => {
           }),
         };
       }
+      if (table === "dispute_submissions") {
+        // No prior submissions — idempotency check finds nothing and falls through to guard
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              in: vi.fn().mockReturnValue({
+                order: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+                }),
+              }),
+            }),
+          }),
+        };
+      }
       return {};
     });
 

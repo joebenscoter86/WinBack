@@ -219,30 +219,10 @@ export const POST = withStripeAuth(
       return errorResponse(500, "internal_error", "Playbook not found");
     }
 
-    // Step 7: Pre-submission guard
-    const guard = evaluateSubmissionGuard({
-      stripeDispute,
-      playbook: playbook as unknown as import("@/lib/playbooks/types").PlaybookData,
-      evidenceFiles,
-      narrativeText,
-    });
-
-    if (guard.action === "block") {
-      const statusCode =
-        guard.blockCode === "dispute_not_submittable"
-          ? 409
-          : guard.blockCode === "validation_failed"
-            ? 422
-            : 400;
-      return errorResponse(
-        statusCode,
-        guard.blockCode ?? "invalid_request",
-        guard.blockMessage ?? "Submission blocked",
-        guard.warnings,
-      );
-    }
-
-    // Step 8: Idempotent replay / in-flight lock check
+    // Step 7: Idempotent replay / in-flight lock check
+    // Must run BEFORE the pre-submission guard so that a replay of a
+    // successfully-submitted dispute returns the cached 200 even though
+    // Stripe now reports a non-submittable status (e.g. under_review).
     const { data: existingRows } = await supabase
       .from("dispute_submissions")
       .select("*")
@@ -263,7 +243,8 @@ export const POST = withStripeAuth(
       | undefined;
 
     if (prior?.status === "succeeded") {
-      // Return cached result — no need to re-call Stripe
+      // Return cached result — no need to re-call Stripe (and no need to
+      // run the guard; the submission already happened).
       return NextResponse.json({
         data: {
           submission_id: prior.id,
@@ -322,7 +303,8 @@ export const POST = withStripeAuth(
         });
       }
 
-      // Stripe hasn't processed it — mark the stale row failed and try fresh
+      // Stripe hasn't processed it — mark the stale row failed and try fresh.
+      // Fall through to the guard and a new submission attempt below.
       await supabase
         .from("dispute_submissions")
         .update({
@@ -332,6 +314,29 @@ export const POST = withStripeAuth(
           completed_at: new Date().toISOString(),
         })
         .eq("id", prior.id);
+    }
+
+    // Step 8: Pre-submission guard
+    const guard = evaluateSubmissionGuard({
+      stripeDispute,
+      playbook: playbook as unknown as import("@/lib/playbooks/types").PlaybookData,
+      evidenceFiles,
+      narrativeText,
+    });
+
+    if (guard.action === "block") {
+      const statusCode =
+        guard.blockCode === "dispute_not_submittable"
+          ? 409
+          : guard.blockCode === "validation_failed"
+            ? 422
+            : 400;
+      return errorResponse(
+        statusCode,
+        guard.blockCode ?? "invalid_request",
+        guard.blockMessage ?? "Submission blocked",
+        guard.warnings,
+      );
     }
 
     // Step 9: Build evidence payload

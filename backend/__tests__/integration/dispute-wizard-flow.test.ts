@@ -441,14 +441,13 @@ describe("WIN-43: dispute wizard integration flow", () => {
 
     const callsBefore = mockSubmitDispute.mock.calls.length;
 
-    // The guard runs BEFORE the idempotency check, so we must return
-    // needs_response here — if we return under_review the guard blocks with
-    // 409 dispute_not_submittable before the cached row is ever checked.
-    // With needs_response the guard passes, the route finds the succeeded row
-    // from step 9 and returns the cached 200 without calling Stripe again.
+    // Idempotency check now runs BEFORE the guard, so returning the realistic
+    // post-submit status (under_review) is correct: the route finds the
+    // succeeded row from step 9 and returns the cached 200 without ever
+    // reaching the guard or calling Stripe again.
     mockGetDispute.mockResolvedValueOnce({
       id: TEST_DISPUTE_ID,
-      status: "needs_response",
+      status: "under_review",
       evidence: {},
       evidence_details: { due_by: Math.floor(Date.now() / 1000) + 86_400 },
       charge: {
