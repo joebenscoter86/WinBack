@@ -122,8 +122,11 @@ export const POST = withStripeAuth(async (
 
   const generationId = (generation as { id: string }).id;
 
-  // 8. Fire background generation (non-blocking via Next.js after() API)
-  after(
+  // 8. Fire background generation (non-blocking via Next.js after() API).
+  // We await after() so that in test environments the mocked after()
+  // (which returns the promise directly) propagates the background work
+  // inline. In production, after() returns void and awaiting void is a no-op.
+  await after(
     runBackgroundGeneration({
       generationId,
       disputeId,

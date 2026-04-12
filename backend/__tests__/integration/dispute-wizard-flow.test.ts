@@ -218,5 +218,53 @@ describe("WIN-43: dispute wizard integration flow", () => {
     expect(disputeAfterPatch?.checklist_state).toEqual({
       [TEST_CHECKLIST_ITEM_KEY]: true,
     });
+
+    // ---- STEP 6: POST /api/narratives/generate ----
+    // The generate route kicks off runBackgroundGeneration via after().
+    // Our next/server mock replaces after() with an inline await, so the
+    // background work (Claude call + DB writes) completes before this
+    // response resolves. That makes the whole generation cycle observable
+    // in DB state immediately after the POST returns.
+    const { POST: generatePOST } = await import(
+      "@/app/api/narratives/generate/route"
+    );
+
+    const step6Req = new NextRequest(
+      "http://localhost/api/narratives/generate",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dispute_id: TEST_DISPUTE_ID,
+          reason_code: "10.4",
+          network: "visa",
+          merchant_feedback: "",
+        }),
+      },
+    );
+    const step6Res = await generatePOST(step6Req);
+    expect(step6Res.status).toBe(202);
+    const step6Body = await step6Res.json();
+    expect(step6Body.generation_id).toBeTruthy();
+    const generationId = step6Body.generation_id as string;
+
+    // DB assertions: narrative_generations row completed, dispute has
+    // narrative_text populated, counter incremented.
+    const { data: genRow } = await testDb
+      .from("narrative_generations")
+      .select("id, status, narrative_output, error")
+      .eq("id", generationId)
+      .single();
+    expect(genRow?.status).toBe("completed");
+    expect(genRow?.error).toBeNull();
+    expect(genRow?.narrative_output).toBeTruthy();
+
+    const { data: disputeAfterGen } = await testDb
+      .from("disputes")
+      .select("narrative_text, narrative_generations_count")
+      .eq("stripe_dispute_id", TEST_DISPUTE_ID)
+      .single();
+    expect(disputeAfterGen?.narrative_text).toContain("Delivery Confirmation");
+    expect(disputeAfterGen?.narrative_generations_count).toBe(1);
   });
 });
