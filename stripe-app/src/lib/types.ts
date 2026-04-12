@@ -49,6 +49,7 @@ export interface Dispute {
   metadata?: Record<string, string>;
   checklist_state?: Record<string, boolean>;
   checklist_notes?: Record<string, string>;
+  evidence_submitted_at?: string | null;
   // Auto-pull fields (WIN-37)
   avs_address_check?: string;
   avs_zip_check?: string;
@@ -102,4 +103,17 @@ export interface EvidenceFile {
   file_size: number;
   mime_type: string;
   uploaded_at: string;
+}
+
+export type SubmissionWarning =
+  | { code: 'field_truncated'; field: string; original_length: number; truncated_length: number }
+  | { code: 'field_collision'; winning_item: string; losing_item: string; field: string; resolution: 'uncategorized_file' | 'dropped' }
+  | { code: 'missing_mandatory_items'; items: string[] }
+  | { code: 'deadline_passed'; due_by: number };
+
+export interface SubmissionResponse {
+  submission_id: string;
+  submitted_at: string;
+  dispute_status: string;
+  warnings: SubmissionWarning[];
 }
