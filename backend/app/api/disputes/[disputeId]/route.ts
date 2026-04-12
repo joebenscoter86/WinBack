@@ -19,7 +19,9 @@ export const POST = withStripeAuth(async (
     );
   }
 
-  ensureMerchant(accountId, userId);
+  // Must await -- we depend on the merchant row existing below for the
+  // dispute upsert's merchant_id. See WIN-42.
+  await ensureMerchant(accountId, userId);
 
   try {
     const dispute = await getDispute(accountId, disputeId, [
@@ -27,6 +29,53 @@ export const POST = withStripeAuth(async (
       "payment_intent",
     ]);
     const normalized = normalizeDispute(dispute);
+
+    // Backfill the dispute row in our database so downstream routes
+    // (narrative generate, evidence upload) can trust it exists with
+    // real data. This is the canonical entry point for a dispute -- the
+    // wizard opens on the Review tab, which calls this route first.
+    try {
+      const { data: merchant } = await supabase
+        .from("merchants")
+        .select("id")
+        .eq("stripe_account_id", accountId)
+        .single();
+
+      if (merchant) {
+        const responseDeadline = normalized.evidence_due_by
+          ? new Date(normalized.evidence_due_by * 1000).toISOString()
+          : null;
+        const transactionDate = normalized.transaction_date
+          ? new Date(normalized.transaction_date * 1000).toISOString()
+          : null;
+
+        const { error: upsertError } = await supabase.from("disputes").upsert(
+          {
+            merchant_id: merchant.id,
+            stripe_dispute_id: normalized.id,
+            stripe_charge_id: normalized.charge_id,
+            amount: normalized.amount,
+            currency: normalized.currency,
+            reason_code: normalized.reason_code,
+            network: normalized.network,
+            status: normalized.status,
+            customer_name: normalized.customer_name ?? null,
+            transaction_date: transactionDate,
+            response_deadline: responseDeadline,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "stripe_dispute_id" },
+        );
+
+        if (upsertError) {
+          console.error("Failed to backfill dispute row:", upsertError.message);
+        }
+      }
+    } catch (backfillErr) {
+      // Never fail the request because of a backfill error -- the
+      // merchant can still read the dispute from Stripe.
+      console.error("Dispute backfill unexpected error:", backfillErr);
+    }
 
     return NextResponse.json({ data: normalized });
   } catch (err) {

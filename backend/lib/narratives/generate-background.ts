@@ -159,6 +159,10 @@ export async function runBackgroundGeneration(
       .update({ narrative_text: validatedOutput.narrative })
       .eq("id", disputeId);
   } catch (err) {
+    console.error(
+      `[generate-background] generation ${generationId} failed:`,
+      err,
+    );
     const message = err instanceof Error ? err.message : String(err);
     await markFailed(generationId, classifyError(message));
   }
