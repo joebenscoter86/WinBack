@@ -10,6 +10,7 @@ interface FileUploadSectionProps {
   existingFile: EvidenceFile | null;
   context: ExtensionContextValue;
   onFileChange: (file: EvidenceFile | null) => void;
+  submitted?: boolean;
 }
 
 function formatFileSize(bytes: number): string {
@@ -36,6 +37,7 @@ const FileUploadSection = ({
   existingFile,
   context,
   onFileChange,
+  submitted,
 }: FileUploadSectionProps) => {
   const [error, setError] = useState<string | null>(null);
   const [showReplace, setShowReplace] = useState(false);
@@ -89,6 +91,29 @@ const FileUploadSection = ({
       setError('Failed to remove file. Try again.');
     }
   };
+
+  // Read-only mode post-submission
+  if (submitted) {
+    if (existingFile) {
+      return (
+        <Box css={{ stack: 'x', gap: 'xsmall', alignY: 'center', wrap: 'wrap' }}>
+          <Icon name="check" size="xsmall" />
+          <Inline css={{ font: 'caption', fontWeight: 'semibold' }}>
+            {existingFile.file_name}
+          </Inline>
+          <Badge type="info">{getMimeLabel(existingFile.mime_type)}</Badge>
+          <Inline css={{ font: 'caption', color: 'secondary' }}>
+            {formatFileSize(existingFile.file_size)}
+          </Inline>
+        </Box>
+      );
+    }
+    return (
+      <Inline css={{ font: 'caption', color: 'secondary' }}>
+        No file attached
+      </Inline>
+    );
+  }
 
   return (
     <Box css={{ stack: 'y', gap: 'xsmall' }}>

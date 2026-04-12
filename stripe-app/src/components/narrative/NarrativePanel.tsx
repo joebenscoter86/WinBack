@@ -18,6 +18,7 @@ interface NarrativePanelProps {
   onEditedNarrativeChange: (text: string) => void;
   onApprove: (narrativeText: string) => void;
   onNavigateBack: () => void;
+  submitted?: boolean;
 }
 
 const NarrativePanel = ({
@@ -29,6 +30,7 @@ const NarrativePanel = ({
   onEditedNarrativeChange,
   onApprove,
   onNavigateBack,
+  submitted,
 }: NarrativePanelProps) => {
   const [phase, setPhase] = useState<NarrativePhase>('idle');
   const [generationId, setGenerationId] = useState<string | null>(null);
@@ -144,6 +146,22 @@ const NarrativePanel = ({
   const handleErrorContinue = useCallback(() => {
     onApprove(editedNarrative);
   }, [onApprove, editedNarrative]);
+
+  // Post-submission: render narrative in read-only mode regardless of local phase state
+  if (submitted) {
+    return (
+      <NarrativeReview
+        narrative={editedNarrative}
+        annotations={annotations}
+        editedNarrative={editedNarrative}
+        generationNumber={generationNumber}
+        onEditChange={onEditedNarrativeChange}
+        onApprove={handleApprove}
+        onRegenerate={handleRegenerate}
+        submitted
+      />
+    );
+  }
 
   switch (phase) {
     case 'idle':

@@ -18,6 +18,7 @@ interface EvidenceChecklistProps {
   context: ExtensionContextValue;
   isUrgent: boolean;
   daysRemaining: number;
+  submitted?: boolean;
 }
 
 type ChecklistState = Record<string, boolean>;
@@ -59,7 +60,7 @@ function buildInitialState(
   return state;
 }
 
-const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining }: EvidenceChecklistProps) => {
+const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining, submitted }: EvidenceChecklistProps) => {
   const items = playbook?.evidence_checklist ?? [];
   const [checklistState, setChecklistState] = useState<ChecklistState>(() =>
     buildInitialState(items, dispute),
@@ -198,11 +199,19 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
 
   return (
     <Box css={{ padding: 'medium', stack: 'y', gap: 'large' }}>
-      <Banner
-        type="default"
-        title="Gather your evidence"
-        description="Here's what you'll need to build your case. Expand each item to see why it matters and jot down notes as you go."
-      />
+      {submitted ? (
+        <Banner
+          type="default"
+          title="Evidence submitted"
+          description="Your evidence has been submitted to Stripe. Files and checklist items are now read-only."
+        />
+      ) : (
+        <Banner
+          type="default"
+          title="Gather your evidence"
+          description="Here's what you'll need to build your case. Expand each item to see why it matters and jot down notes as you go."
+        />
+      )}
 
       <ChecklistProgress completed={completedItems} total={totalItems} />
 
@@ -246,6 +255,7 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
                 onSectionToggle={(section) => handleSectionToggle(item.item, section)}
                 onNotesChange={(value) => handleNotesChange(item.item, value)}
                 onFileChange={(file) => handleFileChange(item.item, file)}
+                submitted={submitted}
               />
             );
           })}

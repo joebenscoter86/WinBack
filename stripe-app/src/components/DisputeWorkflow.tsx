@@ -25,6 +25,8 @@ import QuickActions from './review/QuickActions';
 import LearnMore from './review/LearnMore';
 import EvidenceChecklist from './evidence/EvidenceChecklist';
 import NarrativePanel from './narrative/NarrativePanel';
+import SubmitView from './submit/SubmitView';
+import SubmissionConfirmation from './submit/SubmissionConfirmation';
 
 interface DisputeWorkflowProps {
   dispute: Dispute;
@@ -129,6 +131,8 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
       .catch((err) => console.error('Failed to refresh evidence files:', err));
   }, [currentStep, initialDispute.id]);
 
+  const submitted = Boolean(dispute.evidence_submitted_at);
+
   const currentIndex = WIZARD_STEPS.indexOf(currentStep);
   const isFirstStep = currentIndex === 0;
   const isLastStep = currentIndex === WIZARD_STEPS.length - 1;
@@ -225,7 +229,14 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
       }
     >
       <Box css={{ stack: 'y' }}>
-        <Box css={{ padding: 'medium', paddingBottom: 'small' }}>
+        <Box css={{ padding: 'medium', paddingBottom: 'small', stack: 'y', gap: 'small' }}>
+          {submitted && (
+            <Banner
+              type="default"
+              title="Evidence submitted"
+              description="Your evidence has been submitted to Stripe. This dispute is now read-only."
+            />
+          )}
           <DeadlineTimer dueBy={dispute.due_by} status={dispute.status} />
         </Box>
         <Tabs
@@ -252,6 +263,7 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
                 context={contextRef.current}
                 isUrgent={isUrgent}
                 daysRemaining={daysRemaining}
+                submitted={submitted}
               />
             </TabPanel>
             <TabPanel id="narrative">
@@ -267,19 +279,38 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
                   setCurrentStep('submit');
                 }}
                 onNavigateBack={() => setCurrentStep('evidence')}
+                submitted={submitted}
               />
             </TabPanel>
             <TabPanel id="submit">
-              <Box css={{ padding: 'medium', stack: 'y', gap: 'medium' }}>
-                <Banner
-                  type="caution"
-                  title="Step 4: Submit Evidence"
-                  description="Review everything one final time. Submission to Stripe is irrevocable."
+              {submitted && dispute.evidence_submitted_at ? (
+                <SubmissionConfirmation
+                  response={{
+                    submission_id: '',
+                    submitted_at: dispute.evidence_submitted_at,
+                    dispute_status: 'evidence_submitted',
+                    warnings: [],
+                  }}
                 />
-                <Inline css={{ font: 'caption', color: 'secondary' }}>
-                  Final review and Stripe submission will be built in WIN-20.
-                </Inline>
-              </Box>
+              ) : playbook ? (
+                <SubmitView
+                  dispute={dispute}
+                  playbook={playbook}
+                  evidenceFiles={evidenceFiles}
+                  narrativeText={editedNarrative}
+                  context={contextRef.current}
+                  onSubmitted={(response) => {
+                    setDispute({
+                      ...dispute,
+                      evidence_submitted_at: response.submitted_at,
+                    });
+                  }}
+                />
+              ) : (
+                <Box css={{ padding: 'medium', alignX: 'center' }}>
+                  <Spinner size="medium" />
+                </Box>
+              )}
             </TabPanel>
           </TabPanels>
         </Tabs>
