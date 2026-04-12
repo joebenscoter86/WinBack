@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Box, Button, Banner, Inline, Link, TextArea } from '@stripe/ui-extension-sdk/ui';
 import type { Dispute, PlaybookData, EvidenceFile } from '../../lib/types';
 import { MAX_GENERATIONS } from '../../lib/narrative-types';
+import { getStripeFieldResult } from '../../lib/stripe-field-status';
 
 interface NarrativePreGenerationProps {
   dispute: Dispute;
@@ -31,6 +32,15 @@ const NarrativePreGeneration = ({
     filesByKey.set(file.checklist_item_key, file);
   }
 
+  // Count satisfied items (uploaded files or positive Stripe auto-fills)
+  const checklistItems = playbook?.evidence_checklist ?? [];
+  const satisfiedCount = checklistItems.filter((item) => {
+    if (filesByKey.has(item.item)) return true;
+    const stripeField = getStripeFieldResult(item, dispute);
+    return stripeField?.status === 'positive';
+  }).length;
+  const hasNoEvidence = satisfiedCount === 0;
+
   return (
     <Box css={{ stack: 'y', gap: 'medium' }}>
       {/* Evidence summary section */}
@@ -40,10 +50,10 @@ const NarrativePreGeneration = ({
             Evidence summary
           </Inline>
 
-          {evidenceFiles.length === 0 && (
+          {hasNoEvidence && (
             <Banner
               type="caution"
-              title="No evidence uploaded"
+              title="No evidence available"
               description="The AI will generate a narrative, but without supporting evidence your chances of winning are lower. Consider going back to upload files."
             />
           )}
@@ -52,8 +62,20 @@ const NarrativePreGeneration = ({
             {playbook.evidence_checklist.map((checklistItem) => {
               const key = checklistItem.item;
               const matchedFile = filesByKey.get(key);
+              const stripeField = getStripeFieldResult(checklistItem, dispute);
+              const autoFilled = stripeField?.status === 'positive';
+              const satisfied = !!matchedFile || autoFilled;
               const isMandatoryMissing =
-                checklistItem.required && !matchedFile;
+                checklistItem.required && !satisfied;
+
+              let detail: string;
+              if (matchedFile) {
+                detail = ` \u2014 ${matchedFile.file_name}`;
+              } else if (autoFilled) {
+                detail = ` \u2014 ${stripeField.value} (auto-filled from Stripe)`;
+              } else {
+                detail = ' \u2014 not uploaded';
+              }
 
               return (
                 <Box
@@ -65,7 +87,7 @@ const NarrativePreGeneration = ({
                     padding: 'xsmall',
                   }}
                 >
-                  {matchedFile ? (
+                  {satisfied ? (
                     <Inline css={{ font: 'caption', color: 'success' }}>
                       {'\u2713'}
                     </Inline>
@@ -82,17 +104,11 @@ const NarrativePreGeneration = ({
                   <Inline
                     css={{
                       font: 'caption',
-                      color: matchedFile
-                        ? 'secondary'
-                        : isMandatoryMissing
-                        ? 'attention'
-                        : 'secondary',
+                      color: isMandatoryMissing ? 'attention' : 'secondary',
                     }}
                   >
                     {checklistItem.item}
-                    {matchedFile
-                      ? ` \u2014 ${matchedFile.file_name}`
-                      : ' \u2014 not uploaded'}
+                    {detail}
                   </Inline>
                 </Box>
               );
