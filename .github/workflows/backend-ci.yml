@@ -1,0 +1,59 @@
+name: backend-ci
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  unit:
+    name: unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  integration:
+    name: integration tests
+    needs: unit
+    runs-on: ubuntu-latest
+    # Serialize integration runs across the whole repo. The WIN-43 test uses
+    # a hardcoded acct_WIN43_TEST merchant id; concurrent runs would collide
+    # on the same dev Supabase rows. cancel-in-progress: false means queued
+    # runs wait their turn rather than being dropped.
+    concurrency:
+      group: backend-integration
+      cancel-in-progress: false
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      # lib/claude.ts validates ANTHROPIC_API_KEY before the SDK mock can
+      # intervene, so we inject a dummy value here. The mock in
+      # __tests__/integration/mocks.ts intercepts every Anthropic call, so
+      # the value never hits the real API — it just needs to be non-empty.
+      ANTHROPIC_API_KEY: sk-ant-ci-dummy-not-real
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run test:integration

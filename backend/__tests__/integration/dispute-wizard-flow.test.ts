@@ -248,13 +248,34 @@ describe("WIN-43: dispute wizard integration flow", () => {
     expect(step6Body.generation_id).toBeTruthy();
     const generationId = step6Body.generation_id as string;
 
+    // The generate route is fire-and-forget: it calls
+    // `after(runBackgroundGeneration(...))` and returns 202 without awaiting.
+    // The mocks.ts `after` override can't actually block the handler's return
+    // (the route discards after()'s return value), so the background write to
+    // narrative_generations races the test's next assertion. Locally the write
+    // usually wins; in CI (GitHub runner → dev Supabase latency) it doesn't.
+    // Poll briefly for a terminal status — mirrors how the real client polls
+    // the status endpoint in step 7 anyway. Fix introduced in WIN-46 to
+    // unblock CI; revisit if the route ever becomes directly awaitable.
+    let genRow: {
+      id: string;
+      status: string;
+      narrative_output: unknown;
+      error: string | null;
+    } | null = null;
+    for (let i = 0; i < 40; i++) {
+      const { data } = await testDb
+        .from("narrative_generations")
+        .select("id, status, narrative_output, error")
+        .eq("id", generationId)
+        .single();
+      genRow = data;
+      if (data?.status === "completed" || data?.status === "failed") break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+
     // DB assertions: narrative_generations row completed, dispute has
     // narrative_text populated, counter incremented.
-    const { data: genRow } = await testDb
-      .from("narrative_generations")
-      .select("id, status, narrative_output, error")
-      .eq("id", generationId)
-      .single();
     expect(genRow?.status).toBe("completed");
     expect(genRow?.error).toBeNull();
     expect(genRow?.narrative_output).toBeTruthy();
