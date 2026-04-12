@@ -96,6 +96,20 @@ Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 Types: `feat`, `fix`, `test`, `refactor`, `docs`, `chore`
 Scopes: `stripe-app`, `backend`, or omit for cross-cutting changes
 
+### Pre-PR Checklist (backend changes)
+
+Before opening any PR that touches `backend/**`, run the integration test suite:
+
+```bash
+cd backend && npm run test:integration
+```
+
+This walks the full dispute wizard end-to-end against real dev Supabase with mocked Stripe/Anthropic/auth. It catches cross-route sequencing bugs that unit tests with mocked Supabase miss — the exact class of bug that surfaced during WIN-19 QA. Runs in ~3 seconds.
+
+If it fails, diagnose and fix before landing the PR. Do not merge backend changes with a red integration test. See `docs/superpowers/plans/2026-04-12-win-43-integration-test.md` for what the test covers and known limitations.
+
+Frontend-only PRs (stripe-app/**) do not need this check.
+
 ---
 
 ## Important Constraints
