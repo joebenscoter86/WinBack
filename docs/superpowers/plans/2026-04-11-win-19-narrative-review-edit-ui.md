@@ -1073,3 +1073,78 @@ git commit -m "fix(stripe-app): QA fixes for narrative review/edit UI (WIN-19)"
 ```
 
 Only create this commit if there were fixes. Skip if everything worked on first pass.
+
+---
+
+## Post-QA Notes (shipping — 2026-04-12)
+
+This section captures everything that was discovered during manual QA of WIN-19, what was fixed in-scope, and what was deliberately deferred. If this feature ever needs rework, start here before reading the original spec — the plan above describes the intended design, this section describes the reality that shipped.
+
+### What WIN-19 actually delivered
+
+The review/edit UI works end-to-end: idle → generating → review → approve, plus the error branch with manual fallback. The polling loop, hallucination validator, card-based UI, generation-limit guardrail, and Stripe App signature auth are all wired and tested against a real Visa 10.4 dispute in Docket sandbox.
+
+The UI is the shippable artifact. The *content* of the narratives that this UI presents has known gaps, documented below.
+
+### Bugs fixed in-scope during QA (landed on main)
+
+These surfaced during the WIN-19 QA session but turned out to be latent bugs in code paths WIN-19 exercised for the first time. They were fixed as prerequisites for WIN-19 to function at all. All commits on `main`, unmerged to any PR branch as of the end of QA.
+
+| Commit | Problem | Fix |
+|---|---|---|
+| `f5a3984` | `ensureMerchant` was writing `stripe_user_id` / `last_seen_at` — neither column exists. Every insert silently errored against real Supabase; merchants table had been empty in dev for weeks. | Rewrote insert to match real schema. |
+| `f119aff` | Narrative route called `ensureMerchant` fire-and-forget, then immediately `SELECT merchant.id`. First-ever generation for a merchant raced the upsert and returned "Merchant not found". | Awaited the upsert in the narrative route specifically. Broader pattern fix tracked in WIN-42. |
+| `7948325` | `GET /api/disputes/[id]` was a pure Stripe proxy — it never wrote a row to our `disputes` table. Narrative generation fails for any dispute where the merchant opens Narrative before touching Evidence, because the narrative route reads from Supabase, not Stripe. | Route now upserts a real row with Stripe data on every GET. |
+| (this commit) | `DisputeWorkflow.evidenceFiles` was fetched once on mount. Evidence tab uploads files into its own local state; parent never refreshed. Merchant uploads 3 files, advances to Narrative, sees zero. | Added a second useEffect that refetches `/api/disputes/{id}/evidence-files` whenever `currentStep` becomes `'narrative'`. |
+| (this commit) | `generate-background.ts` caught errors, ran them through `classifyError`, and wrote the sanitized string to the DB. Real error messages (including "missing ANTHROPIC_API_KEY") never surfaced in logs. | Added `console.error(err)` before `markFailed`. Raw error with stack now hits backend stdout. |
+
+### Blocking bug that turned out to be config
+
+Very first QA attempt failed with "Generation failed unexpectedly. Please try again." Root cause: `ANTHROPIC_API_KEY` was never added to `backend/.env.local`. The Claude client's lazy Proxy threw on first access, was caught by the generic `classifyError`, and the real message was swallowed. **Added to `.env.local` locally — NOT committed. Any fresh clone or new deploy environment must set this.** Documented in `backend/.env.example` since WIN-14.
+
+### Known limitations shipping with WIN-19 (tracked elsewhere)
+
+These are real gaps, but they are either (a) not what WIN-19 was chartered to solve, or (b) latent bugs in adjacent systems that WIN-19 exposed but doesn't own. Each has a Linear ticket. **Do not reopen WIN-19 for any of these** — they have their own tickets.
+
+**WIN-44 (Urgent) — Stripe transaction data not in the narrative prompt.**
+`runBackgroundGeneration` passes a `PromptContext` object to `buildPrompt` that's missing every `avs_*`, `cvc_check`, `three_d_secure_*`, `authorization_code`, `network_status`, `card_brand`, `card_last4`, `billing_address`, `charge_description`, and `refunds` field. `buildPrompt` dutifully writes a "STRIPE TRANSACTION DATA (verified by payment network)" section where every line reads "not available". On generations with evidence files uploaded, Claude silently omits the authentication section instead of flagging the gap — the narratives look fine but are missing the strongest evidence in every fraud dispute (10.4, 13.x). The `disputes` DB table also has no columns to store this data, but the fix doesn't require a migration — WIN-44 re-fetches from Stripe inside the background job. **This is the single most important follow-up. Ship WIN-19 aware that the narratives are incomplete until WIN-44 lands.**
+
+**WIN-40 (High) — checklist_item_key uses display label, not a stable key.**
+`evidence_files.checklist_item_key` stores the full label text ("Two prior undisputed transactions from the same cardholder (120-365 days before disputed transaction)"). Any time a playbook item's label gets reworded, every previously-uploaded file under the old text becomes orphaned. Already caught one instance during WIN-19 QA where two files for dispute `du_1TIx1JEQYvM3XwRzZDZKVVcb` were invisible because CVV and 3DS labels had been reworded. Manually patched in dev; will reoccur the next time anyone edits a playbook label.
+
+**WIN-41 (High) — evidence upload creates zombie dispute rows.**
+`POST /api/disputes/[id]/evidence-files` upserts a disputes row with `amount: 0, reason_code: ""` if one doesn't exist. Partially neutralized by `7948325` (the GET route now backfills real data first, and the Review tab always runs before Evidence), but the upload route itself still has the zero-value fallback. Evidence PATCH route (`[disputeId]/route.ts:132-178`) has the same problem.
+
+**WIN-42 (Medium) — merchant-scoped query patterns.**
+Every route that needs merchant-scoped data does a 2-step lookup: get merchant UUID by stripe_account_id, then scope the next query. `ensureMerchant` is fire-and-forget in some routes and awaited in others — the convention is "fire-and-forget unless you need the row on the next line", which is easy to get wrong. Fix is to always await it and add a `getDisputeForAccount(stripeDisputeId, stripeAccountId)` helper.
+
+**WIN-43 (High) — no integration test for the wizard flow.**
+Every route has unit tests with mocked Supabase. Three of the four "in-scope fixes" above would have been caught by a single end-to-end test walking list → detail → playbook → evidence upload → checklist toggle → narrative generate → status poll against a real (or realistic) Supabase. WIN-43 tracks adding that test. **Consider expanding its scope to also assert on the args passed to the mocked Anthropic call** — that single assertion would have caught WIN-44.
+
+**WIN-45 (Low) — `evidence_files.file_path` column is dead weight.**
+`file_path` and `stripe_file_id` hold identical values on every row. The former's name implies local/Supabase storage, which is the opposite of our architecture (evidence bytes live at Stripe, never in our infra, deliberately to avoid PCI scope). Cosmetic cleanup only.
+
+### Deferred UI observations (no ticket yet)
+
+**Checklist item checkboxes don't persist to the narrative pre-generation summary.**
+Observed during the final QA pass: the checkmarks next to items on the Narrative pre-generation screen don't reflect the Evidence tab's toggle state. Likely the same stale-parent-state pattern we just fixed for `evidenceFiles` — `DisputeWorkflow` reads `dispute.checklist_state` once and doesn't refresh when the merchant advances tabs. Could also be a distinct persistence bug. Joe is handling this in the final UI pass / QA; not tracked in Linear yet. If it turns out to be nontrivial, file it as a new ticket; don't fold it into WIN-19.
+
+### Dev harness left in repo
+
+`backend/scripts/smoke-narrative.ts` — a throwaway tsx script that resets a known dispute's generation counter and directly invokes `runBackgroundGeneration`, bypassing the Stripe App UI. Useful for iterating on narrative prompt changes (WIN-44 in particular) without clicking through the wizard for every attempt. Reads `backend/.env.local` via tsx's `--env-file` flag. No secrets embedded. Kept in the repo intentionally as a dev tool, not a production path.
+
+```
+cd backend && ./node_modules/.bin/tsx --env-file=.env.local scripts/smoke-narrative.ts
+```
+
+### What a future maintainer should read first
+
+If you're back in this code because something broke or because you're picking up WIN-44:
+
+1. This section (Post-QA Notes) for the shipping-day context.
+2. `backend/lib/narratives/generate-background.ts` — the actual orchestrator. The `PromptContext` construction (lines ~108-121) is where WIN-44 lives.
+3. `backend/lib/prompts/types.ts` — what the prompt *could* receive. Compare against what generate-background.ts actually sets to see the gap.
+4. `backend/lib/prompts/build-prompt.ts` — what the prompt *does* produce. Search for `formatStripeField` to find every field that falls back to "not available".
+5. `stripe-app/src/components/narrative/NarrativePanel.tsx` and sibling components — the review/edit UI. This part is solid and shouldn't need rework for WIN-44.
+6. `stripe-app/src/components/DisputeWorkflow.tsx` — parent workflow. Note the two separate `useEffect`s for evidence files (one on mount, one on narrative-step entry). If checklist_state has a similar staleness bug, the fix pattern is right there.
+
