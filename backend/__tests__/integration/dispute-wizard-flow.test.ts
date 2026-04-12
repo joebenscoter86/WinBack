@@ -281,5 +281,23 @@ describe("WIN-43: dispute wizard integration flow", () => {
     const step7Body = await step7Res.json();
     expect(step7Body.status).toBe("completed");
     expect(step7Body.narrative).toContain("Delivery Confirmation");
+
+    // ---- STEP 8: inspect captured Anthropic call args ----
+    // The mocked messages.create captured its input into capturedAnthropicCalls.
+    // Assert that the prompt Claude saw actually referenced the evidence file
+    // we uploaded in step 4 — this catches regressions where evidence files
+    // silently fail to flow into the prompt context (the pre-WIN-19 state).
+    const { capturedAnthropicCalls } = await import("./mocks");
+    expect(capturedAnthropicCalls.length).toBe(1);
+    const promptUser = capturedAnthropicCalls[0].user;
+    expect(promptUser).toContain(TEST_CHECKLIST_ITEM_KEY);
+    expect(promptUser).toContain("delivery-confirmation.pdf");
   });
+
+  it.todo(
+    "WIN-44: prompt includes Stripe transaction data (AVS/CVC/3DS/auth_code). " +
+      "When WIN-44 lands, flip this to a real `it(...)` that imports " +
+      "capturedAnthropicCalls and asserts promptUser contains 'AVS address check: pass', " +
+      "'CVC check: pass', '3D Secure: authenticated', and the authorization code.",
+  );
 });
