@@ -2,6 +2,11 @@
 
 All notable changes to WinBack will be documented in this file.
 
+## [0.0.1.2] - 2026-04-12
+
+### Fixed
+- Evidence file uploads no longer create placeholder dispute rows with empty reason_code and zero amount when a dispute hasn't been loaded yet. The upload route now returns a clear 409 `dispute_not_loaded` error so the client can fetch the dispute from Stripe first, keeping the database as the source of truth for dispute metadata. (WIN-41)
+
 ## [0.0.1.1] - 2026-04-10
 
 ### Added

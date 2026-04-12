@@ -199,6 +199,52 @@ describe("POST /api/disputes/[disputeId]/evidence-files", () => {
     expect(ensureMerchant).toHaveBeenCalledWith("acct_test", "usr_test");
   });
 
+  it("returns 409 when the dispute has not been loaded yet (WIN-41)", async () => {
+    // disputes lookup returns no row
+    setTableResult("disputes", { data: null, error: { code: "PGRST116" } });
+
+    const { POST } = await import("../route");
+    const res = await POST(
+      makePostRequest("dp_unloaded", {
+        checklist_item_key: "receipt",
+        stripe_file_id: "file_abc",
+        file_name: "receipt.pdf",
+      }),
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(json.code).toBe("dispute_not_loaded");
+    // Must not have touched disputes with an upsert of zeros
+    const disputesChain = chainBuilders["disputes"];
+    expect(disputesChain.upsert).not.toHaveBeenCalled();
+    expect(disputesChain.insert).not.toHaveBeenCalled();
+  });
+
+  it("does not overwrite amount/reason_code on an existing dispute row (WIN-41)", async () => {
+    setTableResult("disputes", { data: { id: "dispute-uuid" }, error: null });
+    setTableResult("evidence_files", {
+      data: { id: "file-1", dispute_id: "dispute-uuid" },
+      error: null,
+    });
+
+    const { POST } = await import("../route");
+    const res = await POST(
+      makePostRequest("dp_test123", {
+        checklist_item_key: "receipt",
+        stripe_file_id: "file_abc",
+        file_name: "receipt.pdf",
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const disputesChain = chainBuilders["disputes"];
+    // Upload path must never upsert/update the disputes row
+    expect(disputesChain.upsert).not.toHaveBeenCalled();
+    expect(disputesChain.update).not.toHaveBeenCalled();
+    expect(disputesChain.insert).not.toHaveBeenCalled();
+  });
+
   it("returns 400 when required fields are missing", async () => {
     const { POST } = await import("../route");
     const res = await POST(

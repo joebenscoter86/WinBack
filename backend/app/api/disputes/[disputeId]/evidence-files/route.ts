@@ -108,9 +108,10 @@ export const POST = withStripeAuth(async (
     );
   }
 
-  // Look up or create the dispute row
-  let disputeRow: { id: string } | null = null;
-
+  // Look up the dispute row. The dispute MUST already exist -- the Review tab
+  // calls GET /api/disputes/{id} first, which fetches from Stripe and inserts
+  // the real reason_code/amount. If it doesn't exist yet, fail loudly instead
+  // of inserting a zombie row with zero values (WIN-41).
   const { data: existing, error: lookupError } = await supabase
     .from("disputes")
     .select("id")
@@ -118,39 +119,17 @@ export const POST = withStripeAuth(async (
     .single();
 
   if (lookupError || !existing) {
-    // Dispute not found -- upsert it (same pattern as PATCH route)
-    const { data: merchant } = await supabase
-      .from("merchants")
-      .select("id")
-      .eq("stripe_account_id", accountId)
-      .single();
-
-    const { data: inserted, error: insertError } = await supabase
-      .from("disputes")
-      .upsert(
-        {
-          stripe_dispute_id: disputeId,
-          merchant_id: merchant?.id,
-          amount: 0,
-          reason_code: "",
-        },
-        { onConflict: "stripe_dispute_id" },
-      )
-      .select("id")
-      .single();
-
-    if (insertError || !inserted) {
-      console.error("Failed to upsert dispute:", insertError);
-      return NextResponse.json(
-        { error: "Failed to create dispute record", code: "db_error" },
-        { status: 500 },
-      );
-    }
-
-    disputeRow = inserted;
-  } else {
-    disputeRow = existing;
+    return NextResponse.json(
+      {
+        error:
+          "Dispute not loaded. Fetch GET /api/disputes/{id} before uploading evidence.",
+        code: "dispute_not_loaded",
+      },
+      { status: 409 },
+    );
   }
+
+  const disputeRow = existing;
 
   // Upsert the evidence file (one file per checklist item)
   const { data: file, error: fileError } = await supabase
