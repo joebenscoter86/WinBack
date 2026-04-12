@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { Box, Button, Banner, Inline, Link, TextArea } from '@stripe/ui-extension-sdk/ui';
+import {
+  Badge,
+  Banner,
+  Box,
+  Button,
+  Divider,
+  Inline,
+  Link,
+  TextArea,
+} from '@stripe/ui-extension-sdk/ui';
 import type { Dispute, PlaybookData, EvidenceFile } from '../../lib/types';
 import { MAX_GENERATIONS } from '../../lib/narrative-types';
 import { getStripeFieldResult } from '../../lib/stripe-field-status';
@@ -32,92 +41,145 @@ const NarrativePreGeneration = ({
     filesByKey.set(file.checklist_item_key, file);
   }
 
-  // Count satisfied items (uploaded files or positive Stripe auto-fills)
+  // Compute per-item satisfaction using shared stripe-field logic
   const checklistItems = playbook?.evidence_checklist ?? [];
-  const satisfiedCount = checklistItems.filter((item) => {
-    if (filesByKey.has(item.item)) return true;
+  const itemStatuses = checklistItems.map((item) => {
+    const matchedFile = filesByKey.get(item.item);
     const stripeField = getStripeFieldResult(item, dispute);
-    return stripeField?.status === 'positive';
-  }).length;
+    const autoFilled = stripeField?.status === 'positive';
+    const satisfied = !!matchedFile || autoFilled;
+    return { item, matchedFile, stripeField, autoFilled, satisfied };
+  });
+  const satisfiedCount = itemStatuses.filter((s) => s.satisfied).length;
+  const totalItems = itemStatuses.length;
   const hasNoEvidence = satisfiedCount === 0;
 
   return (
-    <Box css={{ stack: 'y', gap: 'medium' }}>
-      {/* Evidence summary section */}
+    <Box css={{ padding: 'medium', stack: 'y', gap: 'large' }}>
+      {/* Coach header: introduces the narrative step */}
+      <Box
+        css={{
+          stack: 'y',
+          gap: 'small',
+          backgroundColor: 'container',
+          padding: 'medium',
+          borderRadius: 'medium',
+        }}
+      >
+        <Badge type="info">AI Coach</Badge>
+        <Inline css={{ font: 'heading', fontWeight: 'semibold' }}>
+          Ready to write your narrative
+        </Inline>
+        <Inline css={{ font: 'body', color: 'secondary' }}>
+          WinBack will use your uploaded evidence and the details Stripe has
+          on this transaction to draft a response tailored to this dispute.
+          Review what the AI will work with below, then generate your draft.
+        </Inline>
+      </Box>
+
+      {/* Evidence summary card */}
       {playbook ? (
-        <Box css={{ stack: 'y', gap: 'small' }}>
-          <Inline css={{ font: 'subheading', fontWeight: 'semibold' }}>
-            Evidence summary
-          </Inline>
+        <Box
+          css={{
+            stack: 'y',
+            gap: 'medium',
+            backgroundColor: 'container',
+            padding: 'medium',
+            borderRadius: 'medium',
+          }}
+        >
+          <Box css={{ stack: 'x', distribute: 'space-between', alignY: 'center' }}>
+            <Inline css={{ font: 'subheading', fontWeight: 'semibold' }}>
+              Evidence summary
+            </Inline>
+            <Inline css={{ font: 'caption', color: 'secondary' }}>
+              {satisfiedCount} of {totalItems} covered
+            </Inline>
+          </Box>
 
           {hasNoEvidence && (
             <Banner
               type="caution"
               title="No evidence available"
-              description="The AI will generate a narrative, but without supporting evidence your chances of winning are lower. Consider going back to upload files."
+              description="The AI can still generate a narrative, but your chances of winning are much lower without supporting evidence."
             />
           )}
 
-          <Box css={{ stack: 'y', gap: 'xsmall' }}>
-            {playbook.evidence_checklist.map((checklistItem) => {
-              const key = checklistItem.item;
-              const matchedFile = filesByKey.get(key);
-              const stripeField = getStripeFieldResult(checklistItem, dispute);
-              const autoFilled = stripeField?.status === 'positive';
-              const satisfied = !!matchedFile || autoFilled;
-              const isMandatoryMissing =
-                checklistItem.required && !satisfied;
+          <Divider />
 
-              let detail: string;
+          <Box css={{ stack: 'y', gap: 'small' }}>
+            {itemStatuses.map(({ item, matchedFile, stripeField, autoFilled, satisfied }) => {
+              const isMandatoryMissing = item.required && !satisfied;
+
+              let detailNode: React.ReactNode = null;
               if (matchedFile) {
-                detail = ` \u2014 ${matchedFile.file_name}`;
-              } else if (autoFilled) {
-                detail = ` \u2014 ${stripeField.value} (auto-filled from Stripe)`;
+                detailNode = (
+                  <Inline css={{ font: 'caption', color: 'secondary' }}>
+                    {matchedFile.file_name}
+                  </Inline>
+                );
+              } else if (autoFilled && stripeField) {
+                detailNode = (
+                  <Inline css={{ font: 'caption', color: 'secondary' }}>
+                    {stripeField.value} (auto-filled from Stripe)
+                  </Inline>
+                );
               } else {
-                detail = ' \u2014 not uploaded';
+                detailNode = (
+                  <Inline
+                    css={{
+                      font: 'caption',
+                      color: isMandatoryMissing ? 'attention' : 'disabled',
+                    }}
+                  >
+                    {isMandatoryMissing ? 'Missing (required)' : 'Not uploaded'}
+                  </Inline>
+                );
               }
 
               return (
                 <Box
-                  key={key}
+                  key={item.item}
                   css={{
                     stack: 'x',
-                    gap: 'xsmall',
+                    gap: 'small',
                     alignY: 'center',
-                    padding: 'xsmall',
+                    distribute: 'space-between',
                   }}
                 >
-                  {satisfied ? (
-                    <Inline css={{ font: 'caption', color: 'success' }}>
-                      {'\u2713'}
+                  <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
+                    <Inline
+                      css={{
+                        font: 'body',
+                        color: satisfied
+                          ? 'success'
+                          : isMandatoryMissing
+                          ? 'attention'
+                          : 'disabled',
+                      }}
+                    >
+                      {satisfied ? '\u2713' : '\u25CB'}
                     </Inline>
-                  ) : (
                     <Inline
                       css={{
                         font: 'caption',
-                        color: isMandatoryMissing ? 'attention' : 'secondary',
+                        color: satisfied ? 'primary' : 'secondary',
                       }}
                     >
-                      {'\u2022'}
+                      {item.item}
                     </Inline>
-                  )}
-                  <Inline
-                    css={{
-                      font: 'caption',
-                      color: isMandatoryMissing ? 'attention' : 'secondary',
-                    }}
-                  >
-                    {checklistItem.item}
-                    {detail}
-                  </Inline>
+                  </Box>
+                  {detailNode}
                 </Box>
               );
             })}
           </Box>
 
+          <Divider />
+
           <Link onPress={onNavigateBack}>
             <Inline css={{ font: 'caption', color: 'info' }}>
-              {'\u2190'} Go back to add more evidence
+              {'\u2190 Go back to add more evidence'}
             </Inline>
           </Link>
         </Box>
@@ -129,14 +191,30 @@ const NarrativePreGeneration = ({
         />
       )}
 
-      {/* Merchant feedback textarea */}
-      <TextArea
-        label="Anything else the AI should know? (optional)"
-        placeholder="e.g. Customer confirmed receipt by phone on March 20th"
-        value={feedback}
-        onChange={(e) => setFeedback(e.target.value)}
-        rows={3}
-      />
+      {/* Merchant feedback card */}
+      <Box
+        css={{
+          stack: 'y',
+          gap: 'small',
+          backgroundColor: 'container',
+          padding: 'medium',
+          borderRadius: 'medium',
+        }}
+      >
+        <Inline css={{ font: 'subheading', fontWeight: 'semibold' }}>
+          Anything else the AI should know?
+        </Inline>
+        <Inline css={{ font: 'caption', color: 'secondary' }}>
+          Optional. Add any context the evidence files don't already capture.
+        </Inline>
+        <TextArea
+          label=""
+          placeholder="e.g. Customer confirmed receipt by phone on March 20th"
+          value={feedback}
+          onChange={(e) => setFeedback(e.target.value)}
+          rows={3}
+        />
+      </Box>
 
       {/* Generate button or limit banner */}
       {limitReached ? (
@@ -146,7 +224,7 @@ const NarrativePreGeneration = ({
           description={`You have used all ${MAX_GENERATIONS} narrative generations for this dispute. Review and edit the existing narrative, or use it as-is for your submission.`}
         />
       ) : (
-        <Box css={{ stack: 'y', gap: 'xsmall' }}>
+        <Box css={{ stack: 'x', gap: 'medium', alignY: 'center', distribute: 'space-between' }}>
           <Button
             type="primary"
             onPress={() => onGenerate(feedback)}

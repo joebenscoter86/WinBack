@@ -2,9 +2,11 @@ import { useState } from 'react';
 import {
   Accordion,
   AccordionItem,
+  Badge,
+  Banner,
   Box,
   Button,
-  Banner,
+  Divider,
   Inline,
   TextArea,
 } from '@stripe/ui-extension-sdk/ui';
@@ -50,51 +52,76 @@ const NarrativeReview = ({
   };
 
   return (
-    <Box css={{ stack: 'y', gap: 'medium' }}>
-      {/* Header row */}
-      <Box css={{ stack: 'x', distribute: 'space-between', alignY: 'center' }}>
-        <Inline css={{ font: 'subheading', fontWeight: 'semibold' }}>
-          Your Dispute Narrative
+    <Box css={{ padding: 'medium', stack: 'y', gap: 'large' }}>
+      {/* Coach header card */}
+      <Box
+        css={{
+          stack: 'y',
+          gap: 'small',
+          backgroundColor: 'container',
+          padding: 'medium',
+          borderRadius: 'medium',
+        }}
+      >
+        <Box css={{ stack: 'x', distribute: 'space-between', alignY: 'center' }}>
+          <Badge type="info">AI Coach</Badge>
+          <Inline css={{ font: 'caption', color: 'secondary' }}>
+            Generation {generationNumber} of {MAX_GENERATIONS}
+          </Inline>
+        </Box>
+        <Inline css={{ font: 'heading', fontWeight: 'semibold' }}>
+          Your dispute narrative
         </Inline>
-        <Inline css={{ font: 'caption', color: 'secondary' }}>
-          Generation {generationNumber} of {MAX_GENERATIONS}
+        <Inline css={{ font: 'body', color: 'secondary' }}>
+          Review the AI's reasoning, then edit the narrative below. This is
+          the text that will be submitted to Stripe.
         </Inline>
       </Box>
 
       {/* AI Strategy & Reasoning accordion */}
-      <Accordion>
-        <AccordionItem
-          title="AI Strategy & Reasoning"
-          subtitle={`${annotations.length} section${annotations.length === 1 ? '' : 's'} analyzed`}
-          defaultOpen
-        >
-          <Box css={{ stack: 'y', gap: 'small' }}>
-            {annotations.map((annotation, index) => (
-              <Box key={index} css={{ stack: 'y', gap: 'xsmall' }}>
-                <Inline
-                  css={{
-                    font: 'caption',
-                    fontWeight: 'semibold',
-                    color: 'secondary',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {annotation.section}
-                </Inline>
-                <Inline css={{ font: 'caption', color: 'info' }}>
-                  {annotation.reasoning}
-                </Inline>
-              </Box>
-            ))}
-          </Box>
-        </AccordionItem>
-      </Accordion>
+      {annotations.length > 0 && (
+        <Accordion>
+          <AccordionItem
+            title="AI Strategy & Reasoning"
+            subtitle={`${annotations.length} section${annotations.length === 1 ? '' : 's'} analyzed`}
+            defaultOpen
+          >
+            <Box css={{ stack: 'y', gap: 'medium' }}>
+              {annotations.map((annotation, index) => (
+                <Box key={index} css={{ stack: 'y', gap: 'xsmall' }}>
+                  <Inline
+                    css={{
+                      font: 'caption',
+                      fontWeight: 'semibold',
+                      color: 'secondary',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {annotation.section}
+                  </Inline>
+                  <Inline css={{ font: 'caption', color: 'info' }}>
+                    {annotation.reasoning}
+                  </Inline>
+                </Box>
+              ))}
+            </Box>
+          </AccordionItem>
+        </Accordion>
+      )}
 
-      {/* Edit section */}
-      <Box css={{ stack: 'y', gap: 'xsmall' }}>
+      {/* Edit card */}
+      <Box
+        css={{
+          stack: 'y',
+          gap: 'small',
+          backgroundColor: 'container',
+          padding: 'medium',
+          borderRadius: 'medium',
+        }}
+      >
         <Box css={{ stack: 'x', distribute: 'space-between', alignY: 'center' }}>
-          <Inline css={{ font: 'body', fontWeight: 'semibold' }}>
-            Edit Your Narrative
+          <Inline css={{ font: 'subheading', fontWeight: 'semibold' }}>
+            Edit your narrative
           </Inline>
           {hasEdits && (
             <Inline css={{ font: 'caption', color: 'success' }}>
@@ -103,7 +130,7 @@ const NarrativeReview = ({
           )}
         </Box>
         <Inline css={{ font: 'caption', color: 'secondary' }}>
-          This is the text that will be submitted to Stripe. Edit freely.
+          Edits are saved locally and travel forward to the Submit step.
         </Inline>
         <TextArea
           label=""
@@ -131,16 +158,34 @@ const NarrativeReview = ({
         />
       )}
 
-      {/* Feedback textarea for regeneration */}
+      {/* Feedback card for regeneration */}
       {!limitReached && !showRegenConfirm && (
-        <TextArea
-          label="Feedback for regeneration (optional)"
-          placeholder="e.g. Emphasize the delivery tracking more"
-          value={feedback}
-          onChange={(e) => setFeedback(e.target.value)}
-          rows={2}
-        />
+        <Box
+          css={{
+            stack: 'y',
+            gap: 'small',
+            backgroundColor: 'container',
+            padding: 'medium',
+            borderRadius: 'medium',
+          }}
+        >
+          <Inline css={{ font: 'subheading', fontWeight: 'semibold' }}>
+            Want to try again with different guidance?
+          </Inline>
+          <Inline css={{ font: 'caption', color: 'secondary' }}>
+            Optional. Tell the AI what to emphasize or change before regenerating.
+          </Inline>
+          <TextArea
+            label=""
+            placeholder="e.g. Emphasize the delivery tracking more"
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            rows={2}
+          />
+        </Box>
       )}
+
+      <Divider />
 
       {/* Action buttons */}
       <Box css={{ stack: 'x', distribute: 'space-between', alignY: 'center' }}>

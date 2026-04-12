@@ -1,5 +1,12 @@
 import { useEffect } from 'react';
-import { Box, Button, Banner, Inline, TextArea } from '@stripe/ui-extension-sdk/ui';
+import {
+  Badge,
+  Banner,
+  Box,
+  Button,
+  Inline,
+  TextArea,
+} from '@stripe/ui-extension-sdk/ui';
 import type { Dispute, PlaybookData } from '../../lib/types';
 import { interpolateTemplate } from '../../lib/narrative-utils';
 
@@ -41,31 +48,61 @@ const NarrativeError = ({
   const hasTemplate = Boolean(templateText);
 
   return (
-    <Box css={{ stack: 'y', gap: 'medium' }}>
-      {/* Status banner */}
-      <Banner
-        type="caution"
-        title={isGenerationLimit ? 'Generation limit reached' : 'AI generation unavailable'}
-        description={
-          isGenerationLimit
-            ? 'You have used all available AI narrative generations for this dispute. Edit the template below and continue with your manual narrative.'
-            : 'AI generation failed. You can edit the playbook template below and submit it as your narrative, or try again.'
-        }
-      />
+    <Box css={{ padding: 'medium', stack: 'y', gap: 'large' }}>
+      {/* Coach header explaining the fallback */}
+      <Box
+        css={{
+          stack: 'y',
+          gap: 'small',
+          backgroundColor: 'container',
+          padding: 'medium',
+          borderRadius: 'medium',
+        }}
+      >
+        <Badge type="info">AI Coach</Badge>
+        <Inline css={{ font: 'heading', fontWeight: 'semibold' }}>
+          {isGenerationLimit
+            ? 'Generation limit reached'
+            : 'AI generation unavailable'}
+        </Inline>
+        <Inline css={{ font: 'body', color: 'secondary' }}>
+          {isGenerationLimit
+            ? 'You have used all available AI narrative generations for this dispute. You can still edit the template below and submit it as your manual narrative.'
+            : 'We could not reach the AI this time. You can edit the reason-code-specific template below and submit it manually, or try again in a moment. Your deadline is not affected.'}
+        </Inline>
+      </Box>
 
       {/* Inline error detail (only for non-limit errors) */}
       {errorMessage && !isGenerationLimit && (
-        <Inline css={{ font: 'caption', color: 'critical' }}>{errorMessage}</Inline>
+        <Banner
+          type="critical"
+          title="Details"
+          description={errorMessage}
+        />
       )}
 
-      {/* Edit section */}
-      <Box css={{ stack: 'y', gap: 'xsmall' }}>
+      {/* Edit card */}
+      <Box
+        css={{
+          stack: 'y',
+          gap: 'small',
+          backgroundColor: 'container',
+          padding: 'medium',
+          borderRadius: 'medium',
+        }}
+      >
         <Inline css={{ font: 'subheading', fontWeight: 'semibold' }}>
-          {hasTemplate ? 'Edit the template below' : 'Write your narrative'}
+          {hasTemplate ? 'Edit the template' : 'Write your narrative'}
         </Inline>
-        {hasTemplate && (
+        {hasTemplate ? (
           <Inline css={{ font: 'caption', color: 'secondary' }}>
             Fill in the [bracketed sections] with your specific details.
+            Stripe-verified fields (AVS, CVV, 3DS) are already filled in.
+          </Inline>
+        ) : (
+          <Inline css={{ font: 'caption', color: 'secondary' }}>
+            Describe what happened, why this charge was legitimate, and the
+            evidence that supports your case.
           </Inline>
         )}
         <TextArea
