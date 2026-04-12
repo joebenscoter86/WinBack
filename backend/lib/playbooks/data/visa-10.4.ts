@@ -48,6 +48,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       where_to_find:
         "Stripe Dashboard > Payments > click the payment > look for the authorization details section. You can also find this in the payment's API response under `charges.data[0].outcome`.",
       stripe_field: "authorization",
+      stripe_evidence_field: "uncategorized_file",
       urgency_essential: true,
       urgency_order: 2,
     },
@@ -61,6 +62,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       where_to_find:
         "Stripe Dashboard > Payments > click the payment > scroll to Payment method details. The address verification result appears as 'Address line1 check' and 'ZIP check'. Stripe automatically includes this when you submit evidence.",
       stripe_field: "avs_result",
+      stripe_evidence_field: "uncategorized_file",
       urgency_essential: true,
       urgency_order: 2,
     },
@@ -74,6 +76,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       where_to_find:
         "Stripe Dashboard > Payments > click the payment > Payment method details section. The CVC check result shows as 'CVC check: pass/fail'. Stripe automatically includes this when you submit evidence.",
       stripe_field: "cvc_check",
+      stripe_evidence_field: "uncategorized_file",
       urgency_essential: true,
       urgency_order: 2,
     },
@@ -86,6 +89,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "The foundation of Visa's purchase history proof rule. Must be 120-365 days older than the disputed transaction, undisputed, and not reported as fraud. When the criteria are met, Visa treats this the same as if the bank verified the purchase -- extremely powerful.",
       where_to_find:
         "Search your Stripe Dashboard by the customer's email or name. Filter payments to the 120-365 day window before the disputed transaction. Look for successful payments with no disputes. You need at least two.",
+      stripe_evidence_field: "receipt",
       urgency_essential: true,
       urgency_order: 3,
     },
@@ -98,6 +102,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "One of these MUST match across all three transactions to qualify for Visa's purchase history proof rule: IP address, device ID, or a unique identifier for the device used to purchase. This is the primary linking element that proves the same person made all three purchases.",
       where_to_find:
         "If you use Stripe Radar, device identifiers are captured automatically -- check the payment's Radar insights. For IP addresses, check your server logs or analytics platform (Google Analytics, Mixpanel, etc.) for the session that created each order.",
+      stripe_evidence_field: "uncategorized_file",
       urgency_essential: true,
       urgency_order: 3,
     },
@@ -110,6 +115,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Visa's purchase history proof rule requires two matching elements. In addition to IP/device, one more must match: user account ID, shipping address, or device ID. Two matching elements across three transactions is very hard to fake.",
       where_to_find:
         "Check your order management system or database for the customer's user account ID and shipping addresses across the three transactions. If they logged in with the same account or shipped to the same address, you have your second element.",
+      stripe_evidence_field: "uncategorized_file",
       urgency_essential: true,
       urgency_order: 3,
     },
@@ -123,6 +129,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       where_to_find:
         "Stripe Dashboard > Payments > click the payment > look for '3D Secure' in the payment details. If it says 'Authenticated' or shows a 3DS result, you have it. Stripe includes this automatically in dispute evidence submissions.",
       stripe_field: "three_d_secure",
+      stripe_evidence_field: "uncategorized_file",
       urgency_essential: true,
       urgency_order: 1,
     },
@@ -135,6 +142,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "If the item was delivered to the cardholder's verified address, it weakens the fraud claim significantly. Why would a fraudster ship to the real cardholder's address?",
       where_to_find:
         "Your shipping provider's website (UPS, FedEx, USPS, DHL). Get a screenshot or PDF of the tracking page showing delivery confirmation, delivery date, and the delivery address. For digital goods, check your app's access logs.",
+      stripe_evidence_field: "shipping_documentation",
       urgency_essential: true,
       urgency_order: 4,
     },
@@ -147,6 +155,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "An established account with purchase history suggests the cardholder is the buyer. New accounts with no history are a red flag; long-standing accounts with repeat purchases are a strong indicator of legitimacy.",
       where_to_find:
         "Your app's admin panel or database. Pull the customer's account creation date, total order count, and a summary of previous purchases. A screenshot of the customer profile page works well.",
+      stripe_evidence_field: "uncategorized_file",
       urgency_essential: true,
       urgency_order: 5,
     },
@@ -159,6 +168,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "For digital goods, this is your delivery proof AND your fraud rebuttal in one. Server logs showing the customer logged in, downloaded, or used the product from a recognizable IP address prove both that the product was delivered and that the cardholder engaged with it.",
       where_to_find:
         "Check your app's admin panel or database for login records tied to this customer's account. Look for timestamps, IP addresses, and what they accessed. If you use analytics (Mixpanel, Amplitude), search by user ID or email. For downloadable products, check your download logs or CDN access logs.",
+      stripe_evidence_field: "service_documentation",
       urgency_essential: true,
       urgency_order: 5,
     },
@@ -171,6 +181,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Even without the purchase history proof rule, showing the IP matches the cardholder's geography helps your case. An IP in the same city as the billing address is very different from an IP in a foreign country.",
       where_to_find:
         "Stripe Radar captures device identifiers automatically if enabled. For IP addresses, check your server access logs, analytics platform, or fraud prevention tool. You can geolocate the IP to show it matches the cardholder's area.",
+      stripe_evidence_field: "uncategorized_file",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -183,6 +194,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Proves your business name is clearly identifiable on the customer's bank statement. Many 'fraud' disputes are simply cardholders who don't recognize the charge because the business name on their statement is cryptic. A clear name eliminates this as a factor.",
       where_to_find:
         "Stripe Dashboard > Settings > Business settings > Statement descriptor. Take a screenshot showing your business name as it appears on statements. Bonus: if you can show what it looks like on an actual bank statement, even better.",
+      stripe_evidence_field: "uncategorized_file",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -195,6 +207,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "If the cardholder opened the order confirmation email, they knew about the purchase. Email engagement data (open timestamps, click data) is strong circumstantial evidence that the cardholder was involved.",
       where_to_find:
         "Your email service provider (Mailchimp, SendGrid, Postmark, etc.) -- look for open/click events on order confirmation and shipping notification emails. Also check your helpdesk (Zendesk, Intercom, etc.) for any support conversations with this customer.",
+      stripe_evidence_field: "customer_communication",
       urgency_essential: false,
       urgency_order: null,
     },

@@ -1,4 +1,39 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { ALL_PLAYBOOKS } from "../data/index";
+import type { PlaybookData } from "../types";
+
+function getStaticPlaybook(
+  network: "visa" | "mastercard",
+  code: string,
+): PlaybookData | undefined {
+  return ALL_PLAYBOOKS.find(
+    (pb) => pb.network === network && pb.reason_code === code,
+  );
+}
+
+describe("WIN-20 stripe_evidence_field backfill", () => {
+  const cases: Array<[string, string]> = [
+    ["visa", "10.4"],
+    ["visa", "13.1"],
+    ["visa", "13.2"],
+    ["visa", "13.3"],
+    ["visa", "13.6"],
+    ["mastercard", "4808"],
+    ["mastercard", "4853"],
+  ];
+
+  it.each(cases)(
+    "every checklist item in %s/%s has stripe_evidence_field set",
+    (network, code) => {
+      const pb = getStaticPlaybook(network as "visa" | "mastercard", code);
+      expect(pb).toBeDefined();
+      for (const item of pb!.evidence_checklist) {
+        expect(item.stripe_evidence_field).toBeDefined();
+        expect(typeof item.stripe_evidence_field).toBe("string");
+      }
+    },
+  );
+});
 
 const { mockSingle, mockEqReasonCode, mockEqNetwork, mockSelect, mockFrom } =
   vi.hoisted(() => {
