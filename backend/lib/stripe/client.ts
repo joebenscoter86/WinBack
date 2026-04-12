@@ -49,3 +49,16 @@ export async function getPaymentIntent(
 ): Promise<Stripe.PaymentIntent> {
   return getStripe().paymentIntents.retrieve(piId);
 }
+
+export async function submitDispute(
+  _accountId: string,
+  disputeId: string,
+  evidence: Stripe.DisputeUpdateParams.Evidence,
+  idempotencyKey: string,
+): Promise<Stripe.Dispute> {
+  return getStripe().disputes.update(
+    disputeId,
+    { evidence, submit: true },
+    { idempotencyKey },
+  );
+}

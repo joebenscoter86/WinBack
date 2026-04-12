@@ -4,6 +4,7 @@ export {
   getCharge,
   getCustomer,
   getPaymentIntent,
+  submitDispute,
 } from "./client";
 export { classifyStripeError } from "./errors";
 export { normalizeDispute } from "./normalize";
