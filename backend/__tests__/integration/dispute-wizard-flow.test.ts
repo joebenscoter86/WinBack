@@ -2,7 +2,7 @@
 // to all subsequent imports of the mocked modules.
 import "./mocks";
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import {
   TEST_ACCOUNT_ID,
@@ -326,5 +326,150 @@ describe("WIN-43: dispute wizard integration flow", () => {
     expect(promptUser).toContain("Network status: approved_by_network");
     expect(promptUser).toContain("Authorization code: AUTH42WIN");
     expect(promptUser).not.toContain("AVS address check: not available");
+  });
+
+  it("WIN-20: step 9 — submits evidence end-to-end", async () => {
+    const { POST: submitRoutePOST } = await import(
+      "@/app/api/disputes/[disputeId]/submit/route"
+    );
+    const { NextRequest } = await import("next/server");
+    const { getDispute, submitDispute } = await import("@/lib/stripe");
+    const mockGetDispute = getDispute as ReturnType<typeof vi.fn>;
+    const mockSubmitDispute = submitDispute as ReturnType<typeof vi.fn>;
+
+    // Pre-submission guard fetch: Stripe returns needs_response with charge expanded
+    mockGetDispute.mockResolvedValueOnce({
+      id: TEST_DISPUTE_ID,
+      status: "needs_response",
+      evidence: {},
+      evidence_details: { due_by: Math.floor(Date.now() / 1000) + 86_400 },
+      charge: {
+        id: "ch_integration_test",
+        object: "charge",
+        billing_details: {
+          name: "Integration Test",
+          email: "test@example.com",
+          address: {
+            line1: "1 Test St",
+            line2: null,
+            city: "Brooklyn",
+            state: "NY",
+            postal_code: "11201",
+            country: "US",
+          },
+          phone: null,
+        },
+        description: "Test widget",
+        payment_method_details: {
+          card: {
+            brand: "visa",
+            network: "visa",
+            last4: "4242",
+            authorization_code: "AUTH42WIN",
+            checks: {
+              address_line1_check: "pass",
+              address_postal_code_check: "pass",
+              cvc_check: "pass",
+            },
+          },
+          type: "card",
+        },
+        outcome: {
+          network_status: "approved_by_network",
+        },
+        refunds: { data: [] },
+      },
+    } as never);
+
+    // submitDispute call: Stripe returns under_review
+    mockSubmitDispute.mockResolvedValueOnce({
+      id: TEST_DISPUTE_ID,
+      status: "under_review",
+      evidence: {},
+    } as never);
+
+    const res = await submitRoutePOST(
+      new NextRequest(
+        `http://localhost/api/disputes/${TEST_DISPUTE_ID}/submit`,
+        { method: "POST", headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.submission_id).toBeDefined();
+    expect(body.data.dispute_status).toBe("under_review");
+
+    // Verify local dispute row was updated
+    const { data: disputeRow } = await testDb
+      .from("disputes")
+      .select("id, status, evidence_submitted_at")
+      .eq("stripe_dispute_id", TEST_DISPUTE_ID)
+      .single();
+    expect(disputeRow?.status).toBe("evidence_submitted");
+    expect(disputeRow?.evidence_submitted_at).not.toBeNull();
+
+    // Verify dispute_submissions row exists and is succeeded
+    const { data: submissions } = await testDb
+      .from("dispute_submissions")
+      .select("*")
+      .eq("dispute_id", disputeRow!.id);
+    expect(submissions).toHaveLength(1);
+    expect(submissions![0].status).toBe("succeeded");
+
+    // Verify submitDispute was called correctly.
+    // submitDispute(accountId, disputeId, evidence, idempotencyKey)
+    expect(mockSubmitDispute).toHaveBeenCalledOnce();
+    const [, calledDisputeId, calledEvidence, calledIdempotencyKey] =
+      mockSubmitDispute.mock.calls[0];
+    expect(calledDisputeId).toBe(TEST_DISPUTE_ID);
+    expect(calledEvidence).toEqual(
+      expect.objectContaining({ customer_name: "Integration Test" }),
+    );
+    expect(calledIdempotencyKey).toBeDefined();
+    expect((calledIdempotencyKey as string).length).toBeGreaterThan(10);
+  });
+
+  it("WIN-20: step 9b — second submit returns cached response without re-calling Stripe", async () => {
+    const { POST: submitRoutePOST } = await import(
+      "@/app/api/disputes/[disputeId]/submit/route"
+    );
+    const { NextRequest } = await import("next/server");
+    const { getDispute, submitDispute } = await import("@/lib/stripe");
+    const mockGetDispute = getDispute as ReturnType<typeof vi.fn>;
+    const mockSubmitDispute = submitDispute as ReturnType<typeof vi.fn>;
+
+    const callsBefore = mockSubmitDispute.mock.calls.length;
+
+    // The guard runs BEFORE the idempotency check, so we must return
+    // needs_response here — if we return under_review the guard blocks with
+    // 409 dispute_not_submittable before the cached row is ever checked.
+    // With needs_response the guard passes, the route finds the succeeded row
+    // from step 9 and returns the cached 200 without calling Stripe again.
+    mockGetDispute.mockResolvedValueOnce({
+      id: TEST_DISPUTE_ID,
+      status: "needs_response",
+      evidence: {},
+      evidence_details: { due_by: Math.floor(Date.now() / 1000) + 86_400 },
+      charge: {
+        id: "ch_integration_test",
+        object: "charge",
+        billing_details: {},
+        description: null,
+        payment_method_details: { card: {}, type: "card" },
+        outcome: {},
+        refunds: { data: [] },
+      },
+    } as never);
+
+    const res = await submitRoutePOST(
+      new NextRequest(
+        `http://localhost/api/disputes/${TEST_DISPUTE_ID}/submit`,
+        { method: "POST", headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockSubmitDispute.mock.calls.length).toBe(callsBefore); // no new call to Stripe
   });
 });
