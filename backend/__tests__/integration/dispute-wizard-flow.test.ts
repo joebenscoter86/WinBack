@@ -294,10 +294,16 @@ describe("WIN-43: dispute wizard integration flow", () => {
     expect(promptUser).toContain("delivery-confirmation.pdf");
   });
 
-  it.todo(
-    "WIN-44: prompt includes Stripe transaction data (AVS/CVC/3DS/auth_code). " +
-      "When WIN-44 lands, flip this to a real `it(...)` that imports " +
-      "capturedAnthropicCalls and asserts promptUser contains 'AVS address check: pass', " +
-      "'CVC check: pass', '3D Secure: authenticated', and the authorization code.",
-  );
+  it("WIN-44: prompt includes live Stripe transaction data (AVS/CVC/auth_code/network)", async () => {
+    const { capturedAnthropicCalls } = await import("./mocks");
+    expect(capturedAnthropicCalls.length).toBeGreaterThanOrEqual(1);
+    // The happy-path test above generated a narrative; re-use its captured call.
+    const promptUser = capturedAnthropicCalls[capturedAnthropicCalls.length - 1].user;
+    expect(promptUser).toContain("AVS address check: pass");
+    expect(promptUser).toContain("AVS zip check: pass");
+    expect(promptUser).toContain("CVC check: pass");
+    expect(promptUser).toContain("Network status: approved_by_network");
+    expect(promptUser).toContain("Authorization code: AUTH42WIN");
+    expect(promptUser).not.toContain("AVS address check: not available");
+  });
 });

@@ -65,6 +65,7 @@ export const CANNED_STRIPE_DISPUTE = {
         brand: "visa",
         network: "visa",
         last4: "4242",
+        authorization_code: "AUTH42WIN",
         checks: {
           address_line1_check: "pass",
           address_postal_code_check: "pass",

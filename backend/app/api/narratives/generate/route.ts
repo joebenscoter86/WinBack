@@ -129,6 +129,7 @@ export const POST = withStripeAuth(async (
   await after(
     runBackgroundGeneration({
       generationId,
+      accountId,
       disputeId,
       stripeDisputeId: dispute_id,
       reasonCode: reason_code,
