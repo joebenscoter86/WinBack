@@ -63,6 +63,7 @@ export const CANNED_STRIPE_DISPUTE = {
     payment_method_details: {
       card: {
         brand: "visa",
+        network: "visa",
         last4: "4242",
         checks: {
           address_line1_check: "pass",
