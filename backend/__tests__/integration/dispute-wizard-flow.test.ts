@@ -110,5 +110,22 @@ describe("WIN-43: dispute wizard integration flow", () => {
     expect(disputeRow?.amount).toBe(14900); // NOT zero — WIN-41 regression check
     expect(disputeRow?.reason_code).toBe("10.4"); // NOT empty string
     expect(disputeRow?.network).toBe("visa");
+
+    // ---- STEP 2: POST /api/playbooks ----
+    // Fetches the visa-10.4 playbook from Supabase. Already seeded in
+    // dev — see WIN-19 QA. Pure read, no DB writes to assert.
+    const { POST: playbooksPOST } = await import("@/app/api/playbooks/route");
+
+    const step2Req = new NextRequest("http://localhost/api/playbooks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ network: "visa", reason_code: "10.4" }),
+    });
+    const step2Res = await playbooksPOST(step2Req);
+    expect(step2Res.status).toBe(200);
+    const step2Body = await step2Res.json();
+    expect(step2Body.data).toBeDefined();
+    expect(step2Body.data.network).toBe("visa");
+    expect(step2Body.data.reason_code).toBe("10.4");
   });
 });
