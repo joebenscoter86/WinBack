@@ -2,11 +2,13 @@ import { generateNarrative } from "@/lib/claude";
 import { buildPrompt } from "@/lib/prompts";
 import { getPlaybook } from "@/lib/playbooks";
 import { supabase } from "@/lib/supabase";
+import { getDispute, normalizeDispute } from "@/lib/stripe";
 import { validateHallucinations } from "./validate-hallucinations";
 import type { PromptContext, EvidenceFileRef } from "@/lib/prompts/types";
 
 export interface BackgroundGenerationParams {
   generationId: string;
+  accountId: string;       // Stripe account id (for Connect-scoped fetches)
   disputeId: string;       // internal UUID from disputes table
   stripeDisputeId: string; // dp_xxx
   reasonCode: string;
@@ -61,7 +63,15 @@ function classifyError(message: string): string {
 export async function runBackgroundGeneration(
   params: BackgroundGenerationParams,
 ): Promise<void> {
-  const { generationId, disputeId, reasonCode, network, merchantFeedback } = params;
+  const {
+    generationId,
+    accountId,
+    disputeId,
+    stripeDisputeId,
+    reasonCode,
+    network,
+    merchantFeedback,
+  } = params;
 
   try {
     // Step 1: Fetch playbook
@@ -71,7 +81,7 @@ export async function runBackgroundGeneration(
       return;
     }
 
-    // Step 2: Fetch dispute
+    // Step 2: Fetch dispute (DB row — used for checklist_notes only)
     const { data: dispute, error: disputeError } = await supabase
       .from("disputes")
       .select("*")
@@ -83,6 +93,16 @@ export async function runBackgroundGeneration(
       await markFailed(generationId, classifyError(msg));
       return;
     }
+
+    // Step 2b: Re-fetch the live Stripe dispute so the prompt sees the real
+    // AVS/CVC/3DS/authorization/refund data the merchant sees in the Review
+    // tab. Same code path the Review tab uses (normalizeDispute), so the two
+    // surfaces can't drift. See WIN-44.
+    const stripeDispute = await getDispute(accountId, stripeDisputeId, [
+      "charge.customer",
+      "payment_intent",
+    ]);
+    const normalized = normalizeDispute(stripeDispute);
 
     // Step 3: Fetch evidence files
     const { data: evidenceRows, error: evidenceError } = await supabase
@@ -99,21 +119,30 @@ export async function runBackgroundGeneration(
           }),
         );
 
-    // Step 4: Build PromptContext
-    const transactionDate =
-      dispute.transaction_date != null
-        ? Math.floor(new Date(dispute.transaction_date).getTime() / 1000)
-        : undefined;
-
+    // Step 4: Build PromptContext — live Stripe data is the source of truth
+    // for transaction fields; the Supabase row only contributes checklist_notes
+    // (merchant-authored content that isn't on the Stripe object).
     const context: PromptContext = {
       reason_code: reasonCode,
       network,
       display_name: String(playbook.display_name ?? ""),
-      amount: Number(dispute.amount),
-      currency: String(dispute.currency ?? "usd"),
-      transaction_date: transactionDate,
-      customer_name: dispute.customer_name ?? undefined,
-      customer_email: dispute.customer_email ?? undefined,
+      amount: normalized.amount,
+      currency: normalized.currency,
+      transaction_date: normalized.transaction_date,
+      customer_name: normalized.customer_name,
+      customer_email: normalized.customer_email,
+      card_brand: normalized.card_brand,
+      card_last4: normalized.card_last4,
+      billing_address: normalized.billing_address,
+      charge_description: normalized.charge_description,
+      avs_address_check: normalized.avs_address_check,
+      avs_zip_check: normalized.avs_zip_check,
+      cvc_check: normalized.cvc_check,
+      three_d_secure_result: normalized.three_d_secure_result,
+      three_d_secure_version: normalized.three_d_secure_version,
+      authorization_code: normalized.authorization_code,
+      network_status: normalized.network_status,
+      refunds: normalized.refunds,
       evidence_files: files,
       checklist_notes: (dispute.checklist_notes ?? {}) as Record<string, string>,
       issuer_evaluation: String(playbook.issuer_evaluation ?? ""),

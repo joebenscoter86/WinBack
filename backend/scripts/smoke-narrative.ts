@@ -2,6 +2,8 @@ import { supabase } from "@/lib/supabase";
 import { runBackgroundGeneration } from "@/lib/narratives/generate-background";
 
 const STRIPE_DISPUTE_ID = "du_1TIx1JEQYvM3XwRzZDZKVVcb";
+const STRIPE_ACCOUNT_ID =
+  process.env.SMOKE_STRIPE_ACCOUNT_ID ?? "acct_1TCiQ5EGBKy2j9aE";
 
 async function main() {
   console.log("ANTHROPIC_API_KEY present:", !!process.env.ANTHROPIC_API_KEY);
@@ -36,6 +38,7 @@ async function main() {
   const t0 = Date.now();
   await runBackgroundGeneration({
     generationId: gen.id,
+    accountId: STRIPE_ACCOUNT_ID,
     disputeId: dispute.id,
     stripeDisputeId: STRIPE_DISPUTE_ID,
     reasonCode: dispute.reason_code,
