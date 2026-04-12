@@ -1,10 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, expectTypeOf } from "vitest";
 import { ALL_PLAYBOOKS } from "../data";
 import type {
   PlaybookData,
   EvidenceChecklistItem,
   EvidenceCategory,
   EvidenceContext,
+  StripeEvidenceFileField,
 } from "../types";
 
 const VALID_CATEGORIES: PlaybookData["category"][] = [
@@ -158,3 +159,24 @@ describe.each(ALL_PLAYBOOKS.map((p) => [p.display_name, p] as [string, PlaybookD
     });
   }
 );
+
+describe("StripeEvidenceFileField", () => {
+  it("includes every Stripe dispute file-evidence field plus uncategorized_file", () => {
+    const fields: StripeEvidenceFileField[] = [
+      "cancellation_policy",
+      "customer_communication",
+      "customer_signature",
+      "duplicate_charge_documentation",
+      "receipt",
+      "refund_policy",
+      "service_documentation",
+      "shipping_documentation",
+      "uncategorized_file",
+    ];
+    expect(fields.length).toBe(9);
+  });
+
+  it("EvidenceChecklistItem requires stripe_evidence_field", () => {
+    expectTypeOf<EvidenceChecklistItem>().toHaveProperty("stripe_evidence_field");
+  });
+});

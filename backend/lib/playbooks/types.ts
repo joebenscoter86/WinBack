@@ -16,6 +16,17 @@ export type EvidenceContext =
   | "installment_defense"
   | "ce3";
 
+export type StripeEvidenceFileField =
+  | "cancellation_policy"
+  | "customer_communication"
+  | "customer_signature"
+  | "duplicate_charge_documentation"
+  | "receipt"
+  | "refund_policy"
+  | "service_documentation"
+  | "shipping_documentation"
+  | "uncategorized_file";
+
 export interface EvidenceChecklistItem {
   item: string;
   category: EvidenceCategory;
@@ -24,6 +35,7 @@ export interface EvidenceChecklistItem {
   why_matters: string;
   where_to_find?: string;
   stripe_field?: string;
+  stripe_evidence_field: StripeEvidenceFileField;
   urgency_essential: boolean;
   urgency_order: number | null;
 }
