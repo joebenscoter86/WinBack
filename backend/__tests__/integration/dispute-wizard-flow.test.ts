@@ -127,5 +127,68 @@ describe("WIN-43: dispute wizard integration flow", () => {
     expect(step2Body.data).toBeDefined();
     expect(step2Body.data.network).toBe("visa");
     expect(step2Body.data.reason_code).toBe("10.4");
+
+    // ---- STEP 3: GET /api/disputes/{id}/evidence-files (empty) ----
+    const { GET: evidenceFilesGET, POST: evidenceFilesPOST } = await import(
+      "@/app/api/disputes/[disputeId]/evidence-files/route"
+    );
+
+    const step3Req = new NextRequest(
+      `http://localhost/api/disputes/${TEST_DISPUTE_ID}/evidence-files`,
+      { method: "GET" },
+    );
+    const step3Res = await evidenceFilesGET(step3Req);
+    expect(step3Res.status).toBe(200);
+    const step3Body = await step3Res.json();
+    expect(step3Body.data).toEqual([]);
+
+    // ---- STEP 4: POST /api/disputes/{id}/evidence-files (upload metadata) ----
+    // Evidence files are uploaded to Stripe client-side; this route only
+    // registers the resulting metadata in our DB. No multipart needed.
+    const { TEST_CHECKLIST_ITEM_KEY, TEST_STRIPE_FILE_ID } = await import(
+      "./fixtures"
+    );
+
+    const step4Req = new NextRequest(
+      `http://localhost/api/disputes/${TEST_DISPUTE_ID}/evidence-files`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          checklist_item_key: TEST_CHECKLIST_ITEM_KEY,
+          stripe_file_id: TEST_STRIPE_FILE_ID,
+          file_name: "delivery-confirmation.pdf",
+          file_size: 4321,
+          mime_type: "pdf",
+        }),
+      },
+    );
+    const step4Res = await evidenceFilesPOST(step4Req);
+    expect(step4Res.status).toBe(200);
+    const step4Body = await step4Res.json();
+    expect(step4Body.data).toBeDefined();
+
+    // DB assertions: evidence_files row exists, linked to the dispute we
+    // wrote in step 1 (NOT a zombie dispute with amount: 0).
+    const { data: fileRow } = await testDb
+      .from("evidence_files")
+      .select("id, dispute_id, checklist_item_key, file_name, stripe_file_id")
+      .eq("stripe_file_id", TEST_STRIPE_FILE_ID)
+      .single();
+    expect(fileRow).toBeDefined();
+    expect(fileRow?.dispute_id).toBe(disputeRow?.id); // links to step 1's dispute
+    expect(fileRow?.checklist_item_key).toBe(TEST_CHECKLIST_ITEM_KEY);
+    expect(fileRow?.file_name).toBe("delivery-confirmation.pdf");
+
+    // Regression check for WIN-41: ensure the dispute row still has
+    // real values (amount/reason_code were NOT overwritten by the
+    // upload route's fallback upsert).
+    const { data: disputeRowAfterUpload } = await testDb
+      .from("disputes")
+      .select("amount, reason_code")
+      .eq("stripe_dispute_id", TEST_DISPUTE_ID)
+      .single();
+    expect(disputeRowAfterUpload?.amount).toBe(14900);
+    expect(disputeRowAfterUpload?.reason_code).toBe("10.4");
   });
 });
