@@ -266,5 +266,20 @@ describe("WIN-43: dispute wizard integration flow", () => {
       .single();
     expect(disputeAfterGen?.narrative_text).toContain("Delivery Confirmation");
     expect(disputeAfterGen?.narrative_generations_count).toBe(1);
+
+    // ---- STEP 7: POST /api/narratives/{gen_id}/status ----
+    const { POST: statusPOST } = await import(
+      "@/app/api/narratives/[generationId]/status/route"
+    );
+
+    const step7Req = new NextRequest(
+      `http://localhost/api/narratives/${generationId}/status`,
+      { method: "POST", headers: { "Content-Type": "application/json" } },
+    );
+    const step7Res = await statusPOST(step7Req);
+    expect(step7Res.status).toBe(200);
+    const step7Body = await step7Res.json();
+    expect(step7Body.status).toBe("completed");
+    expect(step7Body.narrative).toContain("Delivery Confirmation");
   });
 });
