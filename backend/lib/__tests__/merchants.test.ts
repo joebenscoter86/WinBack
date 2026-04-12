@@ -26,19 +26,29 @@ describe("ensureMerchant", () => {
     expect(mockUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
         stripe_account_id: "acct_123",
-        stripe_user_id: "usr_456",
       }),
       { onConflict: "stripe_account_id" },
     );
   });
 
-  it("should include last_seen_at timestamp", async () => {
+  it("should include updated_at timestamp so the touch is recorded", async () => {
     await ensureMerchant("acct_123", "usr_456");
 
     const upsertArg = mockUpsert.mock.calls[0][0];
-    expect(upsertArg.last_seen_at).toBeDefined();
-    const ts = new Date(upsertArg.last_seen_at).getTime();
+    expect(upsertArg.updated_at).toBeDefined();
+    const ts = new Date(upsertArg.updated_at).getTime();
     expect(Date.now() - ts).toBeLessThan(5000);
+  });
+
+  it("should not write schema columns that do not exist", async () => {
+    // Guards against the WIN-19 QA bug where ensureMerchant wrote
+    // stripe_user_id and last_seen_at columns that do not exist in the
+    // merchants table, causing the upsert to fail silently.
+    await ensureMerchant("acct_123", "usr_456");
+
+    const upsertArg = mockUpsert.mock.calls[0][0];
+    expect(upsertArg.stripe_user_id).toBeUndefined();
+    expect(upsertArg.last_seen_at).toBeUndefined();
   });
 
   it("should not throw on upsert error", async () => {
