@@ -114,6 +114,21 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
     fetchData();
   }, [shown, initialDispute.id, initialDispute.network, initialDispute.reason_code]);
 
+  // Re-fetch evidence files whenever the user enters the narrative step.
+  // The Evidence tab owns its own upload state, so DisputeWorkflow's copy
+  // goes stale as soon as the merchant uploads a file. Refreshing on tab
+  // entry keeps the narrative pre-generation view in sync without lifting
+  // upload state across the whole workflow.
+  useEffect(() => {
+    if (currentStep !== 'narrative') return;
+    fetchBackend<{ data: EvidenceFile[] }>(
+      `/api/disputes/${initialDispute.id}/evidence-files`,
+      contextRef.current,
+    )
+      .then((result) => setEvidenceFiles(result.data))
+      .catch((err) => console.error('Failed to refresh evidence files:', err));
+  }, [currentStep, initialDispute.id]);
+
   const currentIndex = WIZARD_STEPS.indexOf(currentStep);
   const isFirstStep = currentIndex === 0;
   const isLastStep = currentIndex === WIZARD_STEPS.length - 1;
