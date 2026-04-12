@@ -105,77 +105,60 @@ const NarrativePreGeneration = ({
             />
           )}
 
-          <Divider />
-
-          <Box css={{ stack: 'y', gap: 'small' }}>
-            {itemStatuses.map(({ item, matchedFile, stripeField, autoFilled, satisfied }) => {
-              const isMandatoryMissing = item.required && !satisfied;
-
-              let detailNode: React.ReactNode = null;
-              if (matchedFile) {
-                detailNode = (
-                  <Inline css={{ font: 'caption', color: 'secondary' }}>
-                    {matchedFile.file_name}
-                  </Inline>
-                );
-              } else if (autoFilled && stripeField) {
-                detailNode = (
-                  <Inline css={{ font: 'caption', color: 'secondary' }}>
-                    {stripeField.value} (auto-filled from Stripe)
-                  </Inline>
-                );
-              } else {
-                detailNode = (
-                  <Inline
+          <Box css={{ stack: 'y', gap: 0 }}>
+            {itemStatuses.map(({ item, satisfied }, index) => {
+              const isFirst = index === 0;
+              return (
+                <Box key={item.item} css={{ stack: 'y', gap: 0 }}>
+                  {!isFirst && <Divider />}
+                  <Box
                     css={{
-                      font: 'caption',
-                      color: isMandatoryMissing ? 'attention' : 'disabled',
+                      stack: 'x',
+                      gap: 'small',
+                      alignY: 'center',
+                      distribute: 'space-between',
+                      paddingY: 'small',
                     }}
                   >
-                    {isMandatoryMissing ? 'Missing (required)' : 'Not uploaded'}
-                  </Inline>
-                );
-              }
-
-              return (
-                <Box
-                  key={item.item}
-                  css={{
-                    stack: 'x',
-                    gap: 'small',
-                    alignY: 'center',
-                    distribute: 'space-between',
-                  }}
-                >
-                  <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
-                    <Inline
+                    <Box
                       css={{
-                        font: 'body',
-                        color: satisfied
-                          ? 'success'
-                          : isMandatoryMissing
-                          ? 'attention'
-                          : 'disabled',
+                        stack: 'x',
+                        gap: 'small',
+                        alignY: 'center',
+                        width: '3/4',
                       }}
                     >
-                      {satisfied ? '\u2713' : '\u25CB'}
-                    </Inline>
+                      <Inline
+                        css={{
+                          font: 'body',
+                          color: satisfied ? 'success' : 'disabled',
+                        }}
+                      >
+                        {satisfied ? '\u2713' : '\u25CB'}
+                      </Inline>
+                      <Inline
+                        css={{
+                          font: 'caption',
+                          color: satisfied ? 'primary' : 'secondary',
+                        }}
+                      >
+                        {item.item}
+                      </Inline>
+                    </Box>
                     <Inline
                       css={{
                         font: 'caption',
-                        color: satisfied ? 'primary' : 'secondary',
+                        fontWeight: 'semibold',
+                        color: satisfied ? 'success' : 'disabled',
                       }}
                     >
-                      {item.item}
+                      {satisfied ? 'Uploaded' : 'Not uploaded'}
                     </Inline>
                   </Box>
-                  {detailNode}
                 </Box>
               );
             })}
           </Box>
-
-          <Divider />
 
           <Link onPress={onNavigateBack}>
             <Inline css={{ font: 'caption', color: 'info' }}>
