@@ -10,7 +10,6 @@ import {
 import { ensureMerchant } from "@/lib/merchants";
 import { supabase } from "@/lib/supabase";
 import { getPlaybook } from "@/lib/playbooks";
-import { buildEvidencePayload } from "@/lib/disputes/build-evidence-payload";
 import { evaluateSubmissionGuard } from "@/lib/disputes/submission-guard";
 import type { SubmissionWarning } from "@/lib/disputes/types";
 
@@ -341,14 +340,15 @@ export const POST = withStripeAuth(
     }
 
     // Step 9: Build evidence payload
-    const { evidence, warnings: mapperWarnings } = buildEvidencePayload({
-      dispute: stripeDispute,
-      playbook: playbook as unknown as import("@/lib/playbooks/types").PlaybookData,
-      evidenceFiles,
-      narrativeText,
-      charge: stripeCharge,
-    });
-
+    // TODO(WIN-20 Task 7): replace with assembleEvidence() call
+    const { evidence, warnings: mapperWarnings } = ((): never => {
+      throw new Error(
+        "evidence assembler not yet implemented — see docs/superpowers/plans/2026-04-12-win-20-evidence-submission.md Task 7",
+      );
+    })();
+    // Unreachable — the throw above aborts Step 9. The references below keep
+    // Task 9's re-wire simple without a massive diff.
+    void stripeCharge;
     const allWarnings: SubmissionWarning[] = [...guard.warnings, ...mapperWarnings];
 
     // Guard already validated hasFiles || hasNarrative, but buildEvidencePayload

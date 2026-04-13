@@ -18,3 +18,16 @@ export type SubmissionWarning =
 
 export const UNCATEGORIZED_TEXT_MAX = 20_000;
 export const COMBINED_TEXT_MAX = 150_000;
+
+/**
+ * Shape of a row from the evidence_files table as consumed by the guard and
+ * the assembler. Originally defined in build-evidence-payload.ts (now deleted).
+ */
+export interface EvidenceFileInput {
+  id: string;
+  checklist_item_key: string;
+  stripe_file_id: string;
+  file_name: string;
+  file_size: number;
+  mime_type: string;
+}

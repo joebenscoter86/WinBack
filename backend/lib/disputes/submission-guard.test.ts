@@ -38,7 +38,7 @@ describe("evaluateSubmissionGuard", () => {
       const result = evaluateSubmissionGuard({
         stripeDispute: mkDispute({ status }),
         playbook: mkPlaybook(),
-        evidenceFiles: [{ checklist_item_key: "Mandatory A", stripe_file_id: "file_1" }],
+        evidenceFiles: [{ checklist_item_key: "Mandatory A" }],
         narrativeText: "defense",
       });
       expect(result.action).toBe("allow");
@@ -52,7 +52,7 @@ describe("evaluateSubmissionGuard", () => {
       const result = evaluateSubmissionGuard({
         stripeDispute: mkDispute({ status }),
         playbook: mkPlaybook(),
-        evidenceFiles: [{ checklist_item_key: "Mandatory A", stripe_file_id: "file_1" }],
+        evidenceFiles: [{ checklist_item_key: "Mandatory A" }],
         narrativeText: "defense",
       });
       expect(result.action).toBe("block");
@@ -66,7 +66,7 @@ describe("evaluateSubmissionGuard", () => {
     const result = evaluateSubmissionGuard({
       stripeDispute: mkDispute({ evidence_details: { due_by: past } as never }),
       playbook: mkPlaybook(),
-      evidenceFiles: [{ checklist_item_key: "Mandatory A", stripe_file_id: "file_1" }],
+      evidenceFiles: [{ checklist_item_key: "Mandatory A" }],
       narrativeText: "defense",
     });
     expect(result.action).toBe("allow");
@@ -103,7 +103,7 @@ describe("evaluateSubmissionGuard", () => {
     const result = evaluateSubmissionGuard({
       stripeDispute: mkDispute({ evidence_details: null as never }),
       playbook: mkPlaybook(),
-      evidenceFiles: [{ checklist_item_key: "Mandatory A", stripe_file_id: "file_1" }],
+      evidenceFiles: [{ checklist_item_key: "Mandatory A" }],
       narrativeText: "defense",
     });
     expect(result.action).toBe("allow");

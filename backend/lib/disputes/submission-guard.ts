@@ -1,12 +1,11 @@
 import type Stripe from "stripe";
 import type { PlaybookData } from "../playbooks/types";
 import type { SubmissionWarning } from "./types";
-import type { EvidenceFileInput } from "./build-evidence-payload";
 
 export interface GuardInput {
   stripeDispute: Stripe.Dispute;
   playbook: PlaybookData;
-  evidenceFiles: EvidenceFileInput[];
+  evidenceFiles: Array<{ checklist_item_key: string }>;
   narrativeText: string | null;
 }
 
