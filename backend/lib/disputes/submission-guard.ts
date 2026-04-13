@@ -49,6 +49,8 @@ export function evaluateSubmissionGuard(input: GuardInput): GuardResult {
   const filedKeys = new Set(evidenceFiles.map((f) => f.checklist_item_key));
   const missingMandatory = playbook.evidence_checklist
     .filter((i) => i.category === "mandatory")
+    .filter((i) => !(i as { narrative_only?: boolean }).narrative_only)
+    .filter((i) => !(i as { stripe_field?: boolean }).stripe_field)
     .filter((i) => !filedKeys.has(i.item))
     .map((i) => i.item);
   if (missingMandatory.length > 0) {

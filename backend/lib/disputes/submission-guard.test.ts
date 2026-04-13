@@ -88,6 +88,50 @@ describe("evaluateSubmissionGuard", () => {
     );
   });
 
+  it("silently passes narrative_only mandatory items (no missing_mandatory_items warning)", () => {
+    const playbook = {
+      network: "visa",
+      reason_code: "10.4",
+      evidence_checklist: [
+        {
+          item: "IP match",
+          category: "mandatory" as const,
+          context: "all",
+          required: true,
+          why_matters: "",
+          where_to_find: "",
+          narrative_only: true,
+          urgency_essential: true,
+          urgency_order: 1,
+        },
+        {
+          item: "Delivery",
+          category: "mandatory" as const,
+          context: "all",
+          required: true,
+          why_matters: "",
+          where_to_find: "",
+          stripe_evidence_field: "shipping_documentation" as const,
+          urgency_essential: true,
+          urgency_order: 2,
+        },
+      ],
+    } as unknown as Parameters<typeof evaluateSubmissionGuard>[0]["playbook"];
+
+    const result = evaluateSubmissionGuard({
+      stripeDispute: { status: "needs_response", evidence_details: { due_by: Math.floor(Date.now() / 1000) + 100000 } } as unknown as Parameters<typeof evaluateSubmissionGuard>[0]["stripeDispute"],
+      playbook,
+      evidenceFiles: [
+        { checklist_item_key: "Delivery" },
+      ],
+      narrativeText: "something",
+    });
+
+    expect(result.action).toBe("allow");
+    const missing = result.warnings.filter((w) => w.code === "missing_mandatory_items");
+    expect(missing).toHaveLength(0);
+  });
+
   it("blocks with validation_failed when evidence AND narrative are both empty", () => {
     const result = evaluateSubmissionGuard({
       stripeDispute: mkDispute(),
