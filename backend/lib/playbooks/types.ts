@@ -34,7 +34,24 @@ export interface EvidenceChecklistItem {
   required: boolean;
   why_matters: string;
   where_to_find?: string;
+  /**
+   * Populated at submit time from the Charge object. An item with stripe_field
+   * set is category A (autofilled) and MUST NOT have stripe_evidence_field or
+   * narrative_only set.
+   */
   stripe_field?: string;
+  /**
+   * True for items the merchant addresses in the narrative body, not via file
+   * upload. An item with narrative_only=true is category T and MUST NOT have
+   * stripe_evidence_field or stripe_field set.
+   */
+  narrative_only?: boolean;
+  /**
+   * Target Stripe dispute evidence file slot. Multiple items in a playbook MAY
+   * share a slot — PDF concat at submit time resolves the merge. Items with a
+   * stripe_evidence_field are file-upload items and MUST NOT have stripe_field
+   * or narrative_only set.
+   */
   stripe_evidence_field?: StripeEvidenceFileField;
   urgency_essential: boolean;
   urgency_order: number | null;
