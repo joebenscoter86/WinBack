@@ -110,6 +110,16 @@ If it fails, diagnose and fix before landing the PR. Do not merge backend change
 
 Frontend-only PRs (stripe-app/**) do not need this check.
 
+### Playbook edits require a DB reseed
+
+The playbook data in `backend/lib/playbooks/data/*.ts` is the authoring source, but runtime code reads playbooks from the Supabase `playbooks` table via `getPlaybook()` -- NOT from the TS modules. Any time you edit a playbook data file you must reseed the dev DB:
+
+```bash
+cd backend && set -a && source .env.local && set +a && npm run seed:playbooks
+```
+
+QA caught this during WIN-20: the plan backfilled `stripe_evidence_field` on every checklist item in the TS source, but the route kept pulling stale rows from Postgres where the field was missing, producing `evidence[undefined]` errors from Stripe. Always reseed after touching `lib/playbooks/data/`.
+
 ---
 
 ## Important Constraints
