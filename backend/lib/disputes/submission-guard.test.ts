@@ -32,16 +32,19 @@ function mkPlaybook(): PlaybookData {
 }
 
 describe("evaluateSubmissionGuard", () => {
-  it("allows when status is needs_response with evidence present", () => {
-    const result = evaluateSubmissionGuard({
-      stripeDispute: mkDispute(),
-      playbook: mkPlaybook(),
-      evidenceFiles: [{ checklist_item_key: "Mandatory A", stripe_file_id: "file_1" }],
-      narrativeText: "defense",
-    });
-    expect(result.action).toBe("allow");
-    expect(result.warnings).toEqual([]);
-  });
+  it.each(["needs_response", "warning_needs_response"] as const)(
+    "allows when status is %s with evidence present",
+    (status) => {
+      const result = evaluateSubmissionGuard({
+        stripeDispute: mkDispute({ status }),
+        playbook: mkPlaybook(),
+        evidenceFiles: [{ checklist_item_key: "Mandatory A", stripe_file_id: "file_1" }],
+        narrativeText: "defense",
+      });
+      expect(result.action).toBe("allow");
+      expect(result.warnings).toEqual([]);
+    },
+  );
 
   it.each(["under_review", "won", "lost", "warning_closed", "charge_refunded"] as const)(
     "blocks when status is %s",

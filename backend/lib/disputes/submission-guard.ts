@@ -21,7 +21,8 @@ export function evaluateSubmissionGuard(input: GuardInput): GuardResult {
   const { stripeDispute, playbook, evidenceFiles, narrativeText } = input;
   const warnings: SubmissionWarning[] = [];
 
-  if (stripeDispute.status !== "needs_response") {
+  const SUBMITTABLE_STATUSES = new Set(["needs_response", "warning_needs_response"]);
+  if (!SUBMITTABLE_STATUSES.has(stripeDispute.status)) {
     return {
       action: "block",
       blockCode: "dispute_not_submittable",

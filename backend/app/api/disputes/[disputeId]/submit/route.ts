@@ -268,7 +268,8 @@ export const POST = withStripeAuth(
       }
 
       // Stale pending (>= 60s) — check if Stripe already processed it
-      if (stripeDispute.status !== "needs_response") {
+      const STILL_SUBMITTABLE = new Set(["needs_response", "warning_needs_response"]);
+      if (!STILL_SUBMITTABLE.has(stripeDispute.status)) {
         // Stripe accepted the submission despite our timeout — reconcile
         const completedAt = new Date().toISOString();
         const { error: staleSubErr } = await supabase
