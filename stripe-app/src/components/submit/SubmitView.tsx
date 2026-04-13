@@ -144,7 +144,7 @@ export default function SubmitView({
         />
       )}
 
-      {attached < total && state.kind !== 'error' && (
+      {attached < total && !isTerminalError && (
         <Banner
           type="caution"
           title="Missing mandatory evidence"
@@ -152,11 +152,13 @@ export default function SubmitView({
         />
       )}
 
-      <Banner
-        type="caution"
-        title="Submission is final"
-        description="Once you submit, your evidence is final and cannot be changed or recalled. Stripe will send it directly to the card issuer."
-      />
+      {!isTerminalError && (
+        <Banner
+          type="caution"
+          title="Submission is final"
+          description="Once you submit, your evidence is final and cannot be changed or recalled. Stripe will send it directly to the card issuer."
+        />
+      )}
 
       <Checkbox
         label="I understand this submission is final."

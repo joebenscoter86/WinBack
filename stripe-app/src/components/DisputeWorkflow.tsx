@@ -210,7 +210,7 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
       primaryAction={
         isLastStep ? (
           <Button type="primary" onPress={() => setShown(false)}>
-            Submit (placeholder)
+            {submitted ? 'Done' : 'Close'}
           </Button>
         ) : (
           <Button type="primary" onPress={handleNext}>
@@ -257,16 +257,19 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
               {renderReviewTab()}
             </TabPanel>
             <TabPanel id="evidence">
-              <EvidenceChecklist
-                dispute={dispute}
-                playbook={playbook}
-                context={contextRef.current}
-                isUrgent={isUrgent}
-                daysRemaining={daysRemaining}
-                submitted={submitted}
-              />
+              {currentStep === 'evidence' && (
+                <EvidenceChecklist
+                  dispute={dispute}
+                  playbook={playbook}
+                  context={contextRef.current}
+                  isUrgent={isUrgent}
+                  daysRemaining={daysRemaining}
+                  submitted={submitted}
+                />
+              )}
             </TabPanel>
             <TabPanel id="narrative">
+              {currentStep === 'narrative' && (
               <NarrativePanel
                 dispute={dispute}
                 playbook={playbook}
@@ -281,6 +284,7 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
                 onNavigateBack={() => setCurrentStep('evidence')}
                 submitted={submitted}
               />
+              )}
             </TabPanel>
             <TabPanel id="submit">
               {submitted && dispute.evidence_submitted_at ? (
