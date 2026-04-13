@@ -62,3 +62,43 @@ export async function submitDispute(
     { idempotencyKey },
   );
 }
+
+/**
+ * Download an existing Stripe File by ID as a Buffer. Uses the file's short-lived
+ * URL from files.retrieve(). The file must have been uploaded with a purpose
+ * that grants read access to the platform account.
+ */
+export async function downloadStripeFile(fileId: string): Promise<Buffer> {
+  const file = await getStripe().files.retrieve(fileId);
+  if (!file.url) {
+    throw new Error(`Stripe file ${fileId} has no URL`);
+  }
+  const res = await fetch(file.url, {
+    headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` },
+  });
+  if (!res.ok) {
+    throw new Error(
+      `Failed to download Stripe file ${fileId}: ${res.status} ${res.statusText}`,
+    );
+  }
+  const arrayBuffer = await res.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
+/**
+ * Upload a combined PDF to Stripe Files as dispute evidence. Returns the new file_id.
+ */
+export async function uploadCombinedEvidence(
+  pdf: Buffer,
+  filename: string,
+): Promise<string> {
+  const file = await getStripe().files.create({
+    purpose: "dispute_evidence",
+    file: {
+      data: pdf,
+      name: filename,
+      type: "application/pdf",
+    },
+  });
+  return file.id;
+}
