@@ -134,7 +134,11 @@ const ChecklistItem = ({
                 onPress={() => onSectionToggle('where')}
               />
             )}
-            {!isUnavailable && !isPositive && !submitted && (
+            {item.narrative_only ? (
+              <Inline css={{ font: 'caption', color: 'secondary' }}>
+                Covered in your narrative
+              </Inline>
+            ) : !isUnavailable && !isPositive && !submitted ? (
               <>
                 <SectionToggle
                   label={notes ? 'Your notes' : 'Add notes'}
@@ -147,7 +151,7 @@ const ChecklistItem = ({
                   onPress={() => onSectionToggle('file')}
                 />
               </>
-            )}
+            ) : null}
             {submitted && existingFile && (
               <SectionToggle
                 label={existingFile.file_name}
@@ -189,7 +193,7 @@ const ChecklistItem = ({
         </Box>
       )}
 
-      {fileExpanded && !isUnavailable && (
+      {fileExpanded && !isUnavailable && !item.narrative_only && (
         <Box css={{ marginLeft: 'xlarge' }}>
           <FileUploadSection
             disputeId={disputeId}

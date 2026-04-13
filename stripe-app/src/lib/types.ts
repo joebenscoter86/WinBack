@@ -72,6 +72,7 @@ export interface EvidenceChecklistItem {
   why_matters: string;
   where_to_find?: string;
   stripe_field?: string;
+  narrative_only?: boolean;
   urgency_essential: boolean;
   urgency_order: number | null;
 }
