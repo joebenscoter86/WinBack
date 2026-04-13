@@ -13,7 +13,8 @@ export type SubmissionWarning =
       resolution: "uncategorized_file" | "dropped";
     }
   | { code: "missing_mandatory_items"; items: string[] }
-  | { code: "deadline_passed"; due_by: number };
+  | { code: "deadline_passed"; due_by: number }
+  | { code: "stripe_field_missing"; item: string; fallback: "uncategorized_file" };
 
 export const UNCATEGORIZED_TEXT_MAX = 20_000;
 export const COMBINED_TEXT_MAX = 150_000;

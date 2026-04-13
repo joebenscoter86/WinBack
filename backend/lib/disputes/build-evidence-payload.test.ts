@@ -238,6 +238,49 @@ describe("buildEvidencePayload", () => {
     expect((result.evidence as { enhanced_evidence?: unknown }).enhanced_evidence).toBeUndefined();
   });
 
+  it("falls back to uncategorized_file when stripe_evidence_field is missing on a playbook item", () => {
+    // Simulates the DB-schema-drift case: playbooks row was seeded before
+    // WIN-20's backfill and is missing stripe_evidence_field on an item.
+    const pb = mkPlaybook({
+      evidence_checklist: [
+        {
+          item: "Stale item without field",
+          category: "mandatory",
+          context: "all",
+          required: true,
+          why_matters: "",
+          // @ts-expect-error -- simulating missing field at runtime
+          stripe_evidence_field: undefined,
+          urgency_essential: true,
+          urgency_order: 1,
+        },
+      ],
+    });
+    const result = buildEvidencePayload({
+      dispute: { id: "dp_1", evidence: {} } as never,
+      playbook: pb,
+      evidenceFiles: [
+        { checklist_item_key: "Stale item without field", stripe_file_id: "file_stale" },
+      ],
+      narrativeText: null,
+      charge: {
+        id: "ch_empty",
+        object: "charge",
+        billing_details: { name: null, email: null, address: null, phone: null },
+        description: null,
+      } as unknown as Stripe.Charge,
+    });
+    // File lands in uncategorized_file, not evidence[undefined]
+    expect(result.evidence.uncategorized_file).toBe("file_stale");
+    expect((result.evidence as Record<string, unknown>).undefined).toBeUndefined();
+    // And a warning is emitted so ops can catch the drift
+    expect(result.warnings).toContainEqual({
+      code: "stripe_field_missing",
+      item: "Stale item without field",
+      fallback: "uncategorized_file",
+    });
+  });
+
   it("returns empty evidence when no narrative, no files, and charge has no billing details", () => {
     const result = buildEvidencePayload({
       dispute: { id: "dp_1", evidence: {} } as never,

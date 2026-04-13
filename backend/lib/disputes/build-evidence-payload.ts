@@ -139,7 +139,19 @@ export function buildEvidencePayload(
     const item = itemByKey.get(file.checklist_item_key);
     if (!item) continue; // orphan file, skip
 
-    const field = item.stripe_evidence_field;
+    // Defensive fallback: if the playbook row is missing stripe_evidence_field
+    // (e.g. because the Supabase playbooks table wasn't reseeded after a TS
+    // edit), degrade to uncategorized_file and emit an observability warning
+    // rather than writing evidence[undefined] and losing the whole submission.
+    let field = item.stripe_evidence_field;
+    if (typeof field !== "string" || field.length === 0) {
+      warnings.push({
+        code: "stripe_field_missing",
+        item: item.item,
+        fallback: "uncategorized_file",
+      });
+      field = "uncategorized_file";
+    }
 
     if (!fieldOwner.has(field)) {
       (evidence as Record<string, unknown>)[field] = file.stripe_file_id;
