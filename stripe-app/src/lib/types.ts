@@ -49,6 +49,7 @@ export interface Dispute {
   metadata?: Record<string, string>;
   checklist_state?: Record<string, boolean>;
   checklist_notes?: Record<string, string>;
+  narrative_text?: string | null;
   evidence_submitted_at?: string | null;
   // Auto-pull fields (WIN-37)
   avs_address_check?: string;

@@ -75,7 +75,11 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
       ]);
 
       if (disputeResult.status === 'fulfilled') {
-        setDispute(disputeResult.value.data);
+        const fetched = disputeResult.value.data;
+        setDispute(fetched);
+        if (fetched.narrative_text) {
+          setEditedNarrative(fetched.narrative_text);
+        }
       } else {
         const err = disputeResult.reason;
         setErrors((prev) => ({

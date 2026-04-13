@@ -32,9 +32,13 @@ const NarrativePanel = ({
   onNavigateBack,
   submitted,
 }: NarrativePanelProps) => {
-  const [phase, setPhase] = useState<NarrativePhase>('idle');
+  // Seed from persisted narrative_text so the Review view shows on reload
+  // across sessions, not the pre-generation prompt (WIN-20).
+  const [phase, setPhase] = useState<NarrativePhase>(() =>
+    editedNarrative ? 'review' : 'idle',
+  );
   const [generationId, setGenerationId] = useState<string | null>(null);
-  const [narrative, setNarrative] = useState<string>('');
+  const [narrative, setNarrative] = useState<string>(() => editedNarrative);
   const [annotations, setAnnotations] = useState<NarrativeAnnotation[]>([]);
   const [generationNumber, setGenerationNumber] = useState<number>(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
