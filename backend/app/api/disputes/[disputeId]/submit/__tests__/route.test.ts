@@ -48,11 +48,34 @@ vi.mock("@/lib/playbooks", () => ({
 }));
 
 // ---------------------------------------------------------------------------
+// Evidence assembler mock — the route now delegates payload building to
+// lib/disputes/assemble-evidence. Default return yields a non-empty evidence
+// object so the empty-payload guard does not fire.
+// ---------------------------------------------------------------------------
+vi.mock("@/lib/disputes/assemble-evidence", () => ({
+  assembleEvidence: vi.fn(async () => ({
+    evidence: { uncategorized_text: "mocked narrative" },
+    warnings: [],
+    concat_receipts: [],
+  })),
+}));
+
+// Stripe client helpers used by the route — just need to exist as the route
+// passes them into assembleEvidence (which is mocked above).
+vi.mock("@/lib/stripe/client", () => ({
+  downloadStripeFile: vi.fn(),
+  uploadCombinedEvidence: vi.fn(),
+}));
+
+// ---------------------------------------------------------------------------
 // Import the route AFTER all mocks are registered, and pull in the mocked fns
 // ---------------------------------------------------------------------------
 import { POST } from "../route";
 import * as stripeMod from "@/lib/stripe";
 import * as playbooksMod from "@/lib/playbooks";
+import * as assembleMod from "@/lib/disputes/assemble-evidence";
+
+const assembleEvidenceMock = assembleMod.assembleEvidence as ReturnType<typeof vi.fn>;
 
 // Typed handles to the vi.fn() instances created in the factory above
 const getDisputeMock = stripeMod.getDispute as ReturnType<typeof vi.fn>;
@@ -200,6 +223,11 @@ describe("POST /api/disputes/[disputeId]/submit", () => {
     vi.clearAllMocks();
     getPlaybookMock.mockResolvedValue(makePlaybook());
     getChargeMock.mockResolvedValue(makeStripeCharge());
+    assembleEvidenceMock.mockResolvedValue({
+      evidence: { uncategorized_text: "mocked narrative" },
+      warnings: [],
+      concat_receipts: [],
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -836,4 +864,204 @@ describe("POST /api/disputes/[disputeId]/submit", () => {
     const secondCallKey = submitDisputeMock.mock.calls[1][3];
     expect(firstCallKey).toBe(secondCallKey);
   });
+
+  // -------------------------------------------------------------------------
+  // 8-10. WIN-20 assembler integration — warnings, hard-fail, receipts
+  // -------------------------------------------------------------------------
+
+  /**
+   * Build a happy-path Supabase mock that returns callbacks to capture the
+   * submissions.update payload. Returns { setup, captured } so each test can
+   * install it on supabaseMock.from and read what the route tried to persist.
+   */
+  function buildSuccessSupabaseMock() {
+    const captured: {
+      submissionsUpdate: Record<string, unknown> | null;
+      submissionsInsert: Record<string, unknown> | null;
+    } = { submissionsUpdate: null, submissionsInsert: null };
+
+    const setup = (table: string) => {
+      if (table === "merchants") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: { id: "merchant-uuid" },
+            error: null,
+          }),
+        };
+      }
+      if (table === "disputes") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: {
+                    id: LOCAL_DISPUTE_ID,
+                    stripe_dispute_id: DISPUTE_ID,
+                    network: "visa",
+                    reason_code: "10.4",
+                    narrative_text: "Narrative",
+                  },
+                  error: null,
+                }),
+              }),
+            }),
+          }),
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ error: null }),
+          }),
+        };
+      }
+      if (table === "evidence_files") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({
+              data: [
+                { checklist_item_key: "receipt", stripe_file_id: "file_receipt" },
+              ],
+              error: null,
+            }),
+          }),
+        };
+      }
+      if (table === "dispute_submissions") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              in: vi.fn().mockReturnValue({
+                order: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+                }),
+              }),
+            }),
+          }),
+          insert: vi.fn().mockImplementation((row: Record<string, unknown>) => {
+            captured.submissionsInsert = row;
+            return {
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { id: "sub-new-uuid" },
+                  error: null,
+                }),
+              }),
+            };
+          }),
+          update: vi.fn().mockImplementation((row: Record<string, unknown>) => {
+            // Capture the first UPDATE (success path). Later calls (if any)
+            // for failure or disputes table are handled on their own mocks.
+            if (!captured.submissionsUpdate) {
+              captured.submissionsUpdate = row;
+            }
+            return {
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            };
+          }),
+        };
+      }
+      return {};
+    };
+
+    return { setup, captured };
+  }
+
+  it("propagates concat_skipped warnings to the success response", async () => {
+    assembleEvidenceMock.mockResolvedValueOnce({
+      evidence: { uncategorized_text: "n" },
+      warnings: [
+        {
+          code: "concat_skipped",
+          file_name: "bad.jpg",
+          slot: "customer_communication",
+          reason: "corrupt",
+        },
+      ],
+      concat_receipts: [],
+    });
+
+    const stripeDispute = makeStripeDispute();
+    getDisputeMock.mockResolvedValueOnce({
+      ...stripeDispute,
+      charge: makeStripeCharge(),
+    });
+    submitDisputeMock.mockResolvedValueOnce(
+      makeStripeDispute({ status: "under_review" }),
+    );
+
+    const { setup } = buildSuccessSupabaseMock();
+    supabaseMock.from.mockImplementation(setup);
+
+    const res = await POST(mkRequest());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(
+      (body.data.warnings as SubmissionWarning[]).some(
+        (w) => w.code === "concat_skipped",
+      ),
+    ).toBe(true);
+  });
+
+  it("returns 502 concat_failed when the assembler throws", async () => {
+    assembleEvidenceMock.mockRejectedValueOnce(
+      new Error("Stripe Files upload failed"),
+    );
+
+    const stripeDispute = makeStripeDispute();
+    getDisputeMock.mockResolvedValueOnce({
+      ...stripeDispute,
+      charge: makeStripeCharge(),
+    });
+
+    const { setup } = buildSuccessSupabaseMock();
+    supabaseMock.from.mockImplementation(setup);
+
+    const res = await POST(mkRequest());
+    const body = await res.json();
+
+    expect(res.status).toBe(502);
+    expect(body.code).toBe("concat_failed");
+    expect(submitDisputeMock).not.toHaveBeenCalled();
+    // Per Task 9 architecture: assembly runs BEFORE the dispute_submissions
+    // row is inserted, so no row should have been created or updated.
+  });
+
+  it("persists concat_receipts to the dispute_submissions row on success", async () => {
+    const receipts = [
+      {
+        slot: "customer_communication" as const,
+        input_file_ids: ["file_a", "file_b"],
+        combined_file_id: "file_merged",
+      },
+    ];
+    assembleEvidenceMock.mockResolvedValueOnce({
+      evidence: { customer_communication: "file_merged" },
+      warnings: [],
+      concat_receipts: receipts,
+    });
+
+    const stripeDispute = makeStripeDispute();
+    getDisputeMock.mockResolvedValueOnce({
+      ...stripeDispute,
+      charge: makeStripeCharge(),
+    });
+    submitDisputeMock.mockResolvedValueOnce(
+      makeStripeDispute({ status: "under_review" }),
+    );
+
+    const { setup, captured } = buildSuccessSupabaseMock();
+    supabaseMock.from.mockImplementation(setup);
+
+    const res = await POST(mkRequest());
+    expect(res.status).toBe(200);
+
+    expect(captured.submissionsUpdate).toMatchObject({
+      status: "succeeded",
+      concat_receipts: receipts,
+    });
+  });
 });
+
+// Local type import for the test assertions above.
+type SubmissionWarning = { code: string; [k: string]: unknown };
