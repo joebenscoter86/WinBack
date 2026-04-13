@@ -49,6 +49,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "This is your baseline. The customer's bank compares what you described against what the cardholder claims they received. Screenshot the listing -- don't just describe it.",
       where_to_find:
         "Screenshot your product page on your website or platform (Shopify, WooCommerce, Etsy, Amazon). If the listing changed since the purchase date, try the Wayback Machine (web.archive.org) for the original version. Include the full description, photos, specs, and any disclaimers.",
+      stripe_evidence_field: "uncategorized_file",
       urgency_essential: true,
       urgency_order: 1,
     },
@@ -61,6 +62,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Directly refutes the cardholder's claim that what they received differed from what was described. For services, this means scope of work delivered vs. agreed scope.",
       where_to_find:
         "For physical goods: check your phone's camera roll or warehouse system for pre-shipment photos. For services: pull deliverables, reports, or completed work product from your project management tool. Quality control records, batch inspection reports, or QC checklists from your production process also work.",
+      stripe_evidence_field: "uncategorized_file",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -73,6 +75,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Shows you were responsive and attempted resolution. If the cardholder never contacted you before filing, this is powerful evidence of friendly fraud -- Mastercard requires the customer to contact you first.",
       where_to_find:
         "Search your helpdesk (Zendesk, Intercom, Freshdesk) by customer name or email. Check Gmail sent/received for any conversations about this order. If you find zero contact from the customer, that's actually your strongest evidence -- Mastercard requires them to contact you first, and skipping that step weakens their case.",
+      stripe_evidence_field: "customer_communication",
       urgency_essential: true,
       urgency_order: 2,
     },
@@ -85,6 +88,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "If your policy offered a return path and the cardholder didn't use it, this undercuts their claim. Either way, a visible, accessible return policy helps you.",
       where_to_find:
         "Screenshot your checkout page showing the return policy link or text. Shopify: Settings > Policies > Refund policy. Also screenshot the full return policy page. If the customer had a clear return path and didn't use it, that's your argument.",
+      stripe_evidence_field: "refund_policy",
       urgency_essential: true,
       urgency_order: 5,
     },
@@ -97,6 +101,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "If the customer attempted a return and you denied it, Stripe's API requires a specific text explanation of why you refused. The customer's bank needs to hear your side. Be concrete: 'returned after the 30-day window', 'item showed clear signs of use', 'missing components.'",
       where_to_find:
         "Check your helpdesk or email for the message where you told the customer why their return or refund was denied. Pull the exact reason. If you use a returns management system (Returnly, Loop), check the denial record with its timestamp and reason code.",
+      narrative_only: true,
       urgency_essential: false,
       urgency_order: null,
     },
@@ -109,6 +114,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Establishes the item was delivered. Doesn't prove it matched the description, but prevents the dispute from pivoting to 'not received.'",
       where_to_find:
         "Your shipping provider's tracking page (UPS, FedEx, USPS, DHL). Screenshot the delivery confirmation showing status, delivery date, and destination. For signed deliveries, request the proof of delivery document from the carrier.",
+      stripe_evidence_field: "shipping_documentation",
       urgency_essential: true,
       urgency_order: 3,
     },
@@ -121,6 +127,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "A repeat customer who bought the same product before is hard-pressed to claim it's 'not as described' on the 5th purchase. Demonstrates established expectations.",
       where_to_find:
         "Stripe Dashboard > Customers > search by email or name > click the customer to see their full payment history. Also check your e-commerce platform's customer profile for order history. If they bought the same product before without complaint, screenshot that.",
+      stripe_evidence_field: "receipt",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -133,6 +140,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Proves the item was in good condition and matched the description when it left your facility. Especially critical for fragile, handmade, or high-value items.",
       where_to_find:
         "Check your phone's camera roll around the ship date for this order. If your team photographs items during packing, check your warehouse system or shared photo folder. For handmade/custom items, check your production documentation. Timestamped photos are best.",
+      stripe_evidence_field: "uncategorized_file",
       urgency_essential: true,
       urgency_order: 4,
     },
@@ -145,6 +153,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "For manufacturers and producers: shows systematic quality assurance. Demonstrates this isn't a one-off error but a documented, repeatable process.",
       where_to_find:
         "Pull from your production or inventory management system. If you do batch inspections, find the QC report covering this product's batch or lot number. Third-party testing certificates or compliance documents also work here.",
+      stripe_evidence_field: "uncategorized_file",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -157,6 +166,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Especially for services -- establishes what was promised and agreed to. Useful when the cardholder claims subjective expectations that differ from the written agreement.",
       where_to_find:
         "Screenshot your checkout page showing the Terms of Service checkbox or link. If you log when customers accept terms, pull the acceptance record with its timestamp for this customer. Also screenshot the relevant sections of your ToS page.",
+      stripe_evidence_field: "uncategorized_file",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -169,6 +179,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Defines exactly what was promised. Without this, the cardholder's subjective expectations become the standard for evaluation.",
       where_to_find:
         "Pull the signed contract or scope of work from your CRM, project management tool, or email. If you used a proposal tool (HoneyBook, Dubsado, PandaDoc, DocuSign), export the signed version with the customer's signature and date.",
+      stripe_evidence_field: "customer_signature",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -181,6 +192,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Concrete evidence that the work was performed as agreed. For digital or software services, access logs and login timestamps serve this purpose.",
       where_to_find:
         "Gather the deliverables you sent -- reports, files, designs, completed work. Check your project management tool (Asana, Trello, Notion) for completed milestones. For software/SaaS services, pull login and usage logs from your admin panel showing the customer accessed the service.",
+      stripe_evidence_field: "service_documentation",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -193,6 +205,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "If the customer approved deliverables along the way, it is hard to claim the final result wasn't as described. Interim approvals are extremely strong evidence.",
       where_to_find:
         "Search your email for approval messages from the client at each project milestone ('looks good', 'approved', 'let's move forward'). Check your project management tool for tasks marked as approved or signed off. Formal sign-off documents from PandaDoc or DocuSign are ideal.",
+      stripe_evidence_field: "customer_communication",
       urgency_essential: false,
       urgency_order: null,
     },
