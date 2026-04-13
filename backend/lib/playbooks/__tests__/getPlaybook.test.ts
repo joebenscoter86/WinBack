@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ALL_PLAYBOOKS } from "../data/index";
 import type { PlaybookData } from "../types";
+import { validatePlaybookChecklist } from "../validate";
 
 function getStaticPlaybook(
   network: "visa" | "mastercard",
@@ -11,7 +12,7 @@ function getStaticPlaybook(
   );
 }
 
-describe("WIN-20 stripe_evidence_field backfill", () => {
+describe("WIN-20 A/T/Slot invariant", () => {
   const cases: Array<[string, string]> = [
     ["visa", "10.4"],
     ["visa", "13.1"],
@@ -23,14 +24,16 @@ describe("WIN-20 stripe_evidence_field backfill", () => {
   ];
 
   it.each(cases)(
-    "every checklist item in %s/%s has stripe_evidence_field set",
+    "every checklist item in %s/%s satisfies the A/T/Slot invariant",
     (network, code) => {
       const pb = getStaticPlaybook(network as "visa" | "mastercard", code);
       expect(pb).toBeDefined();
-      for (const item of pb!.evidence_checklist) {
-        expect(item.stripe_evidence_field).toBeDefined();
-        expect(typeof item.stripe_evidence_field).toBe("string");
-      }
+      expect(() =>
+        validatePlaybookChecklist(
+          `${network}/${code}`,
+          pb!.evidence_checklist,
+        ),
+      ).not.toThrow();
     },
   );
 });
