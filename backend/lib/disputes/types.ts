@@ -1,3 +1,7 @@
+import type { StripeEvidenceFileField } from "../playbooks/types";
+
+export type { StripeEvidenceFileField };
+
 export type SubmissionWarning =
   | {
       code: "field_truncated";
@@ -14,7 +18,20 @@ export type SubmissionWarning =
     }
   | { code: "missing_mandatory_items"; items: string[] }
   | { code: "deadline_passed"; due_by: number }
-  | { code: "stripe_field_missing"; item: string; fallback: "uncategorized_file" };
+  | { code: "stripe_field_missing"; item: string; fallback: "uncategorized_file" }
+  | { code: "concat_skipped"; file_name: string; slot: string; reason: string };
+
+export type ConcatReceipt = {
+  slot: StripeEvidenceFileField;
+  input_file_ids: string[];
+  combined_file_id: string;
+};
+
+export type AssemblyResult = {
+  evidence: Record<string, unknown>;
+  warnings: SubmissionWarning[];
+  concat_receipts: ConcatReceipt[];
+};
 
 export const UNCATEGORIZED_TEXT_MAX = 20_000;
 export const COMBINED_TEXT_MAX = 150_000;
