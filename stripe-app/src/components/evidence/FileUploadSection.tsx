@@ -50,6 +50,15 @@ const FileUploadSection = ({
     type?: string;
   }) => {
     setError(null);
+
+    const mime = (fileObject.type ?? '').toLowerCase();
+    if (mime === 'image/heic' || mime === 'image/heif') {
+      setError(
+        "HEIC photos aren't supported. Open the file in Preview or your photo app, export it as JPEG or PNG, and try again.",
+      );
+      return;
+    }
+
     setSaving(true);
 
     try {
