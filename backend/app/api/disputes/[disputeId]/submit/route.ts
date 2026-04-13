@@ -7,11 +7,13 @@ import {
   getCharge,
   submitDispute,
 } from "@/lib/stripe";
+import { downloadStripeFile, uploadCombinedEvidence } from "@/lib/stripe/client";
 import { ensureMerchant } from "@/lib/merchants";
 import { supabase } from "@/lib/supabase";
 import { getPlaybook } from "@/lib/playbooks";
 import { evaluateSubmissionGuard } from "@/lib/disputes/submission-guard";
-import type { SubmissionWarning } from "@/lib/disputes/types";
+import { assembleEvidence } from "@/lib/disputes/assemble-evidence";
+import type { SubmissionWarning, EvidenceFileInput } from "@/lib/disputes/types";
 
 // A stale pending row is one created more than this many seconds ago.
 const PENDING_STALE_SECONDS = 60;
@@ -144,13 +146,10 @@ export const POST = withStripeAuth(
     // Step 3: Load evidence files
     const { data: evidenceFilesRaw } = await supabase
       .from("evidence_files")
-      .select("checklist_item_key, stripe_file_id")
+      .select("id, checklist_item_key, stripe_file_id, file_name, file_size, mime_type")
       .eq("dispute_id", localDispute.id);
 
-    const evidenceFiles = (evidenceFilesRaw ?? []) as Array<{
-      checklist_item_key: string;
-      stripe_file_id: string;
-    }>;
+    const evidenceFiles = (evidenceFilesRaw ?? []) as EvidenceFileInput[];
 
     // Step 4: Load narrative — prefer disputes.narrative_text; fall back to
     // latest succeeded narrative_generation. The narrative_output JSONB stores
@@ -339,16 +338,31 @@ export const POST = withStripeAuth(
       );
     }
 
-    // Step 9: Build evidence payload
-    // TODO(WIN-20 Task 7): replace with assembleEvidence() call
-    const { evidence, warnings: mapperWarnings } = ((): never => {
-      throw new Error(
-        "evidence assembler not yet implemented — see docs/superpowers/plans/2026-04-12-win-20-evidence-submission.md Task 7",
+    // Step 9: Build evidence payload via the assembler. A thrown error here
+    // means the final combined-PDF upload (or another uncaught assembler
+    // failure) failed — classify as concat_failed and return 502. The
+    // submissions row has not been inserted yet, so there is no row to mark
+    // failed; we simply abort before inserting.
+    let assembly;
+    try {
+      assembly = await assembleEvidence({
+        charge: stripeCharge,
+        playbook: playbook as unknown as import("@/lib/playbooks/types").PlaybookData,
+        evidenceFiles,
+        narrativeText,
+        stripeClient: { downloadStripeFile, uploadCombinedEvidence },
+      });
+    } catch (err) {
+      console.error("[WIN-20] evidence assembly failed", err);
+      return errorResponse(
+        502,
+        "concat_failed",
+        "Failed to assemble combined evidence for Stripe upload.",
+        guard.warnings,
       );
-    })();
-    // Unreachable — the throw above aborts Step 9. The references below keep
-    // Task 9's re-wire simple without a massive diff.
-    void stripeCharge;
+    }
+
+    const { evidence, warnings: mapperWarnings, concat_receipts } = assembly;
     const allWarnings: SubmissionWarning[] = [...guard.warnings, ...mapperWarnings];
 
     // Guard already validated hasFiles || hasNarrative, but buildEvidencePayload
@@ -426,6 +440,7 @@ export const POST = withStripeAuth(
         status: "succeeded",
         stripe_response: result as unknown as Record<string, unknown>,
         completed_at: completedAt,
+        concat_receipts: concat_receipts.length > 0 ? concat_receipts : null,
       })
       .eq("id", submissionId);
     if (subErr) {
