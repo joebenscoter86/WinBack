@@ -188,7 +188,21 @@ export function getStripeFieldResult(
         guidance: "We pulled this from your transaction -- you're covered here.",
       };
     }
+    case 'calculated_statement_descriptor':
+      return {
+        status: 'positive',
+        value: 'Covered by your Stripe transaction data',
+        guidance: "We pulled this from your transaction -- you're covered here.",
+      };
     default:
-      return null;
+      // Any stripe_field value the renderer doesn't have custom copy for still
+      // means the data is autofilled from the transaction. Show a generic
+      // hint so the upload UI stays hidden and the merchant doesn't try to
+      // attach a file that would be silently dropped by the assembler.
+      return {
+        status: 'positive',
+        value: 'Covered by your Stripe transaction data',
+        guidance: "We pulled this from your transaction -- you're covered here.",
+      };
   }
 }
