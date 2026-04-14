@@ -19,6 +19,7 @@ interface ChecklistItemProps {
   onSectionToggle: (section: ExpandedSection) => void;
   onNotesChange: (value: string) => void;
   onFileChange: (file: EvidenceFile | null) => void;
+  submitted?: boolean;
 }
 
 function getCategoryBadge(category: EvidenceChecklistItem['category']) {
@@ -73,6 +74,7 @@ const ChecklistItem = ({
   onSectionToggle,
   onNotesChange,
   onFileChange,
+  submitted,
 }: ChecklistItemProps) => {
   const whyExpanded = expandedSections.has('why');
   const whereExpanded = expandedSections.has('where');
@@ -96,7 +98,7 @@ const ChecklistItem = ({
           label=""
           checked={checked}
           onChange={onToggle}
-          disabled={isUnavailable || isPositive}
+          disabled={isUnavailable || isPositive || submitted}
           aria-label={item.item}
         />
         <Box css={{ stack: 'y', gap: 'xxsmall', width: 'fill' }}>
@@ -132,7 +134,11 @@ const ChecklistItem = ({
                 onPress={() => onSectionToggle('where')}
               />
             )}
-            {!isUnavailable && !isPositive && (
+            {item.narrative_only ? (
+              <Inline css={{ font: 'caption', color: 'secondary' }}>
+                Covered in your narrative
+              </Inline>
+            ) : !isUnavailable && !isPositive && !submitted ? (
               <>
                 <SectionToggle
                   label={notes ? 'Your notes' : 'Add notes'}
@@ -145,6 +151,13 @@ const ChecklistItem = ({
                   onPress={() => onSectionToggle('file')}
                 />
               </>
+            ) : null}
+            {submitted && existingFile && (
+              <SectionToggle
+                label={existingFile.file_name}
+                expanded={fileExpanded}
+                onPress={() => onSectionToggle('file')}
+              />
             )}
           </Box>
         </Box>
@@ -168,7 +181,7 @@ const ChecklistItem = ({
         </Box>
       )}
 
-      {notesExpanded && !isUnavailable && (
+      {notesExpanded && !isUnavailable && !submitted && (
         <Box css={{ marginLeft: 'xlarge' }}>
           <TextArea
             label="Your notes"
@@ -180,7 +193,7 @@ const ChecklistItem = ({
         </Box>
       )}
 
-      {fileExpanded && !isUnavailable && (
+      {fileExpanded && !isUnavailable && !item.narrative_only && (
         <Box css={{ marginLeft: 'xlarge' }}>
           <FileUploadSection
             disputeId={disputeId}
@@ -188,6 +201,7 @@ const ChecklistItem = ({
             existingFile={existingFile}
             context={context}
             onFileChange={onFileChange}
+            submitted={submitted}
           />
         </Box>
       )}

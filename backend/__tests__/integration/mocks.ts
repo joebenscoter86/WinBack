@@ -19,11 +19,17 @@ export const capturedAnthropicCalls: Array<{
 // Mock the Stripe client helpers the routes use. getDispute returns the
 // canned fixture; normalizeDispute is the real implementation because
 // it's a pure function that operates on the already-canned input.
+// submitDispute is a vi.fn() so submit-route tests can override it per-step.
 vi.mock("@/lib/stripe", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/stripe")>();
   return {
     ...actual,
     getDispute: vi.fn().mockResolvedValue(CANNED_STRIPE_DISPUTE),
+    submitDispute: vi.fn().mockResolvedValue({
+      id: "du_mock_default",
+      status: "under_review",
+      evidence: {},
+    }),
     // normalizeDispute, classifyStripeError stay real
   };
 });

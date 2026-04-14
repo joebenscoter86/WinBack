@@ -2,7 +2,28 @@
 // to all subsequent imports of the mocked modules.
 import "./mocks";
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+
+// The submit route imports downloadStripeFile and uploadCombinedEvidence
+// directly from "@/lib/stripe/client" (NOT the barrel), so the @/lib/stripe
+// mock in ./mocks.ts does not cover them. Replace both with vi.fn() stubs so
+// the WIN-20 step 10 multi-file concat test can provide buffers and capture
+// the upload call without touching real Stripe. Other exports from the
+// client module (getDispute, submitDispute, etc.) are preserved via
+// importOriginal — the barrel mock in ./mocks.ts still overrides those on
+// the @/lib/stripe re-export path, which is what the route uses for them.
+vi.mock("@/lib/stripe/client", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/stripe/client")>();
+  return {
+    ...actual,
+    downloadStripeFile: vi.fn(async (_id: string) => Buffer.from([])),
+    uploadCombinedEvidence: vi.fn(
+      async (_pdf: Buffer, _name: string) => "file_combined_default",
+    ),
+  };
+});
+
 import { createClient } from "@supabase/supabase-js";
 import {
   TEST_ACCOUNT_ID,
@@ -326,5 +347,352 @@ describe("WIN-43: dispute wizard integration flow", () => {
     expect(promptUser).toContain("Network status: approved_by_network");
     expect(promptUser).toContain("Authorization code: AUTH42WIN");
     expect(promptUser).not.toContain("AVS address check: not available");
+  });
+
+  it("WIN-20: step 9 — submits evidence end-to-end", async () => {
+    const { POST: submitRoutePOST } = await import(
+      "@/app/api/disputes/[disputeId]/submit/route"
+    );
+    const { NextRequest } = await import("next/server");
+    const { getDispute, submitDispute } = await import("@/lib/stripe");
+    const mockGetDispute = getDispute as ReturnType<typeof vi.fn>;
+    const mockSubmitDispute = submitDispute as ReturnType<typeof vi.fn>;
+
+    // Pre-submission guard fetch: Stripe returns needs_response with charge expanded
+    mockGetDispute.mockResolvedValueOnce({
+      id: TEST_DISPUTE_ID,
+      status: "needs_response",
+      evidence: {},
+      evidence_details: { due_by: Math.floor(Date.now() / 1000) + 86_400 },
+      charge: {
+        id: "ch_integration_test",
+        object: "charge",
+        billing_details: {
+          name: "Integration Test",
+          email: "test@example.com",
+          address: {
+            line1: "1 Test St",
+            line2: null,
+            city: "Brooklyn",
+            state: "NY",
+            postal_code: "11201",
+            country: "US",
+          },
+          phone: null,
+        },
+        description: "Test widget",
+        payment_method_details: {
+          card: {
+            brand: "visa",
+            network: "visa",
+            last4: "4242",
+            authorization_code: "AUTH42WIN",
+            checks: {
+              address_line1_check: "pass",
+              address_postal_code_check: "pass",
+              cvc_check: "pass",
+            },
+          },
+          type: "card",
+        },
+        outcome: {
+          network_status: "approved_by_network",
+        },
+        refunds: { data: [] },
+      },
+    } as never);
+
+    // submitDispute call: Stripe returns under_review
+    mockSubmitDispute.mockResolvedValueOnce({
+      id: TEST_DISPUTE_ID,
+      status: "under_review",
+      evidence: {},
+    } as never);
+
+    const res = await submitRoutePOST(
+      new NextRequest(
+        `http://localhost/api/disputes/${TEST_DISPUTE_ID}/submit`,
+        { method: "POST", headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.submission_id).toBeDefined();
+    expect(body.data.dispute_status).toBe("under_review");
+
+    // Verify local dispute row was updated
+    const { data: disputeRow } = await testDb
+      .from("disputes")
+      .select("id, status, evidence_submitted_at")
+      .eq("stripe_dispute_id", TEST_DISPUTE_ID)
+      .single();
+    expect(disputeRow?.status).toBe("evidence_submitted");
+    expect(disputeRow?.evidence_submitted_at).not.toBeNull();
+
+    // Verify dispute_submissions row exists and is succeeded
+    const { data: submissions } = await testDb
+      .from("dispute_submissions")
+      .select("*")
+      .eq("dispute_id", disputeRow!.id);
+    expect(submissions).toHaveLength(1);
+    expect(submissions![0].status).toBe("succeeded");
+
+    // Verify submitDispute was called correctly.
+    // submitDispute(accountId, disputeId, evidence, idempotencyKey)
+    expect(mockSubmitDispute).toHaveBeenCalledOnce();
+    const [, calledDisputeId, calledEvidence, calledIdempotencyKey] =
+      mockSubmitDispute.mock.calls[0];
+    expect(calledDisputeId).toBe(TEST_DISPUTE_ID);
+    expect(calledEvidence).toEqual(
+      expect.objectContaining({ customer_name: "Integration Test" }),
+    );
+    expect(calledIdempotencyKey).toBeDefined();
+    expect((calledIdempotencyKey as string).length).toBeGreaterThan(10);
+  });
+
+  it("WIN-20: step 9b — second submit returns cached response without re-calling Stripe", async () => {
+    const { POST: submitRoutePOST } = await import(
+      "@/app/api/disputes/[disputeId]/submit/route"
+    );
+    const { NextRequest } = await import("next/server");
+    const { getDispute, submitDispute } = await import("@/lib/stripe");
+    const mockGetDispute = getDispute as ReturnType<typeof vi.fn>;
+    const mockSubmitDispute = submitDispute as ReturnType<typeof vi.fn>;
+
+    const callsBefore = mockSubmitDispute.mock.calls.length;
+
+    // Idempotency check now runs BEFORE the guard, so returning the realistic
+    // post-submit status (under_review) is correct: the route finds the
+    // succeeded row from step 9 and returns the cached 200 without ever
+    // reaching the guard or calling Stripe again.
+    mockGetDispute.mockResolvedValueOnce({
+      id: TEST_DISPUTE_ID,
+      status: "under_review",
+      evidence: {},
+      evidence_details: { due_by: Math.floor(Date.now() / 1000) + 86_400 },
+      charge: {
+        id: "ch_integration_test",
+        object: "charge",
+        billing_details: {},
+        description: null,
+        payment_method_details: { card: {}, type: "card" },
+        outcome: {},
+        refunds: { data: [] },
+      },
+    } as never);
+
+    const res = await submitRoutePOST(
+      new NextRequest(
+        `http://localhost/api/disputes/${TEST_DISPUTE_ID}/submit`,
+        { method: "POST", headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockSubmitDispute.mock.calls.length).toBe(callsBefore); // no new call to Stripe
+  });
+
+  it("WIN-20: step 10 — submits evidence with multi-file concat in one slot", async () => {
+    // visa-13.1 has two checklist items that both map to the
+    // customer_communication slot:
+    //   - "Communication with customer about delivery (emails, chat logs)"
+    //   - "Email delivery confirmation (license key, download link sent to
+    //      customer's email)"
+    // Thanks to the (dispute_id, checklist_item_key) unique constraint on
+    // evidence_files, this is the only way to land 2+ files in the same slot.
+    const ITEM_KEY_A =
+      "Communication with customer about delivery (emails, chat logs)";
+    const ITEM_KEY_B =
+      "Email delivery confirmation (license key, download link sent to customer's email)";
+    const CONCAT_DISPUTE_ID = "du_WIN20_CONCAT_TEST";
+
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+    const jpg = await fs.readFile(
+      path.join(__dirname, "../fixtures/concat/sample.jpg"),
+    );
+
+    // Grab the merchant created by the happy-path test (step 1). afterAll
+    // cascades deletes everything under this merchant, so whatever we seed
+    // here gets cleaned up with the rest.
+    const { data: merchantRow } = await testDb
+      .from("merchants")
+      .select("id")
+      .eq("stripe_account_id", TEST_ACCOUNT_ID)
+      .single();
+    expect(merchantRow?.id).toBeTruthy();
+    const merchantId = (merchantRow as { id: string }).id;
+
+    // Seed a fresh dispute row pinned to visa-13.1 so the submit route's
+    // playbook lookup picks up the customer_communication-sharing items.
+    // Direct insert (bypassing POST /api/disputes/[id]) because the canned
+    // Stripe fixture is visa-10.4 and changing it would affect the other
+    // tests in this file.
+    const { data: disputeInsert, error: disputeErr } = await testDb
+      .from("disputes")
+      .insert({
+        merchant_id: merchantId,
+        stripe_dispute_id: CONCAT_DISPUTE_ID,
+        stripe_charge_id: "ch_WIN20_CONCAT_TEST",
+        amount: 9900,
+        currency: "usd",
+        reason_code: "13.1",
+        network: "visa",
+        status: "needs_response",
+        narrative_text: "Customer received the download link and activated it.",
+      })
+      .select("id")
+      .single();
+    if (disputeErr) throw new Error(`seed dispute failed: ${disputeErr.message}`);
+    const disputeRowId = (disputeInsert as { id: string }).id;
+
+    // Seed two evidence_files rows — one for each checklist item, both
+    // landing in the same customer_communication slot.
+    const { error: ef1Err } = await testDb.from("evidence_files").insert({
+      dispute_id: disputeRowId,
+      checklist_item_key: ITEM_KEY_A,
+      file_name: "customer-email-thread.jpg",
+      file_path: "test/customer-email-thread.jpg",
+      file_size: jpg.length,
+      mime_type: "image/jpeg",
+      stripe_file_id: "file_concat_in_1",
+    });
+    if (ef1Err) throw new Error(`seed evidence A failed: ${ef1Err.message}`);
+
+    const { error: ef2Err } = await testDb.from("evidence_files").insert({
+      dispute_id: disputeRowId,
+      checklist_item_key: ITEM_KEY_B,
+      file_name: "license-key-email.jpg",
+      file_path: "test/license-key-email.jpg",
+      file_size: jpg.length,
+      mime_type: "image/jpeg",
+      stripe_file_id: "file_concat_in_2",
+    });
+    if (ef2Err) throw new Error(`seed evidence B failed: ${ef2Err.message}`);
+
+    // Wire up mocks for this test.
+    const { getDispute, submitDispute } = await import("@/lib/stripe");
+    const { downloadStripeFile, uploadCombinedEvidence } = await import(
+      "@/lib/stripe/client"
+    );
+    const mockGetDispute = getDispute as ReturnType<typeof vi.fn>;
+    const mockSubmitDispute = submitDispute as ReturnType<typeof vi.fn>;
+    const mockDownload = downloadStripeFile as ReturnType<typeof vi.fn>;
+    const mockUpload = uploadCombinedEvidence as ReturnType<typeof vi.fn>;
+
+    // Clear any leftover calls so this test's assertions are precise.
+    mockUpload.mockClear();
+    mockDownload.mockClear();
+    mockSubmitDispute.mockClear();
+
+    // Pre-submission guard fetch: return a 13.1 dispute with charge expanded.
+    mockGetDispute.mockResolvedValueOnce({
+      id: CONCAT_DISPUTE_ID,
+      status: "needs_response",
+      evidence: {},
+      evidence_details: { due_by: Math.floor(Date.now() / 1000) + 86_400 },
+      network_reason_code: "13.1",
+      charge: {
+        id: "ch_WIN20_CONCAT_TEST",
+        object: "charge",
+        billing_details: {
+          name: "Concat Tester",
+          email: "concat@example.com",
+          address: {
+            line1: "1 Concat St",
+            line2: null,
+            city: "Brooklyn",
+            state: "NY",
+            postal_code: "11201",
+            country: "US",
+          },
+          phone: null,
+        },
+        description: "Digital license",
+        payment_method_details: {
+          card: {
+            brand: "visa",
+            network: "visa",
+            last4: "4242",
+            authorization_code: "AUTHCONCAT",
+            checks: {
+              address_line1_check: "pass",
+              address_postal_code_check: "pass",
+              cvc_check: "pass",
+            },
+          },
+          type: "card",
+        },
+        outcome: { network_status: "approved_by_network" },
+        refunds: { data: [] },
+      },
+    } as never);
+
+    // Every downloadStripeFile call in this test returns the sample JPEG.
+    mockDownload.mockResolvedValue(jpg);
+
+    // Combined PDF upload returns the expected new file id.
+    mockUpload.mockResolvedValueOnce("file_combined_xyz");
+
+    // Stripe submit returns a successful under_review status.
+    mockSubmitDispute.mockResolvedValueOnce({
+      id: CONCAT_DISPUTE_ID,
+      status: "under_review",
+      evidence: {},
+    } as never);
+
+    const { POST: submitRoutePOST } = await import(
+      "@/app/api/disputes/[disputeId]/submit/route"
+    );
+    const { NextRequest } = await import("next/server");
+
+    const res = await submitRoutePOST(
+      new NextRequest(
+        `http://localhost/api/disputes/${CONCAT_DISPUTE_ID}/submit`,
+        { method: "POST", headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.submission_id).toBeDefined();
+
+    // Exactly one combined upload — both files merged into one PDF.
+    expect(mockUpload).toHaveBeenCalledTimes(1);
+    // Both source files were downloaded prior to concat.
+    expect(mockDownload).toHaveBeenCalledTimes(2);
+
+    // submitDispute(accountId, disputeId, evidence, idempotencyKey) — assert
+    // the combined file id lands in customer_communication.
+    expect(mockSubmitDispute).toHaveBeenCalledOnce();
+    const [, calledDisputeId, calledEvidence] =
+      mockSubmitDispute.mock.calls[0];
+    expect(calledDisputeId).toBe(CONCAT_DISPUTE_ID);
+    expect(calledEvidence).toEqual(
+      expect.objectContaining({ customer_communication: "file_combined_xyz" }),
+    );
+
+    // dispute_submissions row should have concat_receipts with an entry for
+    // the customer_communication slot.
+    const { data: submission } = await testDb
+      .from("dispute_submissions")
+      .select("concat_receipts, status")
+      .eq("dispute_id", disputeRowId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    expect(submission?.status).toBe("succeeded");
+    const receipts = submission?.concat_receipts as Array<{
+      slot: string;
+      input_file_ids: string[];
+      combined_file_id: string;
+    }> | null;
+    expect(receipts).toHaveLength(1);
+    expect(receipts![0].slot).toBe("customer_communication");
+    expect(receipts![0].combined_file_id).toBe("file_combined_xyz");
+    expect(receipts![0].input_file_ids).toEqual(
+      expect.arrayContaining(["file_concat_in_1", "file_concat_in_2"]),
+    );
   });
 });

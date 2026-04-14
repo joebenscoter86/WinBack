@@ -29,6 +29,10 @@ export const POST = withStripeAuth(async (
       "payment_intent",
     ]);
     const normalized = normalizeDispute(dispute);
+    let localFields: {
+      narrative_text: string | null;
+      evidence_submitted_at: string | null;
+    } = { narrative_text: null, evidence_submitted_at: null };
 
     // Backfill the dispute row in our database so downstream routes
     // (narrative generate, evidence upload) can trust it exists with
@@ -70,6 +74,18 @@ export const POST = withStripeAuth(async (
         if (upsertError) {
           console.error("Failed to backfill dispute row:", upsertError.message);
         }
+
+        // Hydrate persisted narrative + submission state so the wizard can
+        // resume a dispute across sessions (WIN-20).
+        const { data: localRow } = await supabase
+          .from("disputes")
+          .select("narrative_text, evidence_submitted_at")
+          .eq("stripe_dispute_id", normalized.id)
+          .eq("merchant_id", (merchant as { id: string }).id)
+          .maybeSingle();
+        if (localRow) {
+          localFields = localRow as typeof localFields;
+        }
       }
     } catch (backfillErr) {
       // Never fail the request because of a backfill error -- the
@@ -77,7 +93,7 @@ export const POST = withStripeAuth(async (
       console.error("Dispute backfill unexpected error:", backfillErr);
     }
 
-    return NextResponse.json({ data: normalized });
+    return NextResponse.json({ data: { ...normalized, ...localFields } });
   } catch (err) {
     if (err instanceof Stripe.errors.StripeError) {
       const classified = classifyStripeError(err);

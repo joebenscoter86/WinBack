@@ -57,6 +57,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Proves the final charge matches the authorization. The customer's bank compares the authorization and final charge records directly -- both must be present.",
       where_to_find:
         "Stripe Dashboard > Payments > click the payment > Timeline section shows when the charge was captured/finalized. Look for the 'Payment captured' or 'Charge succeeded' entry with its timestamp. Compare the final charge amount against the authorized amount shown earlier in the timeline.",
+      stripe_field: "authorization",
       urgency_essential: true,
       urgency_order: 2,
     },
@@ -82,6 +83,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "If the amount difference is currency-related and within 10% of the authorized amount, Mastercard's currency conversion allowance (up to 10% difference when converting between currencies) applies and the dispute should be denied. Without this documentation, you cannot invoke the rule.",
       where_to_find:
         "Stripe Dashboard > Payments > click the payment > compare the 'Amount' and 'Converted amount' fields (visible on multi-currency transactions). Calculate the percentage difference. If it's within 10%, cite Mastercard's currency conversion safe harbor in your response.",
+      narrative_only: true,
       urgency_essential: true,
       urgency_order: 3,
     },
@@ -94,6 +96,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Mastercard allows tip adjustments up to 20% over the authorized amount for restaurants with tip lines. Document the tip authorization separately -- this explains the amount difference and eliminates the dispute basis.",
       where_to_find:
         "Pull the signed receipt showing the tip line and total from your POS system (Square, Toast, Clover). If you use a terminal that captures digital signatures, export the receipt image. The signed receipt showing the customer wrote in the tip amount is your evidence.",
+      stripe_evidence_field: "customer_signature",
       urgency_essential: true,
       urgency_order: 3,
     },
@@ -106,6 +109,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "If the original authorization expired and you obtained a renewed payment approval before finalizing the charge, showing both records proves you followed proper procedure. Without the renewed approval record, an expired authorization dispute is very difficult to defend.",
       where_to_find:
         "Check your payment processor's admin portal for the renewed authorization record. In Stripe, look at the payment's Timeline for a second authorization event. If you use a booking or pre-order system that re-authorizes before capture, check that system's transaction logs for the renewed approval number and timestamp.",
+      stripe_evidence_field: "uncategorized_file",
       urgency_essential: true,
       urgency_order: 3,
     },
@@ -118,6 +122,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Authorization timelines are the dispute. If your records show the charge was finalized before the authorization expired, the dispute basis disappears. The customer's bank is looking specifically at this timeline.",
       where_to_find:
         "Stripe Dashboard > Payments > click the payment > Timeline section. Compare the authorization timestamp against the capture/final charge timestamp. Screenshot both entries showing the charge was finalized within the authorization window (typically 7 days for e-commerce, 30 days for some merchant categories).",
+      narrative_only: true,
       urgency_essential: false,
       urgency_order: null,
     },
@@ -130,6 +135,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Shows the full record from approval to final charge from your processor's records. More complete and more credible as evidence than a screenshot of a payment dashboard page.",
       where_to_find:
         "Your payment processor's admin portal (not just the Stripe Dashboard). For Stripe, you can use the API to pull the full charge object with all authorization events. If you use a separate gateway or terminal provider, check their reporting dashboard for the full transaction log including approval numbers, amounts, and timestamps.",
+      stripe_evidence_field: "uncategorized_file",
       urgency_essential: true,
       urgency_order: 4,
     },
@@ -142,18 +148,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
         "Connects the authorization to an actual customer order, showing this was a legitimate transaction. Helps the customer's bank understand the transaction context.",
       where_to_find:
         "Your e-commerce platform's order page (Shopify Admin > Orders, WooCommerce > Orders) showing the order total matches the authorized amount. Screenshot the order summary with line items and totals. If the amounts differ, document why (tax adjustment, shipping change, etc.).",
-      urgency_essential: false,
-      urgency_order: null,
-    },
-    {
-      item: "Stripe evidence field mapping (uncategorized_text and uncategorized_file)",
-      category: "recommended",
-      context: "all",
-      required: false,
-      why_matters:
-        "Stripe's standard dispute evidence API doesn't have dedicated fields for authorization records, transaction approval numbers, or currency conversion documentation. All of these technical logs must go into the uncategorized_text (for text summaries) and uncategorized_file (for screenshots/PDFs) fields. If you don't map them there, the evidence won't make it into your submission.",
-      where_to_find:
-        "When submitting evidence through Stripe (or through WinBack), paste your authorization summary into the uncategorized_text field and upload processor screenshots or PDF exports as uncategorized_file attachments. This is the only way authorization-related evidence reaches the customer's bank through Stripe's system.",
+      stripe_evidence_field: "receipt",
       urgency_essential: false,
       urgency_order: null,
     },

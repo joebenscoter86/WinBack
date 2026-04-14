@@ -20,6 +20,7 @@ interface NarrativeReviewProps {
   onEditChange: (text: string) => void;
   onApprove: () => void;
   onRegenerate: (merchantFeedback: string) => void;
+  submitted?: boolean;
 }
 
 const NarrativeReview = ({
@@ -30,6 +31,7 @@ const NarrativeReview = ({
   onEditChange,
   onApprove,
   onRegenerate,
+  submitted,
 }: NarrativeReviewProps) => {
   const [showRegenConfirm, setShowRegenConfirm] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -121,27 +123,30 @@ const NarrativeReview = ({
       >
         <Box css={{ stack: 'x', distribute: 'space-between', alignY: 'center' }}>
           <Inline css={{ font: 'subheading', fontWeight: 'semibold' }}>
-            Edit your narrative
+            {submitted ? 'Submitted narrative' : 'Edit your narrative'}
           </Inline>
-          {hasEdits && (
+          {!submitted && hasEdits && (
             <Inline css={{ font: 'caption', color: 'success' }}>
               {'\u2713'} Auto-saved
             </Inline>
           )}
         </Box>
         <Inline css={{ font: 'caption', color: 'secondary' }}>
-          Edits are saved locally and travel forward to the Submit step.
+          {submitted
+            ? 'This narrative was submitted to Stripe and cannot be changed.'
+            : 'Edits are saved locally and travel forward to the Submit step.'}
         </Inline>
         <TextArea
           label=""
           value={editedNarrative}
           onChange={(e) => onEditChange(e.target.value)}
           rows={12}
+          disabled={submitted}
         />
       </Box>
 
-      {/* Regeneration confirm banner */}
-      {showRegenConfirm && (
+      {/* Regeneration confirm banner — hidden when submitted */}
+      {!submitted && showRegenConfirm && (
         <Banner
           type="caution"
           title="Regenerating will replace your edits. Continue?"
@@ -158,8 +163,8 @@ const NarrativeReview = ({
         />
       )}
 
-      {/* Feedback card for regeneration */}
-      {!limitReached && !showRegenConfirm && (
+      {/* Feedback card for regeneration — hidden when submitted */}
+      {!submitted && !limitReached && !showRegenConfirm && (
         <Box
           css={{
             stack: 'y',
@@ -187,29 +192,31 @@ const NarrativeReview = ({
 
       <Divider />
 
-      {/* Action buttons */}
-      <Box css={{ stack: 'x', distribute: 'space-between', alignY: 'center' }}>
-        <Box css={{ stack: 'x', gap: 'small' }}>
-          <Button type="primary" onPress={onApprove}>
-            Approve &amp; Continue
-          </Button>
-          <Button
-            onPress={handleRegenerateClick}
-            disabled={limitReached}
-          >
-            Regenerate
-          </Button>
+      {/* Action buttons — hidden when submitted */}
+      {!submitted && (
+        <Box css={{ stack: 'x', distribute: 'space-between', alignY: 'center' }}>
+          <Box css={{ stack: 'x', gap: 'small' }}>
+            <Button type="primary" onPress={onApprove}>
+              Approve &amp; Continue
+            </Button>
+            <Button
+              onPress={handleRegenerateClick}
+              disabled={limitReached}
+            >
+              Regenerate
+            </Button>
+          </Box>
+          {limitReached ? (
+            <Inline css={{ font: 'caption', color: 'attention' }}>
+              No generations remaining
+            </Inline>
+          ) : (
+            <Inline css={{ font: 'caption', color: 'secondary' }}>
+              {remaining} generation{remaining === 1 ? '' : 's'} remaining
+            </Inline>
+          )}
         </Box>
-        {limitReached ? (
-          <Inline css={{ font: 'caption', color: 'attention' }}>
-            No generations remaining
-          </Inline>
-        ) : (
-          <Inline css={{ font: 'caption', color: 'secondary' }}>
-            {remaining} generation{remaining === 1 ? '' : 's'} remaining
-          </Inline>
-        )}
-      </Box>
+      )}
     </Box>
   );
 };

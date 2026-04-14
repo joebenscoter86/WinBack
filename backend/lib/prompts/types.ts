@@ -50,6 +50,7 @@ export interface PromptContext {
   authorization_code?: string;
   network_status?: string;
   refunds?: Array<{ amount: number; created: number; status: string }>;
+  calculated_statement_descriptor?: string;
   evidence_files: EvidenceFileRef[];
   checklist_notes: Record<string, string>;
   issuer_evaluation: string;

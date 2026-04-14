@@ -32,8 +32,8 @@ export const visa104Template: ReasonCodePromptTemplate = {
       name: "Customer Identity Match",
       bank_criterion: "Does the purchaser match the cardholder?",
       instruction:
-        "State the customer name, email, and billing address on the transaction. If the billing address matches AVS records, note this. Reference any account details showing the customer's identity.",
-      auto_pull_fields: ["avs_address_check", "avs_zip_check"],
+        "State the customer name, email, and billing address on the transaction. If the billing address matches AVS records, note this. State the statement descriptor the cardholder saw on their bank statement (calculated_statement_descriptor) so the issuer can see the merchant identity as it was billed. Reference any account details showing the customer's identity.",
+      auto_pull_fields: ["avs_address_check", "avs_zip_check", "calculated_statement_descriptor"],
       evidence_keys: [
         "Customer account details (account creation date, purchase history, total prior orders)",
         "Bank statement name screenshot showing recognizable business name",

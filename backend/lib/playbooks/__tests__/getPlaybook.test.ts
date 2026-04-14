@@ -1,4 +1,42 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { ALL_PLAYBOOKS } from "../data/index";
+import type { PlaybookData } from "../types";
+import { validatePlaybookChecklist } from "../validate";
+
+function getStaticPlaybook(
+  network: "visa" | "mastercard",
+  code: string,
+): PlaybookData | undefined {
+  return ALL_PLAYBOOKS.find(
+    (pb) => pb.network === network && pb.reason_code === code,
+  );
+}
+
+describe("WIN-20 A/T/Slot invariant", () => {
+  const cases: Array<[string, string]> = [
+    ["visa", "10.4"],
+    ["visa", "13.1"],
+    ["visa", "13.2"],
+    ["visa", "13.3"],
+    ["visa", "13.6"],
+    ["mastercard", "4808"],
+    ["mastercard", "4853"],
+  ];
+
+  it.each(cases)(
+    "every checklist item in %s/%s satisfies the A/T/Slot invariant",
+    (network, code) => {
+      const pb = getStaticPlaybook(network as "visa" | "mastercard", code);
+      expect(pb).toBeDefined();
+      expect(() =>
+        validatePlaybookChecklist(
+          `${network}/${code}`,
+          pb!.evidence_checklist,
+        ),
+      ).not.toThrow();
+    },
+  );
+});
 
 const { mockSingle, mockEqReasonCode, mockEqNetwork, mockSelect, mockFrom } =
   vi.hoisted(() => {

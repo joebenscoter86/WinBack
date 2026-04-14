@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { ALL_PLAYBOOKS } from "../lib/playbooks/data";
+import { validatePlaybookChecklist } from "../lib/playbooks/validate";
 
 async function seed() {
   const url = process.env.SUPABASE_URL;
@@ -15,6 +16,9 @@ async function seed() {
   console.log(`Seeding ${ALL_PLAYBOOKS.length} playbooks...`);
 
   for (const playbook of ALL_PLAYBOOKS) {
+    const key = `${playbook.network}-${playbook.reason_code}`;
+    validatePlaybookChecklist(key, playbook.evidence_checklist);
+
     const row = {
       network: playbook.network,
       reason_code: playbook.reason_code,

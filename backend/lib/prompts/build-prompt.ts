@@ -111,6 +111,7 @@ STRIPE TRANSACTION DATA (verified by payment network):
 - Network status: ${formatStripeField(context.network_status)}
 - Authorization code: ${formatStripeField(context.authorization_code)}
 - 3D Secure: ${threeDSecure}
+- Statement descriptor (what the cardholder saw on their statement): ${formatStripeField(context.calculated_statement_descriptor)}
 - Refunds: ${formatRefunds(context.refunds)}
 
 BANK EVALUATION CRITERIA:

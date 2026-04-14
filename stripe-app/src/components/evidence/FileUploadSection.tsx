@@ -10,12 +10,44 @@ interface FileUploadSectionProps {
   existingFile: EvidenceFile | null;
   context: ExtensionContextValue;
   onFileChange: (file: EvidenceFile | null) => void;
+  submitted?: boolean;
 }
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+const EXTENSION_TO_MIME: Record<string, string> = {
+  pdf: 'application/pdf',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  csv: 'text/csv',
+  txt: 'text/plain',
+  heic: 'image/heic',
+  heif: 'image/heif',
+};
+
+/**
+ * The Stripe uploader's fileObject.type can be a full MIME type
+ * ("application/pdf") or a bare extension ("pdf") depending on how the SDK
+ * resolves it. Downstream assembly code in the backend wants real MIME types,
+ * so normalize here before persisting to evidence_files.
+ */
+function normalizeMimeType(type: string | undefined, filename: string | undefined): string {
+  const t = (type ?? '').toLowerCase().trim();
+  if (t.includes('/')) return t;
+  if (t && EXTENSION_TO_MIME[t]) return EXTENSION_TO_MIME[t];
+  const name = (filename ?? '').toLowerCase();
+  const dot = name.lastIndexOf('.');
+  if (dot >= 0) {
+    const ext = name.slice(dot + 1);
+    if (EXTENSION_TO_MIME[ext]) return EXTENSION_TO_MIME[ext];
+  }
+  return 'application/octet-stream';
 }
 
 function getMimeLabel(mimeType: string): string {
@@ -36,6 +68,7 @@ const FileUploadSection = ({
   existingFile,
   context,
   onFileChange,
+  submitted,
 }: FileUploadSectionProps) => {
   const [error, setError] = useState<string | null>(null);
   const [showReplace, setShowReplace] = useState(false);
@@ -48,6 +81,15 @@ const FileUploadSection = ({
     type?: string;
   }) => {
     setError(null);
+
+    const normalizedMime = normalizeMimeType(fileObject.type, fileObject.filename);
+    if (normalizedMime === 'image/heic' || normalizedMime === 'image/heif') {
+      setError(
+        "HEIC photos aren't supported. Open the file in Preview or your photo app, export it as JPEG or PNG, and try again.",
+      );
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -59,7 +101,7 @@ const FileUploadSection = ({
           stripe_file_id: fileObject.id,
           file_name: fileObject.filename ?? 'untitled',
           file_size: fileObject.size,
-          mime_type: fileObject.type ?? 'application/octet-stream',
+          mime_type: normalizedMime,
         },
       );
       onFileChange(result.data);
@@ -89,6 +131,29 @@ const FileUploadSection = ({
       setError('Failed to remove file. Try again.');
     }
   };
+
+  // Read-only mode post-submission
+  if (submitted) {
+    if (existingFile) {
+      return (
+        <Box css={{ stack: 'x', gap: 'xsmall', alignY: 'center', wrap: 'wrap' }}>
+          <Icon name="check" size="xsmall" />
+          <Inline css={{ font: 'caption', fontWeight: 'semibold' }}>
+            {existingFile.file_name}
+          </Inline>
+          <Badge type="info">{getMimeLabel(existingFile.mime_type)}</Badge>
+          <Inline css={{ font: 'caption', color: 'secondary' }}>
+            {formatFileSize(existingFile.file_size)}
+          </Inline>
+        </Box>
+      );
+    }
+    return (
+      <Inline css={{ font: 'caption', color: 'secondary' }}>
+        No file attached
+      </Inline>
+    );
+  }
 
   return (
     <Box css={{ stack: 'y', gap: 'xsmall' }}>

@@ -36,6 +36,7 @@ export interface WinBackDispute {
   authorization_code?: string;
   network_status?: string;
   refunds?: Array<{ amount: number; created: number; status: string }>;
+  calculated_statement_descriptor?: string;
 }
 
 function flattenAddress(address: Stripe.Address | null | undefined): string | undefined {
@@ -182,5 +183,8 @@ export function normalizeDispute(d: Stripe.Dispute): WinBackDispute {
     network_status: (charge as { outcome?: { network_status?: string } } | null)
       ?.outcome?.network_status ?? undefined,
     refunds: extractRefunds(charge),
+    calculated_statement_descriptor:
+      (charge as { calculated_statement_descriptor?: string | null } | null)
+        ?.calculated_statement_descriptor ?? undefined,
   };
 }
