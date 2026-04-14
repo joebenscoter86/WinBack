@@ -48,11 +48,17 @@ function countMandatoryAttached(
   playbook: PlaybookData,
   evidenceFiles: EvidenceFile[],
 ): { attached: number; total: number } {
+  // Counter mirrors what actually gets submitted. A mandatory item counts as
+  // attached if any of the three submission paths is covered: autofilled from
+  // Stripe (stripe_field), covered by the narrative (narrative_only), or has
+  // a real uploaded file.
   const mandatory = playbook.evidence_checklist.filter(
     (i) => i.category === 'mandatory',
   );
   const filed = new Set(evidenceFiles.map((f) => f.checklist_item_key));
-  const attached = mandatory.filter((i) => filed.has(i.item)).length;
+  const attached = mandatory.filter(
+    (i) => i.stripe_field || i.narrative_only || filed.has(i.item),
+  ).length;
   return { attached, total: mandatory.length };
 }
 
