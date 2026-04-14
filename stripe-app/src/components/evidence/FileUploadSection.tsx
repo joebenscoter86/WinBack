@@ -19,6 +19,37 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+const EXTENSION_TO_MIME: Record<string, string> = {
+  pdf: 'application/pdf',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  csv: 'text/csv',
+  txt: 'text/plain',
+  heic: 'image/heic',
+  heif: 'image/heif',
+};
+
+/**
+ * The Stripe uploader's fileObject.type can be a full MIME type
+ * ("application/pdf") or a bare extension ("pdf") depending on how the SDK
+ * resolves it. Downstream assembly code in the backend wants real MIME types,
+ * so normalize here before persisting to evidence_files.
+ */
+function normalizeMimeType(type: string | undefined, filename: string | undefined): string {
+  const t = (type ?? '').toLowerCase().trim();
+  if (t.includes('/')) return t;
+  if (t && EXTENSION_TO_MIME[t]) return EXTENSION_TO_MIME[t];
+  const name = (filename ?? '').toLowerCase();
+  const dot = name.lastIndexOf('.');
+  if (dot >= 0) {
+    const ext = name.slice(dot + 1);
+    if (EXTENSION_TO_MIME[ext]) return EXTENSION_TO_MIME[ext];
+  }
+  return 'application/octet-stream';
+}
+
 function getMimeLabel(mimeType: string): string {
   const map: Record<string, string> = {
     'application/pdf': 'PDF',
@@ -51,8 +82,8 @@ const FileUploadSection = ({
   }) => {
     setError(null);
 
-    const mime = (fileObject.type ?? '').toLowerCase();
-    if (mime === 'image/heic' || mime === 'image/heif') {
+    const normalizedMime = normalizeMimeType(fileObject.type, fileObject.filename);
+    if (normalizedMime === 'image/heic' || normalizedMime === 'image/heif') {
       setError(
         "HEIC photos aren't supported. Open the file in Preview or your photo app, export it as JPEG or PNG, and try again.",
       );
@@ -70,7 +101,7 @@ const FileUploadSection = ({
           stripe_file_id: fileObject.id,
           file_name: fileObject.filename ?? 'untitled',
           file_size: fileObject.size,
-          mime_type: fileObject.type ?? 'application/octet-stream',
+          mime_type: normalizedMime,
         },
       );
       onFileChange(result.data);

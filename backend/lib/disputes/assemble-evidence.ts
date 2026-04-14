@@ -5,6 +5,19 @@ import { concatFilesToPDF, type ConcatInput } from "./pdf-concat";
 
 const UNCATEGORIZED_TEXT_CAP = 20000;
 
+/**
+ * Classify a file as PDF or image. Historically the `evidence_files.mime_type`
+ * column has held a mix of full MIME types (`application/pdf`) and bare
+ * extensions (`pdf`, `jpg`) depending on what the Stripe uploader surfaced.
+ * Accept any of those forms plus a filename-extension fallback.
+ */
+function isPdfFile(file: EvidenceFileInput): boolean {
+  const mime = file.mime_type?.toLowerCase() ?? "";
+  if (mime === "application/pdf" || mime === "pdf") return true;
+  if (file.file_name?.toLowerCase().endsWith(".pdf")) return true;
+  return false;
+}
+
 export interface AssembleInput {
   charge: Stripe.Charge;
   playbook: PlaybookData;
@@ -92,7 +105,7 @@ export async function assembleEvidence(input: AssembleInput): Promise<AssemblyRe
     for (const { file } of group) {
       try {
         const buf = await stripeClient.downloadStripeFile(file.stripe_file_id);
-        const kind = file.mime_type === "application/pdf" ? "pdf" : "image";
+        const kind = isPdfFile(file) ? "pdf" : "image";
         concatInputs.push({ name: file.file_name, buffer: buf, kind });
         inputFileIds.push(file.stripe_file_id);
       } catch (err) {

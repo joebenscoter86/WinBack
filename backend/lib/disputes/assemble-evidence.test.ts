@@ -165,6 +165,33 @@ describe("assembleEvidence", () => {
     expect(result.evidence.customer_communication).toBe("file_ok");
   });
 
+  it("treats files with mime_type 'pdf' (bare extension) as PDFs during concat", async () => {
+    const playbook = mockPlaybook([
+      baseItem({ item: "A", stripe_evidence_field: "service_documentation" }),
+      baseItem({ item: "B", stripe_evidence_field: "service_documentation" }),
+    ]);
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+    const pdf = await fs.readFile(path.join(__dirname, "../../__tests__/fixtures/concat/sample.pdf"));
+    const downloadSpy = vi.fn(async () => pdf);
+    const uploadSpy = vi.fn(async () => "file_combined_pdf");
+    const result = await assembleEvidence({
+      charge: mockCharge(),
+      playbook,
+      evidenceFiles: [
+        { id: "ef1", checklist_item_key: "A", stripe_file_id: "file_1", file_name: "a.pdf", file_size: 1000, mime_type: "pdf" },
+        { id: "ef2", checklist_item_key: "B", stripe_file_id: "file_2", file_name: "b.pdf", file_size: 1000, mime_type: "pdf" },
+      ],
+      narrativeText: "n",
+      stripeClient: { downloadStripeFile: downloadSpy, uploadCombinedEvidence: uploadSpy },
+    });
+    const skipWarnings = result.warnings.filter((w) => w.code === "concat_skipped");
+    expect(skipWarnings).toHaveLength(0);
+    expect(uploadSpy).toHaveBeenCalledTimes(1);
+    expect(result.evidence.service_documentation).toBe("file_combined_pdf");
+    expect(result.concat_receipts).toHaveLength(1);
+  });
+
   it("truncates narrative to 20000 chars and emits field_truncated warning", async () => {
     const playbook = mockPlaybook([]);
     const longNarrative = "x".repeat(25000);
