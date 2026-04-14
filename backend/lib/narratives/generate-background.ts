@@ -143,6 +143,7 @@ export async function runBackgroundGeneration(
       authorization_code: normalized.authorization_code,
       network_status: normalized.network_status,
       refunds: normalized.refunds,
+      calculated_statement_descriptor: normalized.calculated_statement_descriptor,
       evidence_files: files,
       checklist_notes: (dispute.checklist_notes ?? {}) as Record<string, string>,
       issuer_evaluation: String(playbook.issuer_evaluation ?? ""),
