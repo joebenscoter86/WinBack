@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import type { PlaybookData } from "../playbooks/types";
 import type { SubmissionWarning } from "./types";
+import { SUBMITTABLE_STATUSES } from "./expired-guard";
 
 export interface GuardInput {
   stripeDispute: Stripe.Dispute;
@@ -20,7 +21,6 @@ export function evaluateSubmissionGuard(input: GuardInput): GuardResult {
   const { stripeDispute, playbook, evidenceFiles, narrativeText } = input;
   const warnings: SubmissionWarning[] = [];
 
-  const SUBMITTABLE_STATUSES = new Set(["needs_response", "warning_needs_response"]);
   if (!SUBMITTABLE_STATUSES.has(stripeDispute.status)) {
     return {
       action: "block",

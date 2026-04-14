@@ -16,7 +16,7 @@ import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 import type { WizardStep, Dispute, PlaybookData, EvidenceFile } from '../lib/types';
 import { WIZARD_STEPS, WIZARD_STEP_LABELS } from '../lib/types';
 import { fetchBackend, ApiError } from '../lib/apiClient';
-import { getDaysRemaining, isResolved } from '../lib/utils';
+import { getDaysRemaining, isResolved, isDisputeExpired } from '../lib/utils';
 import ErrorBanner from './ErrorBanner';
 import DeadlineTimer from './DeadlineTimer';
 import DisputeOverview from './review/DisputeOverview';
@@ -136,6 +136,12 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
   }, [currentStep, initialDispute.id]);
 
   const submitted = Boolean(dispute.evidence_submitted_at);
+  const expired = !submitted && isDisputeExpired(dispute.due_by, dispute.status);
+  // Any child component that keys inputs off `submitted` should also be
+  // locked down when the dispute is expired. We pass the OR as `submitted`
+  // to avoid cascading a new prop through 5+ components; the top-level
+  // banner below provides the accurate "why" for expired disputes.
+  const lockdown = submitted || expired;
 
   const currentIndex = WIZARD_STEPS.indexOf(currentStep);
   const isFirstStep = currentIndex === 0;
@@ -241,6 +247,13 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
               description="Your evidence has been submitted to Stripe. This dispute is now read-only."
             />
           )}
+          {expired && (
+            <Banner
+              type="critical"
+              title="Response deadline has passed"
+              description="No further action can be taken on this dispute. Evidence uploads, narrative generation, and submission are disabled."
+            />
+          )}
           <DeadlineTimer dueBy={dispute.due_by} status={dispute.status} />
         </Box>
         <Tabs
@@ -268,7 +281,7 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
                   context={contextRef.current}
                   isUrgent={isUrgent}
                   daysRemaining={daysRemaining}
-                  submitted={submitted}
+                  submitted={lockdown}
                 />
               )}
             </TabPanel>
@@ -286,7 +299,7 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
                   setCurrentStep('submit');
                 }}
                 onNavigateBack={() => setCurrentStep('evidence')}
-                submitted={submitted}
+                submitted={lockdown}
               />
               )}
             </TabPanel>
@@ -300,6 +313,14 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
                     warnings: [],
                   }}
                 />
+              ) : expired ? (
+                <Box css={{ padding: 'medium' }}>
+                  <Banner
+                    type="critical"
+                    title="Submission is no longer available"
+                    description="This dispute's response deadline has passed. Stripe will no longer accept evidence for it."
+                  />
+                </Box>
               ) : playbook ? (
                 <SubmitView
                   dispute={dispute}
