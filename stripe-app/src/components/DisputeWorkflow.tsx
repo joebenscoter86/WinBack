@@ -274,16 +274,22 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
               {renderReviewTab()}
             </TabPanel>
             <TabPanel id="evidence">
-              {currentStep === 'evidence' && (
-                <EvidenceChecklist
-                  dispute={dispute}
-                  playbook={playbook}
-                  context={contextRef.current}
-                  isUrgent={isUrgent}
-                  daysRemaining={daysRemaining}
-                  submitted={lockdown}
-                />
-              )}
+              {/*
+                Intentionally NOT gated on currentStep. Keeping the component
+                mounted across tab switches preserves checklist and notes
+                state when the merchant tabs away and back. The previous gate
+                unmounted this on every tab switch, killing any pending save
+                and re-reading stale state from the parent dispute prop on
+                remount. (WIN-49)
+              */}
+              <EvidenceChecklist
+                dispute={dispute}
+                playbook={playbook}
+                context={contextRef.current}
+                isUrgent={isUrgent}
+                daysRemaining={daysRemaining}
+                submitted={lockdown}
+              />
             </TabPanel>
             <TabPanel id="narrative">
               {currentStep === 'narrative' && (

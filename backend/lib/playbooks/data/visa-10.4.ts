@@ -100,6 +100,8 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       where_to_find:
         "If you use Stripe Radar, device identifiers are captured automatically -- check the payment's Radar insights. For IP addresses, check your server logs or analytics platform (Google Analytics, Mixpanel, etc.) for the session that created each order.",
       narrative_only: true,
+      narrative_fallback:
+        "The disputed transaction shares the same device fingerprint or originating IP address as two prior successful purchases on this account, satisfying Visa's purchase history proof linking element.",
       urgency_essential: true,
       urgency_order: 3,
     },
@@ -113,6 +115,8 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       where_to_find:
         "Check your order management system or database for the customer's user account ID and shipping addresses across the three transactions. If they logged in with the same account or shipped to the same address, you have your second element.",
       narrative_only: true,
+      narrative_fallback:
+        "A second identifying element across all three transactions matches: the same user account ID, shipping address, or device ID, completing the two-element link Visa requires for purchase history proof.",
       urgency_essential: true,
       urgency_order: 3,
     },
@@ -178,6 +182,8 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       where_to_find:
         "Stripe Radar captures device identifiers automatically if enabled. For IP addresses, check your server access logs, analytics platform, or fraud prevention tool. You can geolocate the IP to show it matches the cardholder's area.",
       narrative_only: true,
+      narrative_fallback:
+        "The device identifier and originating IP address captured at checkout are on file and geolocate to a region consistent with prior verified activity from this cardholder.",
       urgency_essential: false,
       urgency_order: null,
     },

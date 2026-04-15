@@ -47,6 +47,13 @@ export interface EvidenceChecklistItem {
    */
   narrative_only?: boolean;
   /**
+   * Per-playbook canned merchant assertion used by the narrative prompt builder
+   * when a T item has no merchant note in disputes.checklist_notes. Should read
+   * as a credible, reason-code-specific statement the merchant would make. Only
+   * valid on items with narrative_only=true. (WIN-49)
+   */
+  narrative_fallback?: string;
+  /**
    * Target Stripe dispute evidence file slot. Multiple items in a playbook MAY
    * share a slot — PDF concat at submit time resolves the merge. Items with a
    * stripe_evidence_field are file-upload items and MUST NOT have stripe_field

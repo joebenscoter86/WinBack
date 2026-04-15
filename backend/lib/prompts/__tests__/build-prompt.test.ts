@@ -157,4 +157,69 @@ describe("buildPrompt", () => {
     const result = buildPrompt(makeContext());
     expect(result.user).not.toContain("MERCHANT FEEDBACK");
   });
+
+  describe("narrative-only assertions (WIN-49)", () => {
+    it("uses merchant note verbatim when present in checklist_notes", () => {
+      const result = buildPrompt(
+        makeContext({
+          checklist_notes: {
+            "Device identifier and IP address of the transaction":
+              "Device fingerprint matched on Mar 15 and Mar 28 purchases",
+          },
+          narrative_only_items: [
+            {
+              item: "Device identifier and IP address of the transaction",
+              fallback: "Standard fallback text that should NOT appear",
+            },
+          ],
+        })
+      );
+      expect(result.user).toContain("NARRATIVE-ONLY ASSERTIONS");
+      expect(result.user).toContain(
+        "Device fingerprint matched on Mar 15 and Mar 28 purchases"
+      );
+      expect(result.user).toContain("(merchant's own words)");
+      expect(result.user).not.toContain("Standard fallback text that should NOT appear");
+    });
+
+    it("uses per-playbook fallback when no merchant note present", () => {
+      const result = buildPrompt(
+        makeContext({
+          checklist_notes: {},
+          narrative_only_items: [
+            {
+              item: "Currency conversion documentation",
+              fallback:
+                "Any difference falls within Mastercard's currency conversion allowance.",
+            },
+          ],
+        })
+      );
+      expect(result.user).toContain("NARRATIVE-ONLY ASSERTIONS");
+      expect(result.user).toContain(
+        "Any difference falls within Mastercard's currency conversion allowance."
+      );
+      expect(result.user).toContain("(standard assertion for this reason code)");
+    });
+
+    it("skips items with neither merchant note nor fallback", () => {
+      const result = buildPrompt(
+        makeContext({
+          checklist_notes: {},
+          narrative_only_items: [
+            { item: "Item with no fallback and no note" },
+          ],
+        })
+      );
+      expect(result.user).toContain("NARRATIVE-ONLY ASSERTIONS");
+      expect(result.user).toContain("(none for this reason code)");
+      expect(result.user).not.toContain("Item with no fallback and no note");
+    });
+
+    it("renders empty placeholder when narrative_only_items is undefined", () => {
+      const result = buildPrompt(makeContext());
+      expect(result.user).toContain("NARRATIVE-ONLY ASSERTIONS");
+      expect(result.user).toContain("(none for this reason code)");
+    });
+  });
 });

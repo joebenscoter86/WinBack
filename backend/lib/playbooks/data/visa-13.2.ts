@@ -61,6 +61,8 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       where_to_find:
         "Stripe Dashboard > Billing > Subscriptions > click the subscription > look at the billing period for the disputed invoice (e.g., 'Mar 1 - Apr 1'). If you use Chargebee or Recharge, check the invoice details for the period dates. This should show the charge covered a period that started before any cancellation.",
       narrative_only: true,
+      narrative_fallback:
+        "The disputed charge corresponds to a defined billing period during which the subscription was active and services were available to the cardholder.",
       urgency_essential: true,
       urgency_order: 2,
     },
@@ -100,6 +102,8 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       where_to_find:
         "Check your app's admin panel or database for the cancellation request timestamp. If the customer cancelled through your helpdesk (Zendesk, Intercom, Freshdesk), pull the ticket creation date. Then compare it against the charge date in Stripe Dashboard > Payments > click the payment. Show both dates side by side.",
       narrative_only: true,
+      narrative_fallback:
+        "No cancellation request was received from the cardholder prior to the disputed charge date, so the renewal billed under the active subscription terms.",
       urgency_essential: true,
       urgency_order: 3,
     },

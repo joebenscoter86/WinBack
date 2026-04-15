@@ -87,6 +87,24 @@ export function buildPrompt(context: PromptContext): PromptResult {
     .map(([key, note]) => `- "${key}": "${note}"`)
     .join("\n");
 
+  // Narrative-only (T-category) items: prefer merchant notes from
+  // checklist_notes; fall back to the per-playbook canned assertion. Items
+  // with neither are skipped to avoid emitting empty keys to the LLM. (WIN-49)
+  const narrativeOnlyItems = context.narrative_only_items ?? [];
+  const narrativeAssertionsList = narrativeOnlyItems
+    .map((item) => {
+      const merchantNote = context.checklist_notes[item.item]?.trim();
+      if (merchantNote) {
+        return `- "${item.item}": "${merchantNote}" (merchant's own words)`;
+      }
+      if (item.fallback) {
+        return `- "${item.item}": "${item.fallback}" (standard assertion for this reason code)`;
+      }
+      return null;
+    })
+    .filter((line): line is string => line !== null)
+    .join("\n");
+
   const threeDSecure = context.three_d_secure_result
     ? `${context.three_d_secure_result}${context.three_d_secure_version ? ` (version ${context.three_d_secure_version})` : ""}`
     : "not available";
@@ -128,6 +146,9 @@ ${evidenceFilesList || "(no files uploaded)"}
 
 CHECKLIST NOTES (merchant's own words):
 ${checklistNotesList || "(no notes provided)"}
+
+NARRATIVE-ONLY ASSERTIONS (weave these into the narrative; use the merchant's words verbatim when marked, otherwise paraphrase the standard assertion naturally):
+${narrativeAssertionsList || "(none for this reason code)"}
 ${feedbackBlock}
 Generate the narrative following the system instructions.`;
 

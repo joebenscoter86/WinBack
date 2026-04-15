@@ -32,7 +32,14 @@ export const POST = withStripeAuth(async (
     let localFields: {
       narrative_text: string | null;
       evidence_submitted_at: string | null;
-    } = { narrative_text: null, evidence_submitted_at: null };
+      checklist_state: Record<string, boolean>;
+      checklist_notes: Record<string, string>;
+    } = {
+      narrative_text: null,
+      evidence_submitted_at: null,
+      checklist_state: {},
+      checklist_notes: {},
+    };
 
     // Backfill the dispute row in our database so downstream routes
     // (narrative generate, evidence upload) can trust it exists with
@@ -75,16 +82,31 @@ export const POST = withStripeAuth(async (
           console.error("Failed to backfill dispute row:", upsertError.message);
         }
 
-        // Hydrate persisted narrative + submission state so the wizard can
-        // resume a dispute across sessions (WIN-20).
+        // Hydrate persisted narrative + submission + checklist state so the
+        // wizard can resume a dispute across sessions AND across tab switches
+        // within the same session. Previously this route only returned
+        // narrative_text and evidence_submitted_at, so any checklist notes or
+        // checkbox state the merchant had saved looked like it disappeared on
+        // next load. (WIN-20, WIN-49)
         const { data: localRow } = await supabase
           .from("disputes")
-          .select("narrative_text, evidence_submitted_at")
+          .select("narrative_text, evidence_submitted_at, checklist_state, checklist_notes")
           .eq("stripe_dispute_id", normalized.id)
           .eq("merchant_id", (merchant as { id: string }).id)
           .maybeSingle();
         if (localRow) {
-          localFields = localRow as typeof localFields;
+          const row = localRow as {
+            narrative_text: string | null;
+            evidence_submitted_at: string | null;
+            checklist_state: Record<string, boolean> | null;
+            checklist_notes: Record<string, string> | null;
+          };
+          localFields = {
+            narrative_text: row.narrative_text,
+            evidence_submitted_at: row.evidence_submitted_at,
+            checklist_state: row.checklist_state ?? {},
+            checklist_notes: row.checklist_notes ?? {},
+          };
         }
       }
     } catch (backfillErr) {
@@ -112,7 +134,7 @@ export const POST = withStripeAuth(async (
 
 export const PATCH = withStripeAuth(async (
   request: NextRequest,
-  { identity },
+  { identity, body },
 ) => {
   const { accountId, userId } = identity;
   const disputeId = request.nextUrl.pathname.split("/").at(-1);
@@ -126,8 +148,14 @@ export const PATCH = withStripeAuth(async (
 
   ensureMerchant(accountId, userId);
 
-  const body = JSON.parse(await request.clone().text());
-  const { checklist_state, checklist_notes } = body;
+  // Use the body parsed by withStripeAuth -- the request body stream was
+  // consumed during signature verification and cannot be re-read here.
+  // (WIN-49: discovered during QA when checklist notes were silently failing
+  // to persist with TypeError: unusable.)
+  const { checklist_state, checklist_notes } = body as {
+    checklist_state?: Record<string, boolean>;
+    checklist_notes?: Record<string, string>;
+  };
 
   // Build update payload from provided fields
   const updatePayload: Record<string, unknown> = {};
