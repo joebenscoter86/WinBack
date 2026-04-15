@@ -102,6 +102,8 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       where_to_find:
         "Check your helpdesk or email for the message where you told the customer why their return or refund was denied. Pull the exact reason. If you use a returns management system (Returnly, Loop), check the denial record with its timestamp and reason code.",
       narrative_only: true,
+      narrative_fallback:
+        "The merchant's published return policy, accepted by the cardholder at checkout, did not cover the conditions of this return request, and the denial was communicated to the cardholder through the merchant's standard support channels.",
       urgency_essential: false,
       urgency_order: null,
     },

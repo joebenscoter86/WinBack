@@ -1,4 +1,5 @@
-import { Box, Checkbox, Badge, Inline, Link, Icon, TextArea } from '@stripe/ui-extension-sdk/ui';
+import { useState } from 'react';
+import { Box, Button, Checkbox, Badge, Inline, Link, Icon, TextArea } from '@stripe/ui-extension-sdk/ui';
 import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 import type { EvidenceChecklistItem, EvidenceFile } from '../../lib/types';
 import type { StripeFieldResult } from './EvidenceChecklist';
@@ -18,6 +19,7 @@ interface ChecklistItemProps {
   onToggle: () => void;
   onSectionToggle: (section: ExpandedSection) => void;
   onNotesChange: (value: string) => void;
+  onSaveNotes?: () => void;
   onFileChange: (file: EvidenceFile | null) => void;
   submitted?: boolean;
 }
@@ -73,6 +75,7 @@ const ChecklistItem = ({
   onToggle,
   onSectionToggle,
   onNotesChange,
+  onSaveNotes,
   onFileChange,
   submitted,
 }: ChecklistItemProps) => {
@@ -80,6 +83,15 @@ const ChecklistItem = ({
   const whereExpanded = expandedSections.has('where');
   const notesExpanded = expandedSections.has('notes');
   const fileExpanded = expandedSections.has('file');
+
+  // Flash a "Saved" confirmation for 2s after the merchant explicitly clicks
+  // Save, so they have visual confirmation the content persisted. (WIN-49)
+  const [justSaved, setJustSaved] = useState(false);
+  const handleSaveClick = () => {
+    if (onSaveNotes) onSaveNotes();
+    setJustSaved(true);
+    setTimeout(() => setJustSaved(false), 2000);
+  };
 
   const isUnavailable = stripeFieldResult?.status === 'unavailable';
   const isNegative = stripeFieldResult?.status === 'negative';
@@ -134,10 +146,12 @@ const ChecklistItem = ({
                 onPress={() => onSectionToggle('where')}
               />
             )}
-            {item.narrative_only ? (
-              <Inline css={{ font: 'caption', color: 'secondary' }}>
-                Covered in your narrative
-              </Inline>
+            {item.narrative_only && !submitted ? (
+              <SectionToggle
+                label={notes ? 'Your notes' : 'Add detail'}
+                expanded={notesExpanded}
+                onPress={() => onSectionToggle('notes')}
+              />
             ) : !isUnavailable && !isPositive && !submitted ? (
               <>
                 <SectionToggle
@@ -182,14 +196,35 @@ const ChecklistItem = ({
       )}
 
       {notesExpanded && !isUnavailable && !submitted && (
-        <Box css={{ marginLeft: 'xlarge' }}>
+        <Box css={{ marginLeft: 'xlarge', stack: 'y', gap: 'xsmall' }}>
           <TextArea
-            label="Your notes"
-            placeholder="e.g. tracking #, file name, where to find this..."
+            label={item.narrative_only ? 'Add detail (optional)' : 'Your notes'}
+            placeholder={
+              item.narrative_only
+                ? 'In your own words, what should the narrative say about this?'
+                : 'e.g. tracking #, file name, where to find this...'
+            }
             value={notes}
             onChange={(e) => onNotesChange(e.target.value)}
             rows={2}
           />
+          <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
+            {onSaveNotes && (
+              <Button type="secondary" size="small" onPress={handleSaveClick}>
+                Save
+              </Button>
+            )}
+            {justSaved && (
+              <Inline css={{ font: 'caption', color: 'success' }}>
+                Saved
+              </Inline>
+            )}
+          </Box>
+          {item.narrative_only && (
+            <Inline css={{ font: 'caption', color: 'secondary' }}>
+              Optional. Add detail to strengthen this point. If left blank, your narrative will note this generally.
+            </Inline>
+          )}
         </Box>
       )}
 

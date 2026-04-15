@@ -68,7 +68,20 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
   const [notesState, setNotesState] = useState<NotesState>(
     () => dispute.checklist_notes ?? {},
   );
-  const [expandedSections, setExpandedSections] = useState<Map<string, Set<ExpandedSection>>>(new Map());
+  // T-category (narrative_only) items default to having their notes section
+  // expanded -- it's the only place merchants can contribute for these items,
+  // so collapsing it hurts discoverability. (WIN-49)
+  const [expandedSections, setExpandedSections] = useState<Map<string, Set<ExpandedSection>>>(
+    () => {
+      const initial = new Map<string, Set<ExpandedSection>>();
+      for (const item of items) {
+        if (item.narrative_only) {
+          initial.set(item.item, new Set<ExpandedSection>(['notes']));
+        }
+      }
+      return initial;
+    }
+  );
   const [filesState, setFilesState] = useState<Record<string, EvidenceFile | null>>({});
   const [showFullChecklist, setShowFullChecklist] = useState(false);
 
@@ -80,8 +93,20 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
 
   // Rebuild state when dispute or playbook changes
   useEffect(() => {
-    setChecklistState(buildInitialState(items, dispute));
-    setNotesState(dispute.checklist_notes ?? {});
+    const nextChecklist = buildInitialState(items, dispute);
+    setChecklistState(nextChecklist);
+    latestChecklistRef.current = nextChecklist;
+    const nextNotes = dispute.checklist_notes ?? {};
+    setNotesState(nextNotes);
+    latestNotesRef.current = nextNotes;
+    // Re-seed T-item notes as expanded when switching playbooks. (WIN-49)
+    const nextExpanded = new Map<string, Set<ExpandedSection>>();
+    for (const item of items) {
+      if (item.narrative_only) {
+        nextExpanded.set(item.item, new Set<ExpandedSection>(['notes']));
+      }
+    }
+    setExpandedSections(nextExpanded);
   }, [dispute.id, dispute.checklist_state, dispute.checklist_notes, playbook?.reason_code]);
 
   // Fetch evidence files on mount / dispute change
@@ -104,30 +129,82 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
     fetchFiles();
   }, [dispute.id]);
 
+  // Holds the latest checklist state so the unmount flush can persist it
+  // without racing against React re-renders. (WIN-49)
+  const latestChecklistRef = useRef<ChecklistState>({});
+
   const persistChecklist = useCallback((newState: ChecklistState) => {
+    latestChecklistRef.current = newState;
     if (checklistTimeoutRef.current) {
       clearTimeout(checklistTimeoutRef.current);
     }
     checklistTimeoutRef.current = setTimeout(() => {
       patchBackend(`/api/disputes/${dispute.id}`, contextRef.current, {
-        checklist_state: newState,
+        checklist_state: latestChecklistRef.current,
       }).catch((err) => {
         console.error('Failed to save checklist state:', err);
       });
     }, 500);
   }, [dispute.id]);
 
-  const persistNotes = useCallback((newNotes: NotesState) => {
+  // Holds the latest notes state so flushNotes can read the current values
+  // without depending on React re-renders. The debounced save and the explicit
+  // Save button both read from here.
+  const latestNotesRef = useRef<NotesState>({});
+
+  const flushNotes = useCallback(() => {
     if (notesTimeoutRef.current) {
       clearTimeout(notesTimeoutRef.current);
+      notesTimeoutRef.current = null;
     }
-    notesTimeoutRef.current = setTimeout(() => {
-      patchBackend(`/api/disputes/${dispute.id}`, contextRef.current, {
-        checklist_notes: newNotes,
-      }).catch((err) => {
-        console.error('Failed to save checklist notes:', err);
-      });
-    }, 1000);
+    patchBackend(`/api/disputes/${dispute.id}`, contextRef.current, {
+      checklist_notes: latestNotesRef.current,
+    }).catch((err) => {
+      console.error('Failed to save checklist notes:', err);
+    });
+  }, [dispute.id]);
+
+  const persistNotes = useCallback((newNotes: NotesState) => {
+    latestNotesRef.current = newNotes;
+    // No debounce -- notes are short, typed infrequently, and the cost of
+    // losing a note to a debounce race (WIN-49 QA) far exceeds the cost of
+    // a few extra PATCH requests. Every keystroke commits immediately.
+    if (notesTimeoutRef.current) {
+      clearTimeout(notesTimeoutRef.current);
+      notesTimeoutRef.current = null;
+    }
+    patchBackend(`/api/disputes/${dispute.id}`, contextRef.current, {
+      checklist_notes: newNotes,
+    }).catch((err) => {
+      console.error('Failed to save checklist notes:', err);
+    });
+  }, [dispute.id]);
+
+  // Safety net: if the wizard unmounts (user closes the FocusView, navigates
+  // to a different dispute, etc.) before the debounce fires, flush any
+  // pending notes and checklist state immediately so nothing is lost. (WIN-49)
+  useEffect(() => {
+    return () => {
+      if (notesTimeoutRef.current) {
+        clearTimeout(notesTimeoutRef.current);
+        notesTimeoutRef.current = null;
+        patchBackend(`/api/disputes/${dispute.id}`, contextRef.current, {
+          checklist_notes: latestNotesRef.current,
+        }).catch((err) => {
+          console.error('Failed to flush checklist notes on unmount:', err);
+        });
+      }
+      if (checklistTimeoutRef.current) {
+        clearTimeout(checklistTimeoutRef.current);
+        checklistTimeoutRef.current = null;
+        patchBackend(`/api/disputes/${dispute.id}`, contextRef.current, {
+          checklist_state: latestChecklistRef.current,
+        }).catch((err) => {
+          console.error('Failed to flush checklist state on unmount:', err);
+        });
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispute.id]);
 
   const handleToggle = useCallback((itemName: string) => {
@@ -254,6 +331,7 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
                 onToggle={() => handleToggle(item.item)}
                 onSectionToggle={(section) => handleSectionToggle(item.item, section)}
                 onNotesChange={(value) => handleNotesChange(item.item, value)}
+                onSaveNotes={flushNotes}
                 onFileChange={(file) => handleFileChange(item.item, file)}
                 submitted={submitted}
               />

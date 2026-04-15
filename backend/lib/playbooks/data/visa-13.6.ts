@@ -111,6 +111,8 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       where_to_find:
         "Search your returns management system (Returnly, Loop Returns, or your platform's built-in returns), helpdesk, and email for any return requests from this customer. If you find nothing, document that search. Also check your shipping/receiving logs for any inbound packages from this customer.",
       narrative_only: true,
+      narrative_fallback:
+        "The merchant has no record of an inbound return shipment, return authorization, or return request tied to this transaction. The item was delivered and remains in the cardholder's possession.",
       urgency_essential: false,
       urgency_order: null,
     },

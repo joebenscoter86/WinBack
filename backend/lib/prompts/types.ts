@@ -29,6 +29,17 @@ export interface EvidenceFileRef {
   file_name: string;
 }
 
+/**
+ * A T-category (narrative_only) item from the playbook, paired with its
+ * per-playbook canned merchant assertion. The prompt builder uses the merchant's
+ * own note from checklist_notes when present, otherwise falls back to this
+ * string. (WIN-49)
+ */
+export interface NarrativeOnlyItem {
+  item: string;
+  fallback?: string;
+}
+
 export interface PromptContext {
   reason_code: string;
   network: string;
@@ -53,6 +64,13 @@ export interface PromptContext {
   calculated_statement_descriptor?: string;
   evidence_files: EvidenceFileRef[];
   checklist_notes: Record<string, string>;
+  /**
+   * Narrative-only (T-category) items extracted from the playbook. The prompt
+   * builder emits a dedicated section for these where merchant notes (when
+   * present) or per-playbook fallbacks (when absent) provide reason-code-specific
+   * assertions the AI can weave into the narrative. (WIN-49)
+   */
+  narrative_only_items?: NarrativeOnlyItem[];
   issuer_evaluation: string;
   merchant_feedback?: string;
 }

@@ -1,8 +1,15 @@
 /**
- * WIN-20 QA helper: creates a disputable test charge with AVS check data
- * populated, then waits for Stripe to auto-create the dispute.
+ * QA helper: creates a disputable test charge with AVS check data populated,
+ * then waits for Stripe to auto-create the dispute. Accepts an optional
+ * --reason flag mapping to Stripe's test tokens for each dispute reason.
  *
- * Usage: set -a && source .env.local && set +a && npx tsx scripts/create-test-dispute.ts
+ * Usage:
+ *   set -a && source .env.local && set +a && npx tsx scripts/create-test-dispute.ts
+ *   npx tsx scripts/create-test-dispute.ts --reason subscription_canceled
+ *   npx tsx scripts/create-test-dispute.ts --reason product_unacceptable
+ *
+ * Stripe test tokens reference:
+ *   https://docs.stripe.com/testing?testing-method=tokens#disputes
  */
 
 import Stripe from "stripe";
@@ -11,13 +18,27 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-09-30.clover" as Stripe.LatestApiVersion,
 });
 
-// Ordered list of test card tokens that create auto-disputing charges.
-// We try them in order — the first that works wins.
+// Stripe's test API only exposes auto-dispute tokens for the fraudulent
+// reason. For non-fraud reasons, this helper creates a normal successful
+// charge and prints instructions to file the dispute manually via the
+// Dashboard test-mode "Create test dispute" action, where the reason
+// picker supports every dispute reason Stripe tracks.
 const CANDIDATE_TOKENS = [
   "tok_createDispute",
   "tok_visa_chargeFraudulent",
   "tok_chargeDeclinedFraudulent",
 ];
+
+const NON_FRAUD_TOKENS = ["tok_visa"];
+
+function parseReasonArg(): string {
+  const idx = process.argv.indexOf("--reason");
+  if (idx === -1 || idx === process.argv.length - 1) return "fraudulent";
+  return process.argv[idx + 1];
+}
+
+const REASON = parseReasonArg();
+const IS_FRAUD = REASON === "fraudulent";
 
 async function tryCreatePI(token: string): Promise<Stripe.PaymentIntent> {
   return stripe.paymentIntents.create({
@@ -45,9 +66,10 @@ async function tryCreatePI(token: string): Promise<Stripe.PaymentIntent> {
 }
 
 async function main() {
+  const tokens = IS_FRAUD ? CANDIDATE_TOKENS : NON_FRAUD_TOKENS;
   let pi: Stripe.PaymentIntent | null = null;
   let usedToken: string | null = null;
-  for (const tok of CANDIDATE_TOKENS) {
+  for (const tok of tokens) {
     try {
       console.log(`Trying test token: ${tok}`);
       pi = await tryCreatePI(tok);
@@ -74,6 +96,19 @@ async function main() {
     `  avs_line1=${charge.payment_method_details?.card?.checks?.address_line1_check} avs_postal=${charge.payment_method_details?.card?.checks?.address_postal_code_check} cvc=${charge.payment_method_details?.card?.checks?.cvc_check}`,
   );
   console.log(`  billing_details: ${JSON.stringify(charge.billing_details)}`);
+
+  if (!IS_FRAUD) {
+    console.log("\n=== NEXT STEPS (manual dispute filing) ===");
+    console.log(`Reason requested: ${REASON}`);
+    console.log(`Charge ID:        ${charge.id}`);
+    console.log("");
+    console.log("1. Open the Stripe Dashboard in test mode (Dockett sandbox).");
+    console.log(`2. Navigate to Payments > ${charge.id}`);
+    console.log("3. Click the overflow menu and pick 'Create test dispute'.");
+    console.log(`4. Select reason "${REASON}" and submit.`);
+    console.log("5. Refresh the WinBack app -- the dispute will appear in the list.");
+    return;
+  }
 
   console.log("\nWaiting for dispute to appear (poll up to 60s)...");
   let dispute: Stripe.Dispute | null = null;

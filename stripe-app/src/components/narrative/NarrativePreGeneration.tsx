@@ -41,14 +41,41 @@ const NarrativePreGeneration = ({
     filesByKey.set(file.checklist_item_key, file);
   }
 
-  // Compute per-item satisfaction using shared stripe-field logic
+  // Compute per-item satisfaction. Three categories of "satisfied":
+  //   - A (stripe_field): satisfied when auto-pull returns a positive value
+  //   - Slot (stripe_evidence_field): satisfied when a file is uploaded
+  //   - T (narrative_only): always satisfied -- either the merchant typed
+  //     a note or the per-playbook fallback fills it in at narrative time.
+  //     (WIN-49)
+  const checklistNotes = dispute.checklist_notes ?? {};
   const checklistItems = playbook?.evidence_checklist ?? [];
   const itemStatuses = checklistItems.map((item) => {
     const matchedFile = filesByKey.get(item.item);
     const stripeField = getStripeFieldResult(item, dispute);
     const autoFilled = stripeField?.status === 'positive';
-    const satisfied = !!matchedFile || autoFilled;
-    return { item, matchedFile, stripeField, autoFilled, satisfied };
+    const hasMerchantNote = !!(checklistNotes[item.item]?.trim());
+    const isNarrativeOnly = !!item.narrative_only;
+    const satisfied = !!matchedFile || autoFilled || isNarrativeOnly;
+    let statusLabel: string;
+    if (matchedFile) {
+      statusLabel = 'Uploaded';
+    } else if (autoFilled) {
+      statusLabel = 'From Stripe';
+    } else if (isNarrativeOnly) {
+      statusLabel = hasMerchantNote ? 'Notes added' : 'In narrative';
+    } else {
+      statusLabel = 'Not uploaded';
+    }
+    return {
+      item,
+      matchedFile,
+      stripeField,
+      autoFilled,
+      isNarrativeOnly,
+      hasMerchantNote,
+      satisfied,
+      statusLabel,
+    };
   });
   const satisfiedCount = itemStatuses.filter((s) => s.satisfied).length;
   const totalItems = itemStatuses.length;
@@ -152,7 +179,7 @@ const NarrativePreGeneration = ({
                         color: satisfied ? 'success' : 'disabled',
                       }}
                     >
-                      {satisfied ? 'Uploaded' : 'Not uploaded'}
+                      {itemStatuses[index].statusLabel}
                     </Inline>
                   </Box>
                 </Box>

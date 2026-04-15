@@ -116,6 +116,8 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       where_to_find:
         "Search your helpdesk, email, and returns management system (Returnly, Loop Returns, or your platform's built-in returns) for any return requests from this customer. If you find nothing, document that search -- the absence of a return request is your evidence here.",
       narrative_only: true,
+      narrative_fallback:
+        "The merchant has no record in its helpdesk, returns system, or shipping logs of the cardholder attempting to return the merchandise prior to filing this dispute, which is required under Visa's October 2024 chargeback rules.",
       urgency_essential: false,
       urgency_order: null,
     },
@@ -129,6 +131,8 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       where_to_find:
         "Check your helpdesk or email for the message where you told the customer why their return or refund was denied. Pull the exact reason from that conversation. If you have a returns management system (Returnly, Loop), check the denial record there.",
       narrative_only: true,
+      narrative_fallback:
+        "The merchant's published return policy, accepted by the cardholder at checkout, did not cover the conditions of this return request, and the denial was communicated to the cardholder through the merchant's standard support channels.",
       urgency_essential: false,
       urgency_order: null,
     },

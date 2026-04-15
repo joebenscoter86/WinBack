@@ -73,6 +73,10 @@ export interface EvidenceChecklistItem {
   where_to_find?: string;
   stripe_field?: string;
   narrative_only?: boolean;
+  // Per-playbook canned merchant assertion used by the backend prompt builder
+  // when a T item has no merchant note. Frontend doesn't render this -- it's
+  // only here so the type matches the backend payload. (WIN-49)
+  narrative_fallback?: string;
   urgency_essential: boolean;
   urgency_order: number | null;
 }

@@ -84,6 +84,8 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       where_to_find:
         "Stripe Dashboard > Payments > click the payment > compare the 'Amount' and 'Converted amount' fields (visible on multi-currency transactions). Calculate the percentage difference. If it's within 10%, cite Mastercard's currency conversion safe harbor in your response.",
       narrative_only: true,
+      narrative_fallback:
+        "Any difference between the authorized and settled amount falls within Mastercard's currency conversion allowance, which permits a variance of up to 10 percent when converting between currencies.",
       urgency_essential: true,
       urgency_order: 3,
     },
@@ -123,6 +125,8 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       where_to_find:
         "Stripe Dashboard > Payments > click the payment > Timeline section. Compare the authorization timestamp against the capture/final charge timestamp. Screenshot both entries showing the charge was finalized within the authorization window (typically 7 days for e-commerce, 30 days for some merchant categories).",
       narrative_only: true,
+      narrative_fallback:
+        "The charge was captured within the authorization validity window applicable to this merchant category, so the original approval was still in force when the transaction was finalized.",
       urgency_essential: false,
       urgency_order: null,
     },
