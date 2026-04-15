@@ -22,6 +22,13 @@ vi.mock("@/lib/stripe-auth", () => ({
 
 vi.mock("@/lib/merchants", () => ({ ensureMerchant: vi.fn() }));
 
+vi.mock("@/lib/stripe", () => ({
+  getDispute: vi.fn(async () => ({
+    id: "du_test",
+    status: "needs_response",
+  })),
+}));
+
 vi.mock("@/lib/narratives/generate-background", () => ({
   runBackgroundGeneration: vi.fn().mockResolvedValue(undefined),
 }));

@@ -2,6 +2,14 @@
 
 All notable changes to WinBack will be documented in this file.
 
+## [0.0.1.3] - 2026-04-13
+
+### Fixed
+- Expired disputes (past their response deadline) are now read-only on the dashboard and inside the wizard. Opening an expired dispute shows a critical banner explaining that the deadline has passed, and evidence uploads, narrative generation, and submission are all disabled. The backend rejects write attempts with a 409 before burning an AI generation credit or accepting an upload. (WIN-48)
+- Expired disputes no longer show a contradictory "Needs Response" status badge on the dashboard card. Only the red "Expired" badge is displayed. (WIN-48)
+- Expired disputes are now sorted to the bottom of the dispute list instead of jumping to the top as the "most overdue" items. (WIN-48)
+- Dashboard filter now defaults to "Needs response" on load, and includes a new "Expired" filter option. Expired disputes are excluded from the "Needs response" filter even though Stripe still reports them as needs_response. (WIN-48)
+
 ## [0.0.1.2] - 2026-04-12
 
 ### Fixed

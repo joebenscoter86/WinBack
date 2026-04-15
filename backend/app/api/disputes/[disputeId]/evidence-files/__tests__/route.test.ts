@@ -15,6 +15,13 @@ vi.mock("@/lib/merchants", () => ({
   ensureMerchant: vi.fn(),
 }));
 
+vi.mock("@/lib/stripe", () => ({
+  getDispute: vi.fn(async () => ({
+    id: "du_test",
+    status: "needs_response",
+  })),
+}));
+
 // Track supabase calls by table and build chainable results
 type ChainResult = { data: unknown; error: unknown };
 const tableResults: Record<string, ChainResult[]> = {};

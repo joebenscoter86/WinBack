@@ -1,6 +1,11 @@
 import { Box, Badge, Button, Inline } from '@stripe/ui-extension-sdk/ui';
 import type { Dispute } from '../lib/types';
-import { getStatusBadge, getUrgencyBadge, getReasonCodeLabel } from '../lib/utils';
+import {
+  getStatusBadge,
+  getUrgencyBadge,
+  getReasonCodeLabel,
+  isDisputeExpired,
+} from '../lib/utils';
 
 interface DisputeCardProps {
   dispute: Dispute;
@@ -15,7 +20,11 @@ function formatAmount(amount: number, currency: string): string {
 }
 
 const DisputeCard = ({ dispute, onSelect }: DisputeCardProps) => {
-  const statusBadge = getStatusBadge(dispute.status);
+  const expired = isDisputeExpired(dispute.due_by, dispute.status);
+  // Hide the "Needs Response" status badge for expired disputes -- the
+  // red "Expired" urgency badge already tells the merchant what state
+  // they're in, and showing both is contradictory (WIN-48).
+  const statusBadge = expired ? null : getStatusBadge(dispute.status);
   const urgencyBadge = getUrgencyBadge(dispute.due_by, dispute.status);
   const reasonLabel = getReasonCodeLabel(dispute.network, dispute.reason_code);
 
@@ -38,7 +47,9 @@ const DisputeCard = ({ dispute, onSelect }: DisputeCardProps) => {
             {formatAmount(dispute.amount, dispute.currency)}
           </Inline>
           <Box css={{ stack: 'x', gap: 'xsmall' }}>
-            <Badge type={statusBadge.type}>{statusBadge.label}</Badge>
+            {statusBadge && (
+              <Badge type={statusBadge.type}>{statusBadge.label}</Badge>
+            )}
             {urgencyBadge && (
               <Badge type={urgencyBadge.type}>{urgencyBadge.label}</Badge>
             )}

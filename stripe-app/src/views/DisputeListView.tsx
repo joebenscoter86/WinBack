@@ -18,29 +18,38 @@ import DisputeWorkflow from '../components/DisputeWorkflow';
 import EmptyState from '../components/EmptyState';
 import ErrorBanner from '../components/ErrorBanner';
 import { fetchBackend, ApiError } from '../lib/apiClient';
-import { isResolved } from '../lib/utils';
+import { isResolved, isDisputeExpired } from '../lib/utils';
 import type { Dispute } from '../lib/types';
 
 type ViewState = 'loading' | 'error' | 'ready';
-type StatusFilter = 'all' | 'needs_response' | 'under_review' | 'resolved';
+type StatusFilter = 'all' | 'needs_response' | 'under_review' | 'resolved' | 'expired';
 
 const FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All disputes' },
   { value: 'needs_response', label: 'Needs response' },
   { value: 'under_review', label: 'Under review' },
   { value: 'resolved', label: 'Resolved' },
+  { value: 'expired', label: 'Expired' },
 ];
 
 function matchesFilter(dispute: Dispute, filter: StatusFilter): boolean {
+  const expired = isDisputeExpired(dispute.due_by, dispute.status);
   switch (filter) {
     case 'all':
       return true;
     case 'needs_response':
-      return dispute.status === 'needs_response' || dispute.status === 'warning_needs_response';
+      // Exclude expired disputes -- they are not actionable even though
+      // Stripe still reports status=needs_response (WIN-48).
+      return (
+        (dispute.status === 'needs_response' || dispute.status === 'warning_needs_response') &&
+        !expired
+      );
     case 'under_review':
       return dispute.status === 'under_review' || dispute.status === 'warning_under_review';
     case 'resolved':
       return isResolved(dispute.status);
+    case 'expired':
+      return expired;
     default:
       return true;
   }
@@ -57,6 +66,8 @@ function getCountText(count: number, filter: StatusFilter): string {
       return `${count} under review`;
     case 'resolved':
       return `${count} resolved`;
+    case 'expired':
+      return `${count} expired`;
     default:
       return `${count} ${noun}`;
   }
@@ -67,7 +78,7 @@ const DisputeListView = (context: ExtensionContextValue) => {
   const [viewState, setViewState] = useState<ViewState>('loading');
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('needs_response');
 
   const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
   const [showWorkflow, setShowWorkflow] = useState(false);
@@ -106,10 +117,16 @@ const DisputeListView = (context: ExtensionContextValue) => {
     if (!shown) setSelectedDispute(null);
   };
 
-  // Sort by deadline (soonest first)
-  const sortedDisputes = [...disputes].sort(
-    (a, b) => new Date(a.due_by).getTime() - new Date(b.due_by).getTime(),
-  );
+  // Sort by deadline (soonest first), but push expired disputes to the
+  // bottom regardless of how overdue they are -- they're no longer actionable
+  // so they shouldn't jump to the top of the list just because they're the
+  // "most overdue" (WIN-48).
+  const sortedDisputes = [...disputes].sort((a, b) => {
+    const aExpired = isDisputeExpired(a.due_by, a.status);
+    const bExpired = isDisputeExpired(b.due_by, b.status);
+    if (aExpired !== bExpired) return aExpired ? 1 : -1;
+    return new Date(a.due_by).getTime() - new Date(b.due_by).getTime();
+  });
 
   const filteredDisputes = sortedDisputes.filter((d) => matchesFilter(d, statusFilter));
 

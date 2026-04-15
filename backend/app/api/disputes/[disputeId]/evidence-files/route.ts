@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
 import { withStripeAuth } from "@/lib/stripe-auth";
 import { ensureMerchant } from "@/lib/merchants";
 import { supabase } from "@/lib/supabase";
+import { getDispute } from "@/lib/stripe";
+import {
+  disputeExpiredResponse,
+  isDisputeSubmittable,
+} from "@/lib/disputes/expired-guard";
 
 export const GET = withStripeAuth(async (
   request: NextRequest,
@@ -130,6 +136,26 @@ export const POST = withStripeAuth(async (
   }
 
   const disputeRow = existing;
+
+  // Expired/closed guard (WIN-48)
+  try {
+    const stripeDispute = await getDispute(accountId, disputeId);
+    if (!isDisputeSubmittable(stripeDispute)) {
+      return disputeExpiredResponse(stripeDispute);
+    }
+  } catch (err) {
+    if (err instanceof Stripe.errors.StripeError) {
+      return NextResponse.json(
+        { error: err.message, code: "stripe_error" },
+        { status: err.statusCode ?? 502 },
+      );
+    }
+    console.error("[WIN-48] Failed to fetch dispute for expiry check:", err);
+    return NextResponse.json(
+      { error: "Failed to verify dispute status", code: "internal_error" },
+      { status: 500 },
+    );
+  }
 
   // Upsert the evidence file (one file per checklist item)
   const { data: file, error: fileError } = await supabase

@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { after } from "next/server";
+import Stripe from "stripe";
 import { withStripeAuth } from "@/lib/stripe-auth";
 import { ensureMerchant } from "@/lib/merchants";
 import { supabase } from "@/lib/supabase";
 import { runBackgroundGeneration } from "@/lib/narratives/generate-background";
+import { getDispute } from "@/lib/stripe";
+import {
+  disputeExpiredResponse,
+  isDisputeSubmittable,
+} from "@/lib/disputes/expired-guard";
 
 const MAX_GENERATIONS = 5;
 
@@ -57,6 +63,27 @@ export const POST = withStripeAuth(async (
     return NextResponse.json(
       { error: "Dispute not found", code: "not_found" },
       { status: 404 },
+    );
+  }
+
+  // 4b. Expired/closed guard (WIN-48) -- don't burn a generation count on a
+  // dispute Stripe will no longer accept evidence for.
+  try {
+    const stripeDispute = await getDispute(accountId, dispute_id);
+    if (!isDisputeSubmittable(stripeDispute)) {
+      return disputeExpiredResponse(stripeDispute);
+    }
+  } catch (err) {
+    if (err instanceof Stripe.errors.StripeError) {
+      return NextResponse.json(
+        { error: err.message, code: "stripe_error" },
+        { status: err.statusCode ?? 502 },
+      );
+    }
+    console.error("[WIN-48] Failed to fetch dispute for expiry check:", err);
+    return NextResponse.json(
+      { error: "Failed to verify dispute status", code: "internal_error" },
+      { status: 500 },
     );
   }
 

@@ -20,6 +20,19 @@ export function isResolved(status: string): boolean {
   return RESOLVED_STATUSES.includes(status as DisputeStatus);
 }
 
+/**
+ * A dispute is "expired" when the deadline has passed but Stripe still
+ * reports it as needs_response. Authoritative source for the backend is
+ * stripeDispute.status; the UI uses due_by as a leading indicator before
+ * Stripe flips the status.
+ */
+export function isDisputeExpired(dueBy: string, status: string): boolean {
+  if (status !== 'needs_response' && status !== 'warning_needs_response') {
+    return false;
+  }
+  return getTimeRemaining(dueBy).isExpired;
+}
+
 export function getStatusBadge(status: string): {
   label: string;
   type: 'urgent' | 'warning' | 'positive' | 'negative' | 'info';
