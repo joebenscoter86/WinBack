@@ -14,6 +14,7 @@ import { getDisputeForAccount } from "@/lib/disputes";
 import { getPlaybook } from "@/lib/playbooks";
 import { evaluateSubmissionGuard } from "@/lib/disputes/submission-guard";
 import { assembleEvidence } from "@/lib/disputes/assemble-evidence";
+import { captureRouteError } from "@/lib/sentry";
 import type { SubmissionWarning, EvidenceFileInput } from "@/lib/disputes/types";
 
 // A stale pending row is one created more than this many seconds ago.
@@ -79,8 +80,15 @@ async function failSubmission(
   submissionId: string,
   err: unknown,
   warnings: SubmissionWarning[],
+  disputeId: string,
 ): Promise<NextResponse<ErrorBody>> {
   const { code, status, message } = classifyStripeSubmissionError(err);
+
+  captureRouteError(err, {
+    route: "disputes.submit",
+    disputeId,
+    extra: { submission_id: submissionId, classified_code: code, classified_status: status },
+  });
 
   await supabase
     .from("dispute_submissions")
@@ -188,6 +196,7 @@ export const POST = withStripeAuth(
         return errorResponse(status, code, message);
       }
       console.error("[WIN-20] fetch stripe dispute failed", err);
+      captureRouteError(err, { route: "disputes.submit.fetch", disputeId: stripeDisputeId });
       return errorResponse(
         500,
         "internal_error",
@@ -267,6 +276,11 @@ export const POST = withStripeAuth(
           .eq("id", prior.id);
         if (staleSubErr) {
           console.error("[WIN-20] Failed to persist submission success:", staleSubErr);
+          captureRouteError(staleSubErr, {
+            route: "disputes.submit.reconcile_submission",
+            disputeId: stripeDisputeId,
+            extra: { submission_id: prior.id, severity: "data_drift_after_stripe_success" },
+          });
         }
         const { error: staleDispErr } = await supabase
           .from("disputes")
@@ -277,6 +291,11 @@ export const POST = withStripeAuth(
           .eq("id", localDispute.id);
         if (staleDispErr) {
           console.error("[WIN-20] Failed to persist submission success:", staleDispErr);
+          captureRouteError(staleDispErr, {
+            route: "disputes.submit.reconcile_dispute",
+            disputeId: stripeDisputeId,
+            extra: { submission_id: prior.id, severity: "data_drift_after_stripe_success" },
+          });
         }
 
         return NextResponse.json({
@@ -341,6 +360,10 @@ export const POST = withStripeAuth(
       });
     } catch (err) {
       console.error("[WIN-20] evidence assembly failed", err);
+      captureRouteError(err, {
+        route: "disputes.submit.assemble",
+        disputeId: stripeDisputeId,
+      });
       return errorResponse(
         502,
         "concat_failed",
@@ -412,10 +435,10 @@ export const POST = withStripeAuth(
             idempotencyKey,
           );
         } catch (retryErr) {
-          return await failSubmission(submissionId, retryErr, allWarnings);
+          return await failSubmission(submissionId, retryErr, allWarnings, stripeDisputeId);
         }
       } else {
-        return await failSubmission(submissionId, err, allWarnings);
+        return await failSubmission(submissionId, err, allWarnings, stripeDisputeId);
       }
     }
 
@@ -432,6 +455,11 @@ export const POST = withStripeAuth(
       .eq("id", submissionId);
     if (subErr) {
       console.error("[WIN-20] Failed to persist submission success:", subErr);
+      captureRouteError(subErr, {
+        route: "disputes.submit.persist_submission",
+        disputeId: stripeDisputeId,
+        extra: { submission_id: submissionId, severity: "data_drift_after_stripe_success" },
+      });
     }
 
     const { error: dispErr } = await supabase
@@ -443,6 +471,11 @@ export const POST = withStripeAuth(
       .eq("id", localDispute.id);
     if (dispErr) {
       console.error("[WIN-20] Failed to persist submission success:", dispErr);
+      captureRouteError(dispErr, {
+        route: "disputes.submit.persist_dispute",
+        disputeId: stripeDisputeId,
+        extra: { submission_id: submissionId, severity: "data_drift_after_stripe_success" },
+      });
     }
 
     return NextResponse.json({

@@ -10,6 +10,7 @@ import {
 } from "@/lib/disputes";
 import { runBackgroundGeneration } from "@/lib/narratives/generate-background";
 import { getDispute } from "@/lib/stripe";
+import { captureRouteError } from "@/lib/sentry";
 import {
   disputeExpiredResponse,
   isDisputeSubmittable,
@@ -66,6 +67,7 @@ export const POST = withStripeAuth(async (
       );
     }
     console.error("[WIN-48] Failed to fetch dispute for expiry check:", err);
+    captureRouteError(err, { route: "narratives.generate.expiry_check", disputeId: dispute_id });
     return NextResponse.json(
       { error: "Failed to verify dispute status", code: "internal_error" },
       { status: 500 },
@@ -80,6 +82,7 @@ export const POST = withStripeAuth(async (
 
   if (incError) {
     console.error("[WIN-18] incrementNarrativeGenerations failed:", incError);
+    captureRouteError(incError, { route: "narratives.generate.increment", disputeId: dispute_id });
     return NextResponse.json(
       { error: "Failed to start generation", code: "db_error" },
       { status: 500 },
@@ -111,6 +114,10 @@ export const POST = withStripeAuth(async (
 
   if (insertError || !generation) {
     console.error("[WIN-18] Failed to insert narrative_generation row:", insertError);
+    captureRouteError(insertError ?? new Error("insert returned no row"), {
+      route: "narratives.generate.insert",
+      disputeId: dispute_id,
+    });
     return NextResponse.json(
       { error: "Failed to start generation", code: "db_error" },
       { status: 500 },
