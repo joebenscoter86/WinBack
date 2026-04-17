@@ -3,6 +3,7 @@ import { withStripeAuth } from "@/lib/stripe-auth";
 import { getDispute, normalizeDispute, classifyStripeError } from "@/lib/stripe";
 import { ensureMerchant } from "@/lib/merchants";
 import { supabase } from "@/lib/supabase";
+import { getDisputeForAccount } from "@/lib/disputes";
 import Stripe from "stripe";
 
 export const POST = withStripeAuth(async (
@@ -19,8 +20,9 @@ export const POST = withStripeAuth(async (
     );
   }
 
-  // Must await -- we depend on the merchant row existing below for the
-  // dispute upsert's merchant_id. See WIN-42.
+  // This route is the canonical entry point for a dispute -- it backfills
+  // the local row from Stripe. We need the merchant row to exist before
+  // the upsert can reference its id, so await is mandatory (WIN-42).
   await ensureMerchant(accountId, userId);
 
   try {
@@ -43,8 +45,9 @@ export const POST = withStripeAuth(async (
 
     // Backfill the dispute row in our database so downstream routes
     // (narrative generate, evidence upload) can trust it exists with
-    // real data. This is the canonical entry point for a dispute -- the
-    // wizard opens on the Review tab, which calls this route first.
+    // real data. This is the only route that needs the raw merchant.id
+    // (to populate the upsert payload's merchant_id); every other route
+    // uses getDisputeForAccount to scope in a single query.
     try {
       const { data: merchant } = await supabase
         .from("merchants")
@@ -62,7 +65,7 @@ export const POST = withStripeAuth(async (
 
         const { error: upsertError } = await supabase.from("disputes").upsert(
           {
-            merchant_id: merchant.id,
+            merchant_id: (merchant as { id: string }).id,
             stripe_dispute_id: normalized.id,
             stripe_charge_id: normalized.charge_id,
             amount: normalized.amount,
@@ -84,28 +87,23 @@ export const POST = withStripeAuth(async (
 
         // Hydrate persisted narrative + submission + checklist state so the
         // wizard can resume a dispute across sessions AND across tab switches
-        // within the same session. Previously this route only returned
-        // narrative_text and evidence_submitted_at, so any checklist notes or
-        // checkbox state the merchant had saved looked like it disappeared on
-        // next load. (WIN-20, WIN-49)
-        const { data: localRow } = await supabase
-          .from("disputes")
-          .select("narrative_text, evidence_submitted_at, checklist_state, checklist_notes")
-          .eq("stripe_dispute_id", normalized.id)
-          .eq("merchant_id", (merchant as { id: string }).id)
-          .maybeSingle();
+        // within the same session. (WIN-20, WIN-49)
+        const { data: localRow } = await getDisputeForAccount<{
+          narrative_text: string | null;
+          evidence_submitted_at: string | null;
+          checklist_state: Record<string, boolean> | null;
+          checklist_notes: Record<string, string> | null;
+        }>(
+          normalized.id,
+          accountId,
+          "narrative_text, evidence_submitted_at, checklist_state, checklist_notes",
+        );
         if (localRow) {
-          const row = localRow as {
-            narrative_text: string | null;
-            evidence_submitted_at: string | null;
-            checklist_state: Record<string, boolean> | null;
-            checklist_notes: Record<string, string> | null;
-          };
           localFields = {
-            narrative_text: row.narrative_text,
-            evidence_submitted_at: row.evidence_submitted_at,
-            checklist_state: row.checklist_state ?? {},
-            checklist_notes: row.checklist_notes ?? {},
+            narrative_text: localRow.narrative_text,
+            evidence_submitted_at: localRow.evidence_submitted_at,
+            checklist_state: localRow.checklist_state ?? {},
+            checklist_notes: localRow.checklist_notes ?? {},
           };
         }
       }
@@ -146,7 +144,9 @@ export const PATCH = withStripeAuth(async (
     );
   }
 
-  ensureMerchant(accountId, userId);
+  // Await -- the PATCH may fall back to upserting a row with merchant_id,
+  // which requires the merchant row to exist (WIN-42).
+  await ensureMerchant(accountId, userId);
 
   // Use the body parsed by withStripeAuth -- the request body stream was
   // consumed during signature verification and cannot be re-read here.
@@ -157,7 +157,6 @@ export const PATCH = withStripeAuth(async (
     checklist_notes?: Record<string, string>;
   };
 
-  // Build update payload from provided fields
   const updatePayload: Record<string, unknown> = {};
   if (checklist_state && typeof checklist_state === "object") {
     updatePayload.checklist_state = checklist_state;
@@ -173,53 +172,63 @@ export const PATCH = withStripeAuth(async (
     );
   }
 
-  const { data, error } = await supabase
+  // Verify the dispute belongs to this merchant before updating (WIN-42).
+  const { data: scoped } = await getDisputeForAccount<{ id: string }>(
+    disputeId,
+    accountId,
+    "id",
+  );
+
+  if (scoped) {
+    const { data, error } = await supabase
+      .from("disputes")
+      .update(updatePayload)
+      .eq("id", scoped.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Failed to update checklist:", error);
+      return NextResponse.json(
+        { error: "Failed to save checklist", code: "db_error" },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({ data });
+  }
+
+  // Dispute row doesn't exist yet for this merchant -- fall back to an
+  // upsert so checklist state saved before the Review tab loaded isn't
+  // silently dropped. This matches the pre-WIN-42 behavior.
+  const { data: merchant } = await supabase
+    .from("merchants")
+    .select("id")
+    .eq("stripe_account_id", accountId)
+    .single();
+
+  const { data: inserted, error: insertError } = await supabase
     .from("disputes")
-    .update(updatePayload)
-    .eq("stripe_dispute_id", disputeId)
+    .upsert(
+      {
+        stripe_dispute_id: disputeId,
+        merchant_id: (merchant as { id: string } | null)?.id,
+        amount: 0,
+        reason_code: "",
+        ...updatePayload,
+      },
+      { onConflict: "stripe_dispute_id" },
+    )
     .select()
     .single();
 
-  if (error) {
-    if (error.code === "PGRST116") {
-      const { data: merchant } = await supabase
-        .from("merchants")
-        .select("id")
-        .eq("stripe_account_id", accountId)
-        .single();
-
-      const { data: inserted, error: insertError } = await supabase
-        .from("disputes")
-        .upsert(
-          {
-            stripe_dispute_id: disputeId,
-            merchant_id: merchant?.id,
-            amount: 0,
-            reason_code: "",
-            ...updatePayload,
-          },
-          { onConflict: "stripe_dispute_id" },
-        )
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error("Failed to upsert dispute checklist:", insertError);
-        return NextResponse.json(
-          { error: "Failed to save checklist", code: "db_error" },
-          { status: 500 },
-        );
-      }
-
-      return NextResponse.json({ data: inserted });
-    }
-
-    console.error("Failed to update checklist:", error);
+  if (insertError) {
+    console.error("Failed to upsert dispute checklist:", insertError);
     return NextResponse.json(
       { error: "Failed to save checklist", code: "db_error" },
       { status: 500 },
     );
   }
 
-  return NextResponse.json({ data });
+  return NextResponse.json({ data: inserted });
 });

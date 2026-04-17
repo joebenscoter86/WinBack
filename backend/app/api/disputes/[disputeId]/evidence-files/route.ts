@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { withStripeAuth } from "@/lib/stripe-auth";
 import { ensureMerchant } from "@/lib/merchants";
 import { supabase } from "@/lib/supabase";
+import { getDisputeForAccount } from "@/lib/disputes";
 import { getDispute } from "@/lib/stripe";
 import {
   disputeExpiredResponse,
@@ -24,16 +25,15 @@ export const GET = withStripeAuth(async (
     );
   }
 
-  ensureMerchant(accountId, userId);
+  await ensureMerchant(accountId, userId);
 
-  // Look up the internal dispute UUID
-  const { data: dispute, error: disputeError } = await supabase
-    .from("disputes")
-    .select("id")
-    .eq("stripe_dispute_id", disputeId)
-    .single();
+  const { data: dispute } = await getDisputeForAccount<{ id: string }>(
+    disputeId,
+    accountId,
+    "id",
+  );
 
-  if (disputeError || !dispute) {
+  if (!dispute) {
     return NextResponse.json({ data: [] });
   }
 
@@ -76,17 +76,17 @@ export const POST = withStripeAuth(async (
     mime_type?: string;
   };
 
-  ensureMerchant(accountId, userId);
+  await ensureMerchant(accountId, userId);
 
   // If no file fields provided, treat as a list request
   if (!checklist_item_key && !stripe_file_id && !file_name) {
-    const { data: dispute, error: disputeError } = await supabase
-      .from("disputes")
-      .select("id")
-      .eq("stripe_dispute_id", disputeId)
-      .single();
+    const { data: dispute } = await getDisputeForAccount<{ id: string }>(
+      disputeId,
+      accountId,
+      "id",
+    );
 
-    if (disputeError || !dispute) {
+    if (!dispute) {
       return NextResponse.json({ data: [] });
     }
 
@@ -114,17 +114,18 @@ export const POST = withStripeAuth(async (
     );
   }
 
-  // Look up the dispute row. The dispute MUST already exist -- the Review tab
-  // calls GET /api/disputes/{id} first, which fetches from Stripe and inserts
-  // the real reason_code/amount. If it doesn't exist yet, fail loudly instead
-  // of inserting a zombie row with zero values (WIN-41).
-  const { data: existing, error: lookupError } = await supabase
-    .from("disputes")
-    .select("id")
-    .eq("stripe_dispute_id", disputeId)
-    .single();
+  // Look up the dispute row, scoped to this merchant. The dispute MUST
+  // already exist -- the Review tab calls GET /api/disputes/{id} first,
+  // which fetches from Stripe and inserts the real reason_code/amount.
+  // If it doesn't exist yet, fail loudly instead of inserting a zombie
+  // row with zero values (WIN-41).
+  const { data: existing } = await getDisputeForAccount<{ id: string }>(
+    disputeId,
+    accountId,
+    "id",
+  );
 
-  if (lookupError || !existing) {
+  if (!existing) {
     return NextResponse.json(
       {
         error:
@@ -134,8 +135,6 @@ export const POST = withStripeAuth(async (
       { status: 409 },
     );
   }
-
-  const disputeRow = existing;
 
   // Expired/closed guard (WIN-48)
   try {
@@ -162,7 +161,7 @@ export const POST = withStripeAuth(async (
     .from("evidence_files")
     .upsert(
       {
-        dispute_id: disputeRow.id,
+        dispute_id: existing.id,
         checklist_item_key,
         stripe_file_id,
         file_name,

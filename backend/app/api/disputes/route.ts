@@ -7,8 +7,7 @@ import Stripe from "stripe";
 export const POST = withStripeAuth(async (_request, { identity }) => {
   const { accountId, userId } = identity;
 
-  // Fire-and-forget merchant upsert
-  ensureMerchant(accountId, userId);
+  await ensureMerchant(accountId, userId);
 
   try {
     const disputes = await listDisputes(accountId, {

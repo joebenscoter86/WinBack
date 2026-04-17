@@ -33,54 +33,27 @@ vi.mock("@/lib/narratives/generate-background", () => ({
   runBackgroundGeneration: vi.fn().mockResolvedValue(undefined),
 }));
 
-// Supabase mock -- configured per-test via result variables
-let mockMerchantResult: { data: unknown; error: unknown } = {
-  data: { id: "merchant-uuid-1" },
-  error: null,
-};
+// Mock the WIN-42 helpers directly. This is cleaner than mocking the
+// supabase chain since the helpers encapsulate the join + RPC.
 let mockDisputeResult: { data: unknown; error: unknown } = {
   data: { id: "dispute-uuid-1", narrative_generations_count: 0 },
   error: null,
 };
-let mockUpdateResult: { data: unknown; error: unknown } = {
-  data: { narrative_generations_count: 1 },
+let mockIncrementResult: { newCount: number | null; error: unknown } = {
+  newCount: 1,
   error: null,
 };
+vi.mock("@/lib/disputes", () => ({
+  getDisputeForAccount: vi.fn(async () => mockDisputeResult),
+  incrementNarrativeGenerations: vi.fn(async () => mockIncrementResult),
+}));
+
 let mockInsertResult: { data: unknown; error: unknown } = {
   data: { id: "gen-uuid-1" },
   error: null,
 };
 
 function makeMockFrom(table: string) {
-  if (table === "merchants") {
-    return {
-      select: () => ({
-        eq: () => ({
-          single: () => Promise.resolve(mockMerchantResult),
-        }),
-      }),
-    };
-  }
-  if (table === "disputes") {
-    return {
-      select: () => ({
-        eq: (_col1: string, _val1: string) => ({
-          eq: (_col2: string, _val2: string) => ({
-            single: () => Promise.resolve(mockDisputeResult),
-          }),
-        }),
-      }),
-      update: () => ({
-        eq: () => ({
-          eq: () => ({
-            select: () => ({
-              single: () => Promise.resolve(mockUpdateResult),
-            }),
-          }),
-        }),
-      }),
-    };
-  }
   if (table === "narrative_generations") {
     return {
       insert: () => ({
@@ -110,15 +83,11 @@ function makeRequest(body: unknown): NextRequest {
 describe("POST /api/narratives/generate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockMerchantResult = { data: { id: "merchant-uuid-1" }, error: null };
     mockDisputeResult = {
       data: { id: "dispute-uuid-1", narrative_generations_count: 0 },
       error: null,
     };
-    mockUpdateResult = {
-      data: { narrative_generations_count: 1 },
-      error: null,
-    };
+    mockIncrementResult = { newCount: 1, error: null };
     mockInsertResult = { data: { id: "gen-uuid-1" }, error: null };
   });
 
@@ -140,7 +109,7 @@ describe("POST /api/narratives/generate", () => {
   });
 
   it("returns 404 when dispute not found for this merchant", async () => {
-    mockDisputeResult = { data: null, error: { message: "not found", code: "PGRST116" } };
+    mockDisputeResult = { data: null, error: null };
 
     const { POST } = await import("../generate/route");
     const res = await POST(
@@ -152,10 +121,7 @@ describe("POST /api/narratives/generate", () => {
   });
 
   it("returns 429 when generation limit (5) is reached", async () => {
-    mockDisputeResult = {
-      data: { id: "dispute-uuid-1", narrative_generations_count: 5 },
-      error: null,
-    };
+    mockIncrementResult = { newCount: null, error: null };
 
     const { POST } = await import("../generate/route");
     const res = await POST(

@@ -25,12 +25,19 @@ export const POST = withStripeAuth(async (
     );
   }
 
-  // 2. Fetch the generation record
+  // 2. Fetch the generation row joined to its dispute and the dispute's
+  // merchant -- scope to the authenticated Stripe account in a single
+  // query. If any of the three conditions fail (generation missing,
+  // dispute mismatch, wrong merchant) we return the same 404 so we don't
+  // leak which layer matched. (WIN-42 collapsed the prior 3-query chain.)
   const { data: generation, error: generationError } = await supabase
     .from("narrative_generations")
-    .select("id, status, dispute_id, narrative_output, error")
+    .select(
+      "id, status, dispute_id, narrative_output, error, disputes!inner(merchants!inner(stripe_account_id))",
+    )
     .eq("id", generationId)
-    .single();
+    .eq("disputes.merchants.stripe_account_id", accountId)
+    .maybeSingle();
 
   if (generationError || !generation) {
     return NextResponse.json(
@@ -39,38 +46,7 @@ export const POST = withStripeAuth(async (
     );
   }
 
-  // 3. Verify merchant ownership -- look up merchant by Stripe account ID
-  const { data: merchant, error: merchantError } = await supabase
-    .from("merchants")
-    .select("id")
-    .eq("stripe_account_id", accountId)
-    .single();
-
-  if (merchantError || !merchant) {
-    // Don't leak existence -- return same 404
-    return NextResponse.json(
-      { error: "Generation not found", code: "not_found" },
-      { status: 404 },
-    );
-  }
-
-  // 4. Verify the dispute belongs to this merchant
-  const { data: dispute, error: disputeError } = await supabase
-    .from("disputes")
-    .select("id")
-    .eq("id", (generation as { dispute_id: string }).dispute_id)
-    .eq("merchant_id", merchant.id)
-    .single();
-
-  if (disputeError || !dispute) {
-    // Don't leak existence -- return same 404
-    return NextResponse.json(
-      { error: "Generation not found", code: "not_found" },
-      { status: 404 },
-    );
-  }
-
-  // 5. Return based on status
+  // 3. Return based on status
   const gen = generation as {
     id: string;
     status: string;
@@ -99,6 +75,5 @@ export const POST = withStripeAuth(async (
     });
   }
 
-  // Fallback for any other status value
   return NextResponse.json({ status: gen.status });
 });

@@ -4,6 +4,10 @@ import Stripe from "stripe";
 import { withStripeAuth } from "@/lib/stripe-auth";
 import { ensureMerchant } from "@/lib/merchants";
 import { supabase } from "@/lib/supabase";
+import {
+  getDisputeForAccount,
+  incrementNarrativeGenerations,
+} from "@/lib/disputes";
 import { runBackgroundGeneration } from "@/lib/narratives/generate-background";
 import { getDispute } from "@/lib/stripe";
 import {
@@ -25,7 +29,6 @@ export const POST = withStripeAuth(async (
     merchant_feedback?: string;
   };
 
-  // 1. Validate required fields
   if (!dispute_id || !reason_code || !network) {
     return NextResponse.json(
       { error: "Missing dispute_id, reason_code, or network", code: "invalid_request" },
@@ -33,31 +36,13 @@ export const POST = withStripeAuth(async (
     );
   }
 
-  // 2. Upsert merchant row -- must await because we look up merchant.id on the
-  // next line. Fire-and-forget would race against the SELECT on first visit.
   await ensureMerchant(accountId, userId);
 
-  // 3. Look up merchant
-  const { data: merchant, error: merchantError } = await supabase
-    .from("merchants")
-    .select("id")
-    .eq("stripe_account_id", accountId)
-    .single();
-
-  if (merchantError || !merchant) {
-    return NextResponse.json(
-      { error: "Merchant not found", code: "not_found" },
-      { status: 404 },
-    );
-  }
-
-  // 4. Look up dispute (scoped to this merchant)
-  const { data: dispute, error: disputeError } = await supabase
-    .from("disputes")
-    .select("id, narrative_generations_count")
-    .eq("stripe_dispute_id", dispute_id)
-    .eq("merchant_id", merchant.id)
-    .single();
+  // Merchant-scoped dispute lookup in a single query (WIN-42).
+  const { data: dispute, error: disputeError } = await getDisputeForAccount<{
+    id: string;
+    narrative_generations_count: number;
+  }>(dispute_id, accountId, "id, narrative_generations_count");
 
   if (disputeError || !dispute) {
     return NextResponse.json(
@@ -66,7 +51,7 @@ export const POST = withStripeAuth(async (
     );
   }
 
-  // 4b. Expired/closed guard (WIN-48) -- don't burn a generation count on a
+  // Expired/closed guard (WIN-48) -- don't burn a generation count on a
   // dispute Stripe will no longer accept evidence for.
   try {
     const stripeDispute = await getDispute(accountId, dispute_id);
@@ -87,9 +72,21 @@ export const POST = withStripeAuth(async (
     );
   }
 
-  // 5. Check generation limit
-  const currentCount = (dispute as { narrative_generations_count?: number }).narrative_generations_count ?? 0;
-  if (currentCount >= MAX_GENERATIONS) {
+  // Atomic increment via RPC (WIN-42). null means already at limit.
+  const { newCount, error: incError } = await incrementNarrativeGenerations(
+    dispute.id,
+    MAX_GENERATIONS,
+  );
+
+  if (incError) {
+    console.error("[WIN-18] incrementNarrativeGenerations failed:", incError);
+    return NextResponse.json(
+      { error: "Failed to start generation", code: "db_error" },
+      { status: 500 },
+    );
+  }
+
+  if (newCount === null) {
     return NextResponse.json(
       {
         error:
@@ -100,38 +97,11 @@ export const POST = withStripeAuth(async (
     );
   }
 
-  // 6. Atomic increment -- prevents race condition where two concurrent requests
-  // both read count=4 and both proceed. Uses raw SQL via Supabase RPC-style query.
-  const disputeId = (dispute as { id: string }).id;
-  const { data: updated, error: updateError } = await supabase
-    .from("disputes")
-    .update({ narrative_generations_count: currentCount + 1 })
-    .eq("id", disputeId)
-    .eq("narrative_generations_count", currentCount)
-    .select("narrative_generations_count")
-    .single();
-
-  if (updateError || !updated) {
-    // Another request incremented the count between our read and write.
-    // Re-check: if now at limit, return 429. Otherwise retry is safe but
-    // for simplicity we return a conflict error.
-    return NextResponse.json(
-      {
-        error:
-          "You've used all 5 narrative generations for this dispute. You can edit the current narrative manually.",
-        code: "generation_limit",
-      },
-      { status: 429 },
-    );
-  }
-
-  const newCount = (updated as { narrative_generations_count: number }).narrative_generations_count;
-
-  // 7. Insert pending generation row
+  // Insert pending generation row
   const { data: generation, error: insertError } = await supabase
     .from("narrative_generations")
     .insert({
-      dispute_id: disputeId,
+      dispute_id: dispute.id,
       status: "pending",
       generation_number: newCount,
       merchant_feedback: merchant_feedback ?? null,
@@ -149,7 +119,7 @@ export const POST = withStripeAuth(async (
 
   const generationId = (generation as { id: string }).id;
 
-  // 8. Fire background generation (non-blocking via Next.js after() API).
+  // Fire background generation (non-blocking via Next.js after() API).
   // We await after() so that in test environments the mocked after()
   // (which returns the promise directly) propagates the background work
   // inline. In production, after() returns void and awaiting void is a no-op.
@@ -157,7 +127,7 @@ export const POST = withStripeAuth(async (
     runBackgroundGeneration({
       generationId,
       accountId,
-      disputeId,
+      disputeId: dispute.id,
       stripeDisputeId: dispute_id,
       reasonCode: reason_code,
       network,
@@ -165,7 +135,6 @@ export const POST = withStripeAuth(async (
     }),
   );
 
-  // 9. Return 202 Accepted
   return NextResponse.json(
     { generation_id: generationId, status: "pending" },
     { status: 202 },
