@@ -17,6 +17,7 @@ import DisputeCard from '../components/DisputeCard';
 import DisputeWorkflow from '../components/DisputeWorkflow';
 import EmptyState from '../components/EmptyState';
 import ErrorBanner from '../components/ErrorBanner';
+import UpgradePromptBanner from '../components/UpgradePromptBanner';
 import { fetchBackend, ApiError } from '../lib/apiClient';
 import { isResolved, isDisputeExpired } from '../lib/utils';
 import type { Dispute } from '../lib/types';
@@ -160,6 +161,7 @@ const DisputeListView = (context: ExtensionContextValue) => {
           <TabPanels>
             <TabPanel id="disputes">
               <Box css={{ padding: 'small', stack: 'y', gap: 'small' }}>
+                <UpgradePromptBanner context={contextRef.current} />
                 {disputes.length === 0 ? (
                   <EmptyState
                     title="No disputes yet"
