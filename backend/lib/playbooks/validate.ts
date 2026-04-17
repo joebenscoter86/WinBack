@@ -8,9 +8,11 @@ export class PlaybookInvariantError extends Error {
 }
 
 /**
- * Enforces the A/T/Slot invariant: every checklist item MUST have exactly one
- * of stripe_field, narrative_only=true, or stripe_evidence_field set. Throws
- * PlaybookInvariantError naming the playbook and offending item on violation.
+ * Enforces invariants on every checklist item:
+ *   - key is non-empty (including after trim) and unique within the playbook. (WIN-40)
+ *   - Exactly one of stripe_field, narrative_only, or stripe_evidence_field
+ *     is set (the A/T/Slot invariant).
+ * Throws PlaybookInvariantError naming the playbook and offending item on violation.
  */
 export function validatePlaybookChecklist(
   playbookKey: string,
