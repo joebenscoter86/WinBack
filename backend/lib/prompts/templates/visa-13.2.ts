@@ -14,8 +14,8 @@ export const visa132Template: ReasonCodePromptTemplate = {
         "State the subscription start date, billing cycle, and that the subscription was active at the time of the disputed charge. Include the billing period covered by the charge.",
       auto_pull_fields: [],
       evidence_keys: [
-        "Proof of active subscription at time of charge",
-        "Billing period covered by the disputed charge (service_date)",
+        "subscription_active_proof",
+        "billing_period_covered",
       ],
       priority: 1,
     },
@@ -26,9 +26,9 @@ export const visa132Template: ReasonCodePromptTemplate = {
         "State the cancellation policy and how it was disclosed to the customer at signup. If the cancellation request came after the billing date, state the timeline factually. If no cancellation was received, state that.",
       auto_pull_fields: [],
       evidence_keys: [
-        "Cancellation policy (terms accepted at signup)",
-        "Cancellation request timestamp vs. charge date",
-        "Cancellation confirmation sent to customer",
+        "cancellation_policy_terms",
+        "cancellation_request_timestamp",
+        "cancellation_confirmation_sent",
       ],
       priority: 1,
     },
@@ -38,7 +38,7 @@ export const visa132Template: ReasonCodePromptTemplate = {
       instruction:
         "If access logs show the customer used the service after the alleged cancellation date, state the timestamps and activity. Continued usage undermines the claim that the subscription should have been cancelled.",
       auto_pull_fields: [],
-      evidence_keys: ["Service usage logs after last billing cycle"],
+      evidence_keys: ["post_billing_usage_logs"],
       priority: 1,
     },
     {
@@ -47,7 +47,7 @@ export const visa132Template: ReasonCodePromptTemplate = {
       instruction:
         "Reference any correspondence about the subscription or cancellation. If the customer was informed of the billing terms and did not follow the cancellation process, state this factually.",
       auto_pull_fields: [],
-      evidence_keys: ["Communication history with customer"],
+      evidence_keys: ["customer_communication_history"],
       priority: 2,
     },
     {
@@ -57,8 +57,8 @@ export const visa132Template: ReasonCodePromptTemplate = {
         "Reference the subscription agreement and refund policy terms. If a refund was already issued, state the amount and date.",
       auto_pull_fields: ["refunds"],
       evidence_keys: [
-        "Subscription agreement / terms of service",
-        "Refund confirmation (if already refunded)",
+        "subscription_agreement",
+        "refund_confirmation",
       ],
       priority: 2,
     },

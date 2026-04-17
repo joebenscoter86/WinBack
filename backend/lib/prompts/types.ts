@@ -36,6 +36,12 @@ export interface EvidenceFileRef {
  * string. (WIN-49)
  */
 export interface NarrativeOnlyItem {
+  /**
+   * Stable key from EvidenceChecklistItem.key. Used to look up the merchant's
+   * note in checklist_notes (which is keyed by stable key post-WIN-40 migration 011).
+   * Must match a key on the playbook's evidence_checklist. (WIN-40)
+   */
+  key: string;
   item: string;
   fallback?: string;
 }

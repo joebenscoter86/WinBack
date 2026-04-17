@@ -37,6 +37,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
 
   evidence_checklist: [
     {
+      key: "refund_confirmation_record",
       item: "Refund confirmation / transaction record",
       category: "mandatory",
       context: "refund_issued",
@@ -50,6 +51,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 1,
     },
     {
+      key: "refund_amount_and_date",
       item: "Refund amount and date matching the dispute",
       category: "mandatory",
       context: "refund_issued",
@@ -63,6 +65,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 2,
     },
     {
+      key: "processor_credit_confirmation",
       item: "Processor confirmation of the credit posting",
       category: "recommended",
       context: "refund_issued",
@@ -76,6 +79,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "return_refund_policy_at_checkout",
       item: "Return/refund policy as displayed at checkout",
       category: "mandatory",
       context: "refund_disputed",
@@ -89,6 +93,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 2,
     },
     {
+      key: "return_condition_documentation",
       item: "Return condition documentation (photos or inspection records)",
       category: "mandatory",
       context: "refund_disputed",
@@ -102,6 +107,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 4,
     },
     {
+      key: "no_return_received",
       item: "Evidence the item was not returned",
       category: "mandatory",
       context: "refund_disputed",
@@ -117,6 +123,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "customer_denial_communication",
       item: "Customer communication denying the return",
       category: "recommended",
       context: "refund_disputed",
@@ -130,6 +137,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "order_confirmation_original_terms",
       item: "Order confirmation showing original terms",
       category: "recommended",
       context: "all",
@@ -143,6 +151,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "cancellation_policy_disclosure",
       item: "Cancellation policy disclosure (if the missing credit relates to a cancelled subscription)",
       category: "recommended",
       context: "all",
@@ -156,6 +165,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "written_return_refund_communication",
       item: "Written communication about the return or refund",
       category: "recommended",
       context: "all",

@@ -13,8 +13,8 @@ export const visa131Template: ReasonCodePromptTemplate = {
         "State the tracking number, carrier name, delivery date, and delivery status. If a signature was obtained, include that. Present these as factual statements from carrier records.",
       auto_pull_fields: [],
       evidence_keys: [
-        "Carrier tracking confirmation with delivery scan",
-        "Signed delivery confirmation (for orders over $100)",
+        "tracking_delivery_scan",
+        "signed_delivery",
       ],
       priority: 1,
     },
@@ -25,7 +25,7 @@ export const visa131Template: ReasonCodePromptTemplate = {
         "State that the shipping address on the order matches the delivery address confirmed by the carrier. Include AVS results from Stripe showing address verification at time of purchase.",
       auto_pull_fields: ["avs_address_check", "avs_zip_check"],
       evidence_keys: [
-        "Delivery address verification (matches billing or shipping address on order)",
+        "shipping_address_match",
       ],
       priority: 1,
     },
@@ -36,8 +36,8 @@ export const visa131Template: ReasonCodePromptTemplate = {
         "For digital goods only. State access log timestamps, IP addresses, and what the customer accessed or downloaded. Include email delivery confirmation of license keys or download links.",
       auto_pull_fields: [],
       evidence_keys: [
-        "Access logs showing customer used the product/service (IP address, login timestamps, download confirmation)",
-        "Email delivery confirmation (license key, download link sent to customer's email)",
+        "digital_access_logs",
+        "digital_delivery_email",
       ],
       priority: 1,
     },
@@ -48,8 +48,8 @@ export const visa131Template: ReasonCodePromptTemplate = {
         "For services only. State the service completion date and reference completion documentation, signed work orders, or appointment records.",
       auto_pull_fields: [],
       evidence_keys: [
-        "Service completion documentation or proof of performance",
-        "Appointment or scheduling records confirming service date",
+        "service_completion",
+        "appointment_records",
       ],
       priority: 1,
     },
@@ -60,7 +60,7 @@ export const visa131Template: ReasonCodePromptTemplate = {
         "Reference any delivery notifications sent, tracking emails, or customer acknowledgment of receipt. Any communication where the customer acknowledged receiving the item is especially valuable.",
       auto_pull_fields: [],
       evidence_keys: [
-        "Communication with customer about delivery (emails, chat logs)",
+        "delivery_communication",
       ],
       priority: 2,
     },

@@ -57,7 +57,7 @@ function countMandatoryAttached(
   );
   const filed = new Set(evidenceFiles.map((f) => f.checklist_item_key));
   const attached = mandatory.filter(
-    (i) => i.stripe_field || i.narrative_only || filed.has(i.item),
+    (i) => i.stripe_field || i.narrative_only || filed.has(i.key),
   ).length;
   return { attached, total: mandatory.length };
 }

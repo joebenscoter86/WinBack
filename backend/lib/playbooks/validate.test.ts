@@ -4,6 +4,7 @@ import type { EvidenceChecklistItem } from "./types";
 
 function baseItem(overrides: Partial<EvidenceChecklistItem> = {}): EvidenceChecklistItem {
   return {
+    key: "test_key",
     item: "Test item",
     category: "recommended",
     context: "all",
@@ -68,5 +69,41 @@ describe("validatePlaybookChecklist", () => {
       expect((err as Error).message).toContain("visa-10.4");
       expect((err as Error).message).toContain("bad item");
     }
+  });
+
+  it("rejects a playbook with two items sharing the same key", () => {
+    try {
+      validatePlaybookChecklist("visa-10.4", [
+        baseItem({ key: "shared_key", item: "First", stripe_field: "authorization" }),
+        baseItem({ key: "shared_key", item: "Second", stripe_field: "avs_result" }),
+      ]);
+      throw new Error("should have thrown");
+    } catch (err) {
+      expect(err).toBeInstanceOf(PlaybookInvariantError);
+      expect((err as Error).message).toContain("visa-10.4");
+      expect((err as Error).message).toContain("shared_key");
+      expect((err as Error).message).toContain("Second");
+    }
+  });
+
+  it("rejects a playbook with an empty-string key", () => {
+    try {
+      validatePlaybookChecklist("visa-10.4", [
+        baseItem({ key: "", item: "Empty item", stripe_field: "authorization" }),
+      ]);
+      throw new Error("should have thrown");
+    } catch (err) {
+      expect(err).toBeInstanceOf(PlaybookInvariantError);
+      expect((err as Error).message).toContain("visa-10.4");
+      expect((err as Error).message).toContain("Empty item");
+    }
+  });
+
+  it("rejects a playbook with a whitespace-only key", () => {
+    expect(() =>
+      validatePlaybookChecklist("visa-10.4", [
+        baseItem({ key: "   ", stripe_field: "authorization" }),
+      ]),
+    ).toThrow(PlaybookInvariantError);
   });
 });

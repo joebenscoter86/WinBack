@@ -112,6 +112,7 @@ describe.each(ALL_PLAYBOOKS.map((p) => [p.display_name, p] as [string, PlaybookD
 
     it("has valid evidence item structure for all checklist items", () => {
       for (const item of playbook.evidence_checklist) {
+        expect(item.key.trim()).toBeTruthy();
         expect(item.item.trim()).toBeTruthy();
         expect(VALID_EVIDENCE_CATEGORIES).toContain(item.category);
         expect(VALID_EVIDENCE_CONTEXTS).toContain(item.context);
@@ -122,6 +123,13 @@ describe.each(ALL_PLAYBOOKS.map((p) => [p.display_name, p] as [string, PlaybookD
           item.urgency_order === null || typeof item.urgency_order === "number"
         ).toBe(true);
       }
+    });
+
+    it("has unique checklist item keys within this playbook", () => {
+      const keys = playbook.evidence_checklist.map((item) => item.key);
+      const seen = new Set<string>();
+      const duplicates = keys.filter((k) => seen.size === seen.add(k).size);
+      expect(duplicates).toEqual([]);
     });
 
     it("has urgency_essentials with a summary and ordered_items", () => {
@@ -178,5 +186,61 @@ describe("StripeEvidenceFileField", () => {
 
   it("EvidenceChecklistItem requires stripe_evidence_field", () => {
     expectTypeOf<EvidenceChecklistItem>().toHaveProperty("stripe_evidence_field");
+  });
+});
+
+describe("WIN-40 regression: stable keys survive label renames", () => {
+  it("assembleEvidence finds files after every display label is rewritten", async () => {
+    const { assembleEvidence } = await import("../../disputes/assemble-evidence");
+    const visa104 = ALL_PLAYBOOKS.find(
+      (p) => p.network === "visa" && p.reason_code === "10.4",
+    );
+    if (!visa104) throw new Error("visa-10.4 playbook not loaded");
+
+    // Clone the playbook and rewrite every display label. Keys are preserved.
+    const mutated = {
+      ...visa104,
+      evidence_checklist: visa104.evidence_checklist.map((item) => ({
+        ...item,
+        item: `!!! RENAMED: ${item.item} !!!`,
+      })),
+    };
+
+    const fakeCharge = {
+      id: "ch_test",
+      payment_method_details: { card: { checks: {} } },
+      billing_details: { name: "Test", address: null },
+      refunds: { data: [] },
+    } as unknown as import("stripe").default.Charge;
+
+    // Upload a file keyed to a slot-bearing item's stable key.
+    const slotItem = visa104.evidence_checklist.find(
+      (i) => i.stripe_evidence_field === "shipping_documentation",
+    );
+    if (!slotItem) throw new Error("no shipping_documentation item in visa-10.4");
+
+    const result = await assembleEvidence({
+      charge: fakeCharge,
+      playbook: mutated,
+      evidenceFiles: [
+        {
+          id: "ef1",
+          checklist_item_key: slotItem.key,
+          stripe_file_id: "file_test_abc",
+          file_name: "tracking.pdf",
+          file_size: 1000,
+          mime_type: "application/pdf",
+        },
+      ],
+      narrativeText: null,
+      stripeClient: {
+        downloadStripeFile: async () => Buffer.from([]),
+        uploadCombinedEvidence: async () => "file_combined",
+      },
+    });
+
+    // The uploaded file must have landed in its Stripe slot, proving label drift
+    // did not orphan it.
+    expect(result.evidence[slotItem.stripe_evidence_field!]).toBe("file_test_abc");
   });
 });

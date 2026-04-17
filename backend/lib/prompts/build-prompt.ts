@@ -93,7 +93,10 @@ export function buildPrompt(context: PromptContext): PromptResult {
   const narrativeOnlyItems = context.narrative_only_items ?? [];
   const narrativeAssertionsList = narrativeOnlyItems
     .map((item) => {
-      const merchantNote = context.checklist_notes[item.item]?.trim();
+      // checklist_notes in Supabase is now keyed by the stable key (WIN-40
+      // migration 011). The display label is kept in the emitted line so the
+      // LLM sees a human-readable anchor, not an opaque identifier.
+      const merchantNote = context.checklist_notes[item.key]?.trim();
       if (merchantNote) {
         return `- "${item.item}": "${merchantNote}" (merchant's own words)`;
       }

@@ -39,6 +39,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
 
   evidence_checklist: [
     {
+      key: "subscription_active_proof",
       item: "Proof of active subscription at time of charge",
       category: "mandatory",
       context: "all",
@@ -52,6 +53,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 1,
     },
     {
+      key: "billing_period_covered",
       item: "Billing period covered by the disputed charge (service_date)",
       category: "mandatory",
       context: "all",
@@ -67,6 +69,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 2,
     },
     {
+      key: "customer_email_subscription",
       item: "Customer email address tied to the subscription",
       category: "recommended",
       context: "all",
@@ -80,6 +83,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "cancellation_policy_terms",
       item: "Cancellation policy (terms accepted at signup)",
       category: "mandatory",
       context: "all",
@@ -93,6 +97,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 4,
     },
     {
+      key: "cancellation_request_timestamp",
       item: "Cancellation request timestamp vs. charge date",
       category: "recommended",
       context: "all",
@@ -108,6 +113,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 3,
     },
     {
+      key: "cancellation_confirmation_sent",
       item: "Cancellation confirmation sent to customer",
       category: "recommended",
       context: "all",
@@ -121,6 +127,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "post_billing_usage_logs",
       item: "Service usage logs after last billing cycle",
       category: "recommended",
       context: "all",
@@ -134,6 +141,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 5,
     },
     {
+      key: "subscription_agreement",
       item: "Subscription agreement / terms of service",
       category: "recommended",
       context: "all",
@@ -147,6 +155,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "customer_communication_history",
       item: "Communication history with customer",
       category: "recommended",
       context: "all",
@@ -160,6 +169,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "refund_confirmation",
       item: "Refund confirmation (if already refunded)",
       category: "situational",
       context: "refund_issued",
@@ -173,6 +183,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "installment_plan_proof",
       item: "Proof this is an installment plan, not a recurring transaction",
       category: "mandatory",
       context: "installment_defense",

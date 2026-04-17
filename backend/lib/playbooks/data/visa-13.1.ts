@@ -39,6 +39,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
 
   evidence_checklist: [
     {
+      key: "tracking_delivery_scan",
       item: "Carrier tracking confirmation with delivery scan",
       category: "mandatory",
       context: "physical_goods",
@@ -52,6 +53,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 1,
     },
     {
+      key: "shipping_address_match",
       item: "Delivery address verification (matches billing or shipping address on order)",
       category: "mandatory",
       context: "physical_goods",
@@ -65,6 +67,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 2,
     },
     {
+      key: "signed_delivery",
       item: "Signed delivery confirmation (for orders over $100)",
       category: "recommended",
       context: "physical_goods",
@@ -78,6 +81,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "order_confirmation_delivery_date",
       item: "Order confirmation showing agreed delivery date",
       category: "recommended",
       context: "physical_goods",
@@ -91,6 +95,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 3,
     },
     {
+      key: "order_details_screenshot",
       item: "Screenshot of order details (items, quantities, shipping method)",
       category: "recommended",
       context: "physical_goods",
@@ -104,6 +109,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "delivery_communication",
       item: "Communication with customer about delivery (emails, chat logs)",
       category: "recommended",
       context: "physical_goods",
@@ -117,6 +123,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 4,
     },
     {
+      key: "digital_access_logs",
       item: "Access logs showing customer used the product/service (IP address, login timestamps, download confirmation)",
       category: "mandatory",
       context: "digital_goods",
@@ -130,6 +137,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 1,
     },
     {
+      key: "digital_delivery_email",
       item: "Email delivery confirmation (license key, download link sent to customer's email)",
       category: "mandatory",
       context: "digital_goods",
@@ -143,6 +151,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 2,
     },
     {
+      key: "checkout_terms",
       item: "Terms of service / delivery terms accepted at checkout",
       category: "recommended",
       context: "digital_goods",
@@ -156,6 +165,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "service_completion",
       item: "Service completion documentation or proof of performance",
       category: "mandatory",
       context: "services",
@@ -169,6 +179,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 1,
     },
     {
+      key: "appointment_records",
       item: "Appointment or scheduling records confirming service date",
       category: "recommended",
       context: "services",
