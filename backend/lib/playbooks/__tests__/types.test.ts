@@ -127,7 +127,9 @@ describe.each(ALL_PLAYBOOKS.map((p) => [p.display_name, p] as [string, PlaybookD
 
     it("has unique checklist item keys within this playbook", () => {
       const keys = playbook.evidence_checklist.map((item) => item.key);
-      expect(new Set(keys).size).toBe(keys.length);
+      const seen = new Set<string>();
+      const duplicates = keys.filter((k) => seen.size === seen.add(k).size);
+      expect(duplicates).toEqual([]);
     });
 
     it("has urgency_essentials with a summary and ordered_items", () => {

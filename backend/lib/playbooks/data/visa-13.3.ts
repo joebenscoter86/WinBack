@@ -143,6 +143,11 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_essential: false,
       urgency_order: null,
     },
+    // Intentional key split: visa-13.6 and mastercard-4853 both use
+    // `return_refund_policy_at_checkout` for their broader refund-policy item.
+    // This visa-13.3 item is narrower -- proving the merchant gave the customer
+    // a way to return DEFECTIVE merchandise (the 13.3 reason code context). Keep
+    // the keys distinct so label rewording on one does not drift the other. (WIN-40)
     {
       key: "return_policy_at_checkout",
       item: "Return policy clearly stated at checkout (screenshot or policy page)",
