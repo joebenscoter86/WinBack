@@ -112,6 +112,7 @@ describe.each(ALL_PLAYBOOKS.map((p) => [p.display_name, p] as [string, PlaybookD
 
     it("has valid evidence item structure for all checklist items", () => {
       for (const item of playbook.evidence_checklist) {
+        expect(item.key.trim()).toBeTruthy();
         expect(item.item.trim()).toBeTruthy();
         expect(VALID_EVIDENCE_CATEGORIES).toContain(item.category);
         expect(VALID_EVIDENCE_CONTEXTS).toContain(item.context);
@@ -122,6 +123,11 @@ describe.each(ALL_PLAYBOOKS.map((p) => [p.display_name, p] as [string, PlaybookD
           item.urgency_order === null || typeof item.urgency_order === "number"
         ).toBe(true);
       }
+    });
+
+    it("has unique checklist item keys within this playbook", () => {
+      const keys = playbook.evidence_checklist.map((item) => item.key);
+      expect(new Set(keys).size).toBe(keys.length);
     });
 
     it("has urgency_essentials with a summary and ordered_items", () => {

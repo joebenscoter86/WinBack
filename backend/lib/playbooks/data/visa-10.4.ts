@@ -39,6 +39,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
 
   evidence_checklist: [
     {
+      key: "authorization_record",
       item: "Transaction authorization record",
       category: "mandatory",
       context: "all",
@@ -52,6 +53,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 2,
     },
     {
+      key: "avs_result",
       item: "Address verification result",
       category: "mandatory",
       context: "all",
@@ -65,6 +67,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 2,
     },
     {
+      key: "cvc_verification",
       item: "Security code (CVV) verification result",
       category: "mandatory",
       context: "all",
@@ -78,6 +81,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 2,
     },
     {
+      key: "ce3_prior_transactions",
       item: "Two prior undisputed transactions from the same cardholder (120-365 days before disputed transaction)",
       category: "mandatory",
       context: "ce3",
@@ -91,6 +95,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 3,
     },
     {
+      key: "ce3_primary_link",
       item: "IP address or device ID/fingerprint matching across all 3 transactions (disputed + 2 historical)",
       category: "mandatory",
       context: "ce3",
@@ -106,6 +111,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 3,
     },
     {
+      key: "ce3_secondary_link",
       item: "Second matching data element across all 3 transactions (user account ID, shipping address, or device ID)",
       category: "mandatory",
       context: "ce3",
@@ -121,6 +127,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 3,
     },
     {
+      key: "three_d_secure_proof",
       item: "Bank verification (3D Secure) authentication proof",
       category: "mandatory",
       context: "all",
@@ -134,6 +141,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 1,
     },
     {
+      key: "delivery_to_billing_address",
       item: "Delivery confirmation to cardholder's verified billing address",
       category: "recommended",
       context: "all",
@@ -147,6 +155,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 4,
     },
     {
+      key: "customer_account_details",
       item: "Customer account details (account creation date, purchase history, total prior orders)",
       category: "recommended",
       context: "all",
@@ -160,6 +169,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 5,
     },
     {
+      key: "digital_access_logs",
       item: "Access/activity logs proving the customer used the product (for digital goods and SaaS)",
       category: "mandatory",
       context: "digital_goods",
@@ -173,6 +183,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 5,
     },
     {
+      key: "device_and_ip",
       item: "Device identifier and IP address of the transaction",
       category: "recommended",
       context: "all",
@@ -188,6 +199,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "statement_descriptor_proof",
       item: "Bank statement name screenshot showing recognizable business name",
       category: "recommended",
       context: "all",
@@ -201,6 +213,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "customer_engagement_communication",
       item: "Communication with cardholder showing engagement (order confirmation emails opened/clicked, support contacts)",
       category: "recommended",
       context: "all",

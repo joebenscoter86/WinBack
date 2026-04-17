@@ -36,6 +36,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
 
   evidence_checklist: [
     {
+      key: "authorization_record",
       item: "Original authorization record with transaction approval number and timestamp",
       category: "mandatory",
       context: "all",
@@ -49,6 +50,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 1,
     },
     {
+      key: "final_charge_tied_to_authorization",
       item: "Final charge record tied to the authorization",
       category: "mandatory",
       context: "all",
@@ -62,6 +64,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 2,
     },
     {
+      key: "approval_number",
       item: "Transaction approval number",
       category: "mandatory",
       context: "all",
@@ -75,6 +78,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "currency_conversion",
       item: "Currency conversion documentation",
       category: "mandatory",
       context: "amount_discrepancy",
@@ -90,6 +94,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 3,
     },
     {
+      key: "tip_gratuity_authorization",
       item: "Tip or gratuity authorization documentation (for restaurant and service merchants)",
       category: "mandatory",
       context: "amount_discrepancy",
@@ -103,6 +108,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 3,
     },
     {
+      key: "renewed_payment_approval",
       item: "Renewed payment approval record (if original authorization expired before the charge was finalized)",
       category: "mandatory",
       context: "expired_auth",
@@ -116,6 +122,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 3,
     },
     {
+      key: "charge_before_expiry_timestamp",
       item: "Timestamp proof that the charge was finalized before the authorization expired",
       category: "mandatory",
       context: "expired_auth",
@@ -131,6 +138,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "processor_transaction_log",
       item: "Payment processor transaction log showing the full record from approval to final charge",
       category: "recommended",
       context: "all",
@@ -144,6 +152,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 4,
     },
     {
+      key: "order_details_matching_amount",
       item: "Order details matching the authorized amount",
       category: "recommended",
       context: "all",

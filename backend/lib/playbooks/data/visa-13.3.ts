@@ -42,6 +42,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
 
   evidence_checklist: [
     {
+      key: "product_description_at_purchase",
       item: "Product description as shown at time of purchase (screenshot, listing page)",
       category: "mandatory",
       context: "all",
@@ -55,6 +56,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 1,
     },
     {
+      key: "delivery_proof",
       item: "Proof of delivery (tracking number with delivery confirmation)",
       category: "mandatory",
       context: "physical_goods",
@@ -68,6 +70,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 2,
     },
     {
+      key: "pre_shipment_photos",
       item: "Pre-shipment photos of the actual item",
       category: "recommended",
       context: "physical_goods",
@@ -81,6 +84,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 4,
     },
     {
+      key: "product_specifications",
       item: "Product specifications or detailed listing",
       category: "recommended",
       context: "physical_goods",
@@ -94,6 +98,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "customer_product_communications",
       item: "Customer communications about the product (emails, chat logs)",
       category: "recommended",
       context: "all",
@@ -107,6 +112,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 3,
     },
     {
+      key: "no_return_attempt",
       item: "Proof cardholder did NOT attempt to return the merchandise",
       category: "recommended",
       context: "physical_goods",
@@ -122,6 +128,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "refund_refusal_explanation",
       item: "Refund refusal explanation (if you denied a return or refund request)",
       category: "recommended",
       context: "all",
@@ -137,6 +144,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "return_policy_at_checkout",
       item: "Return policy clearly stated at checkout (screenshot or policy page)",
       category: "recommended",
       context: "physical_goods",
@@ -150,6 +158,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "refund_or_replacement_confirmation",
       item: "Refund or replacement confirmation (if already issued)",
       category: "recommended",
       context: "all",
@@ -163,6 +172,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "service_agreement",
       item: "Service agreement or scope of work document",
       category: "mandatory",
       context: "services",
@@ -176,6 +186,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 1,
     },
     {
+      key: "service_delivery_proof",
       item: "Proof of service delivery (reports, access logs, deliverables, work product)",
       category: "mandatory",
       context: "services",
@@ -189,6 +200,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 2,
     },
     {
+      key: "client_signoff",
       item: "Client sign-off or acceptance documentation",
       category: "recommended",
       context: "services",

@@ -41,6 +41,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
 
   evidence_checklist: [
     {
+      key: "product_description_original",
       item: "Original product/service description (website listing, catalog page, or order confirmation)",
       category: "mandatory",
       context: "all",
@@ -54,6 +55,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 1,
     },
     {
+      key: "matched_description_proof",
       item: "Proof the item or service matched the description (photos of actual item shipped, quality control records, inspection documentation)",
       category: "mandatory",
       context: "all",
@@ -67,6 +69,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "customer_communication_logs",
       item: "Customer communication logs (emails, chat transcripts, support tickets)",
       category: "mandatory",
       context: "all",
@@ -80,6 +83,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 2,
     },
     {
+      key: "return_refund_policy_at_checkout",
       item: "Return/refund policy as displayed at checkout",
       category: "recommended",
       context: "all",
@@ -93,6 +97,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 5,
     },
     {
+      key: "refund_refusal_explanation",
       item: "Refund refusal explanation (if you denied a return or refund request)",
       category: "recommended",
       context: "all",
@@ -108,6 +113,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "proof_of_delivery",
       item: "Proof of delivery (tracking confirmation, signature)",
       category: "recommended",
       context: "all",
@@ -121,6 +127,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 3,
     },
     {
+      key: "prior_transaction_history",
       item: "Prior transaction history with the cardholder",
       category: "recommended",
       context: "all",
@@ -134,6 +141,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "pre_shipment_photos",
       item: "Photos or video of item before shipment (timestamped packing photos showing correct item in good condition)",
       category: "recommended",
       context: "all",
@@ -147,6 +155,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: 4,
     },
     {
+      key: "qc_inspection_records",
       item: "Quality control or inspection records (batch inspection reports, QC checklists)",
       category: "recommended",
       context: "all",
@@ -160,6 +169,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "checkout_terms_of_service",
       item: "Terms of service accepted at checkout",
       category: "recommended",
       context: "all",
@@ -173,6 +183,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "signed_scope_of_work",
       item: "Signed scope of work or service agreement",
       category: "mandatory",
       context: "services",
@@ -186,6 +197,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "service_delivery_proof",
       item: "Proof of service delivery (reports, deliverables, login/access logs)",
       category: "mandatory",
       context: "services",
@@ -199,6 +211,7 @@ Getting bounced at the processor stage is an automatic loss with no second chanc
       urgency_order: null,
     },
     {
+      key: "milestone_signoffs",
       item: "Milestone sign-offs or approval emails from the customer",
       category: "recommended",
       context: "services",
