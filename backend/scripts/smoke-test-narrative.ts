@@ -40,18 +40,18 @@ const CASE_1_NOT_RECEIVED: PromptContext = {
   authorization_code: "AUTH123",
   evidence_files: [
     {
-      checklist_item_key: "Carrier tracking confirmation with delivery scan",
+      checklist_item_key: "tracking_delivery_scan",
       file_name: "fedex-tracking-screenshot.pdf",
     },
     {
-      checklist_item_key: "Signed delivery confirmation or proof of delivery",
+      checklist_item_key: "signed_delivery",
       file_name: "delivery-photo.jpg",
     },
   ],
   checklist_notes: {
-    "Carrier tracking confirmation with delivery scan":
+    tracking_delivery_scan:
       "FedEx tracking 789456123, delivered March 18 at 2:14 PM, left at front door",
-    "Signed delivery confirmation or proof of delivery":
+    signed_delivery:
       "FedEx delivery photo shows package at front door of 123 Main St",
   },
   issuer_evaluation:
@@ -82,12 +82,12 @@ const CASE_2_FRAUD: PromptContext = {
   authorization_code: "AUTH789",
   evidence_files: [
     {
-      checklist_item_key: "Customer correspondence or email communication",
+      checklist_item_key: "delivery_communication",
       file_name: "support-chat-transcript.pdf",
     },
   ],
   checklist_notes: {
-    "Customer correspondence or email communication":
+    delivery_communication:
       "Customer emailed support on March 25 asking about upgrading their plan, 3 days after the disputed charge. Used same email as on the account.",
   },
   issuer_evaluation:

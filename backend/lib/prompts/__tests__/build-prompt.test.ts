@@ -23,13 +23,12 @@ function makeContext(overrides: Partial<PromptContext> = {}): PromptContext {
     network_status: "approved_by_network_rules",
     evidence_files: [
       {
-        checklist_item_key: "Carrier tracking confirmation with delivery scan",
+        checklist_item_key: "tracking_delivery_scan",
         file_name: "tracking-screenshot.pdf",
       },
     ],
     checklist_notes: {
-      "Carrier tracking confirmation with delivery scan":
-        "FedEx tracking 7891234, delivered Mar 18",
+      tracking_delivery_scan: "FedEx tracking 7891234, delivered Mar 18",
     },
     issuer_evaluation: "The bank checks for carrier confirmation of delivery.",
     ...overrides,
@@ -76,19 +75,15 @@ describe("buildPrompt", () => {
   it("includes evidence files", () => {
     const result = buildPrompt(makeContext());
     expect(result.user).toContain("tracking-screenshot.pdf");
-    expect(result.user).toContain(
-      "Carrier tracking confirmation with delivery scan"
-    );
+    expect(result.user).toContain("tracking_delivery_scan");
   });
 
   it("shows not-uploaded entries for missing evidence", () => {
     const result = buildPrompt(makeContext());
-    // The default context only uploads "Carrier tracking confirmation with delivery scan"
-    // Other evidence keys from the 13.1 template should show as (not uploaded)
+    // The default context only uploads "tracking_delivery_scan".
+    // Other evidence keys from the 13.1 template should show as (not uploaded).
     expect(result.user).toContain("(not uploaded)");
-    expect(result.user).toContain(
-      '"Delivery address verification (matches billing or shipping address on order)": (not uploaded)'
-    );
+    expect(result.user).toContain('"shipping_address_match": (not uploaded)');
   });
 
   it("includes checklist notes", () => {
@@ -163,11 +158,12 @@ describe("buildPrompt", () => {
       const result = buildPrompt(
         makeContext({
           checklist_notes: {
-            "Device identifier and IP address of the transaction":
+            device_and_ip:
               "Device fingerprint matched on Mar 15 and Mar 28 purchases",
           },
           narrative_only_items: [
             {
+              key: "device_and_ip",
               item: "Device identifier and IP address of the transaction",
               fallback: "Standard fallback text that should NOT appear",
             },
@@ -188,6 +184,7 @@ describe("buildPrompt", () => {
           checklist_notes: {},
           narrative_only_items: [
             {
+              key: "currency_conversion",
               item: "Currency conversion documentation",
               fallback:
                 "Any difference falls within Mastercard's currency conversion allowance.",
@@ -207,7 +204,7 @@ describe("buildPrompt", () => {
         makeContext({
           checklist_notes: {},
           narrative_only_items: [
-            { item: "Item with no fallback and no note" },
+            { key: "test_no_fallback", item: "Item with no fallback and no note" },
           ],
         })
       );

@@ -18,6 +18,7 @@ function mkPlaybook(): PlaybookData {
     reason_code: "10.4",
     evidence_checklist: [
       {
+        key: "Mandatory A",
         item: "Mandatory A",
         category: "mandatory",
         context: "all",
@@ -94,6 +95,7 @@ describe("evaluateSubmissionGuard", () => {
       reason_code: "10.4",
       evidence_checklist: [
         {
+          key: "IP match",
           item: "IP match",
           category: "mandatory" as const,
           context: "all",
@@ -105,6 +107,7 @@ describe("evaluateSubmissionGuard", () => {
           urgency_order: 1,
         },
         {
+          key: "Delivery",
           item: "Delivery",
           category: "mandatory" as const,
           context: "all",

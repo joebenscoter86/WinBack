@@ -8,11 +8,9 @@ export const TEST_USER_ID = "usr_WIN43_TEST";
 export const TEST_DISPUTE_ID = "du_WIN43_TEST";
 export const TEST_CHARGE_ID = "ch_WIN43_TEST";
 
-// The checklist item key we upload evidence under. Chosen to exactly
-// match a real visa-10.4 playbook item so NarrativePreGeneration's
-// filesByKey.get(item.item) lookup would find it in a real UI render.
-export const TEST_CHECKLIST_ITEM_KEY =
-  "Delivery confirmation to cardholder's verified billing address";
+// The checklist item key we upload evidence under. Matches the stable key
+// `delivery_to_billing_address` defined in the visa-10.4 playbook (WIN-40).
+export const TEST_CHECKLIST_ITEM_KEY = "delivery_to_billing_address";
 
 // Fake Stripe file ID for the evidence upload metadata row.
 export const TEST_STRIPE_FILE_ID = "file_WIN43_TEST_abc";
@@ -91,7 +89,7 @@ export const CANNED_STRIPE_DISPUTE = {
 export const CANNED_NARRATIVE_OUTPUT: NarrativeOutput = {
   narrative:
     `**Delivery Confirmation**\n` +
-    `We have uploaded the delivery confirmation document (see "${TEST_CHECKLIST_ITEM_KEY}") ` +
+    `We have uploaded the delivery confirmation document ` +
     `showing the order was delivered to the cardholder's verified billing address.\n\n` +
     `**Summary**\n` +
     `This transaction is legitimate and should not be treated as fraud.`,

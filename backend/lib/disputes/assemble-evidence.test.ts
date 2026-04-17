@@ -29,6 +29,7 @@ function mockCharge(): Stripe.Charge {
 
 function baseItem(overrides: Partial<EvidenceChecklistItem> = {}): EvidenceChecklistItem {
   return {
+    key: "test_item",
     item: "Test",
     category: "recommended",
     context: "all",
@@ -91,7 +92,7 @@ describe("assembleEvidence", () => {
   });
 
   it("passes a single-file slot through without concat", async () => {
-    const playbook = mockPlaybook([baseItem({ item: "Delivery", stripe_evidence_field: "shipping_documentation" })]);
+    const playbook = mockPlaybook([baseItem({ key: "Delivery", item: "Delivery", stripe_evidence_field: "shipping_documentation" })]);
     const client = mockStripeClient();
     const result = await assembleEvidence({
       charge: mockCharge(),
@@ -109,8 +110,8 @@ describe("assembleEvidence", () => {
 
   it("concats 2+ files into a single slot via PDF merge + upload", async () => {
     const playbook = mockPlaybook([
-      baseItem({ item: "Email", stripe_evidence_field: "customer_communication" }),
-      baseItem({ item: "Chat", stripe_evidence_field: "customer_communication" }),
+      baseItem({ key: "Email", item: "Email", stripe_evidence_field: "customer_communication" }),
+      baseItem({ key: "Chat", item: "Chat", stripe_evidence_field: "customer_communication" }),
     ]);
     const fs = await import("node:fs/promises");
     const path = await import("node:path");
@@ -140,8 +141,8 @@ describe("assembleEvidence", () => {
 
   it("skips a corrupted file with concat_skipped warning and continues", async () => {
     const playbook = mockPlaybook([
-      baseItem({ item: "A", stripe_evidence_field: "customer_communication" }),
-      baseItem({ item: "B", stripe_evidence_field: "customer_communication" }),
+      baseItem({ key: "A", item: "A", stripe_evidence_field: "customer_communication" }),
+      baseItem({ key: "B", item: "B", stripe_evidence_field: "customer_communication" }),
     ]);
     const fs = await import("node:fs/promises");
     const path = await import("node:path");
@@ -167,8 +168,8 @@ describe("assembleEvidence", () => {
 
   it("treats files with mime_type 'pdf' (bare extension) as PDFs during concat", async () => {
     const playbook = mockPlaybook([
-      baseItem({ item: "A", stripe_evidence_field: "service_documentation" }),
-      baseItem({ item: "B", stripe_evidence_field: "service_documentation" }),
+      baseItem({ key: "A", item: "A", stripe_evidence_field: "service_documentation" }),
+      baseItem({ key: "B", item: "B", stripe_evidence_field: "service_documentation" }),
     ]);
     const fs = await import("node:fs/promises");
     const path = await import("node:path");
