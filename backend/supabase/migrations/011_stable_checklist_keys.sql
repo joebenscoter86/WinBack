@@ -107,6 +107,7 @@ INSERT INTO win40_label_map (label, stable_key) VALUES
   ('Quality control or inspection records (batch inspection reports, QC checklists)', 'qc_inspection_records'),
   ('Terms of service accepted at checkout', 'checkout_terms_of_service'),
   ('Signed scope of work or service agreement', 'signed_scope_of_work'),
+  ('Proof of service delivery (reports, deliverables, login/access logs)', 'service_delivery_proof'),
   ('Milestone sign-offs or approval emails from the customer', 'milestone_signoffs')
 ON CONFLICT (label) DO NOTHING;
 
