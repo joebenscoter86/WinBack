@@ -3,6 +3,7 @@ import { buildPrompt } from "@/lib/prompts";
 import { getPlaybook } from "@/lib/playbooks";
 import { supabase } from "@/lib/supabase";
 import { getDispute, normalizeDispute } from "@/lib/stripe";
+import { captureRouteError } from "@/lib/sentry";
 import { validateHallucinations } from "./validate-hallucinations";
 import type { PromptContext, EvidenceFileRef } from "@/lib/prompts/types";
 
@@ -203,6 +204,12 @@ export async function runBackgroundGeneration(
       `[generate-background] generation ${generationId} failed:`,
       err,
     );
+    captureRouteError(err, {
+      route: "narratives.generate.background",
+      disputeId: stripeDisputeId,
+      generationId,
+      extra: { merchant_id: accountId, internal_dispute_id: disputeId },
+    });
     const message = err instanceof Error ? err.message : String(err);
     await markFailed(generationId, classifyError(message));
   }

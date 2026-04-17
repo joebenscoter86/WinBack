@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { verifyStripeAppSignature } from "./verify";
 import type { StripeAppRequestBody, VerifiedRequest } from "./types";
 
@@ -43,19 +44,29 @@ export function withStripeAuth<
       );
     }
 
+    let verified: VerifiedRequest<T>;
     try {
-      const verified = verifyStripeAppSignature<T>(rawBody, signature);
-      return await handler(request, verified);
+      verified = verifyStripeAppSignature<T>(rawBody, signature);
     } catch (error) {
       console.error("Stripe App signature verification failed:", error);
       console.error("Raw body:", rawBody);
       console.error("Signature header:", signature?.substring(0, 50) + "...");
       console.error("APP_SECRET set:", !!process.env.STRIPE_APP_SECRET);
       console.error("APP_SECRET prefix:", process.env.STRIPE_APP_SECRET?.substring(0, 10));
+      Sentry.captureException(error, {
+        tags: { auth_failure: "signature_verification", route: request.nextUrl.pathname },
+      });
       return NextResponse.json(
         { error: "Invalid or expired signature", debug: String(error) },
         { status: 401 },
       );
     }
+
+    return Sentry.withScope(async (scope) => {
+      scope.setUser({ id: verified.identity.userId });
+      scope.setTag("merchant_id", verified.identity.accountId);
+      scope.setTag("stripe_user_id", verified.identity.userId);
+      return handler(request, verified);
+    });
   };
 }
