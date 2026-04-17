@@ -41,7 +41,7 @@ function makeChainBuilder(table: string): Record<string, Function> {
   };
 
   const chain: Record<string, unknown> = {};
-  const terminalMethods = ["single"];
+  const terminalMethods = ["single", "maybeSingle"];
   const chainMethods = ["select", "insert", "upsert", "update", "delete", "eq"];
 
   for (const method of terminalMethods) {

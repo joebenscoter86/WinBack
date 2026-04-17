@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withStripeAuth } from "@/lib/stripe-auth";
 import { ensureMerchant } from "@/lib/merchants";
 import { supabase } from "@/lib/supabase";
+import { getDisputeForAccount } from "@/lib/disputes";
 
 export const POST = withStripeAuth(async (
   request: NextRequest,
@@ -19,16 +20,16 @@ export const POST = withStripeAuth(async (
     );
   }
 
-  ensureMerchant(accountId, userId);
+  await ensureMerchant(accountId, userId);
 
-  // Look up the dispute
-  const { data: dispute, error: disputeError } = await supabase
-    .from("disputes")
-    .select("id")
-    .eq("stripe_dispute_id", disputeId)
-    .single();
+  // Merchant-scoped dispute lookup (WIN-42)
+  const { data: dispute } = await getDisputeForAccount<{ id: string }>(
+    disputeId,
+    accountId,
+    "id",
+  );
 
-  if (disputeError || !dispute) {
+  if (!dispute) {
     return NextResponse.json(
       { error: "Dispute not found", code: "not_found" },
       { status: 404 },
@@ -36,7 +37,7 @@ export const POST = withStripeAuth(async (
   }
 
   // Delete the evidence file and verify a row was removed
-  const { data: deleted, error: deleteError } = await supabase
+  const { error: deleteError } = await supabase
     .from("evidence_files")
     .delete()
     .eq("id", fileId)

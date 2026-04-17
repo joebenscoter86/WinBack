@@ -14,7 +14,9 @@ vi.mock("@/lib/stripe-auth", () => ({
   },
 }));
 
-// Supabase mock -- configured per-test via result variables
+// The status route now uses a single merchant-scoped query:
+//   .from("narrative_generations").select(..., disputes!inner(...)).eq(id).eq(stripe_account_id).maybeSingle()
+// (WIN-42)
 let mockGenerationResult: { data: unknown; error: unknown } = {
   data: {
     id: "gen-uuid-1",
@@ -25,40 +27,14 @@ let mockGenerationResult: { data: unknown; error: unknown } = {
   },
   error: null,
 };
-let mockMerchantResult: { data: unknown; error: unknown } = {
-  data: { id: "merchant-uuid-1" },
-  error: null,
-};
-let mockDisputeResult: { data: unknown; error: unknown } = {
-  data: { id: "dispute-uuid-1" },
-  error: null,
-};
 
 function makeMockFrom(table: string) {
   if (table === "narrative_generations") {
     return {
       select: () => ({
         eq: () => ({
-          single: () => Promise.resolve(mockGenerationResult),
-        }),
-      }),
-    };
-  }
-  if (table === "merchants") {
-    return {
-      select: () => ({
-        eq: () => ({
-          single: () => Promise.resolve(mockMerchantResult),
-        }),
-      }),
-    };
-  }
-  if (table === "disputes") {
-    return {
-      select: () => ({
-        eq: (_col1: string, _val1: string) => ({
-          eq: (_col2: string, _val2: string) => ({
-            single: () => Promise.resolve(mockDisputeResult),
+          eq: () => ({
+            maybeSingle: () => Promise.resolve(mockGenerationResult),
           }),
         }),
       }),
@@ -97,8 +73,6 @@ describe("POST /api/narratives/[generationId]/status", () => {
       },
       error: null,
     };
-    mockMerchantResult = { data: { id: "merchant-uuid-1" }, error: null };
-    mockDisputeResult = { data: { id: "dispute-uuid-1" }, error: null };
   });
 
   it("returns pending status", async () => {
@@ -161,11 +135,8 @@ describe("POST /api/narratives/[generationId]/status", () => {
     expect(json.error).toBe("Claude API timeout after 30s");
   });
 
-  it("returns 404 when generation not found", async () => {
-    mockGenerationResult = {
-      data: null,
-      error: { message: "not found", code: "PGRST116" },
-    };
+  it("returns 404 when generation not found or not owned by this merchant", async () => {
+    mockGenerationResult = { data: null, error: null };
 
     const { POST } = await import("../[generationId]/status/route");
 

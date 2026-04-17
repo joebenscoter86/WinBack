@@ -14,7 +14,7 @@ export const POST = withStripeAuth(async (_request, { identity, body }) => {
     );
   }
 
-  ensureMerchant(accountId, userId);
+  await ensureMerchant(accountId, userId);
 
   try {
     const playbook = await getPlaybook(network, reason_code);

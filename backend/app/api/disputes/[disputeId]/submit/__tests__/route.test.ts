@@ -43,6 +43,17 @@ vi.mock("@/lib/merchants", () => ({
   ensureMerchant: vi.fn().mockResolvedValue(undefined),
 }));
 
+// WIN-42: the route now calls getDisputeForAccount (a helper that joins
+// merchants -> disputes in one query). Stub it to return the canonical
+// local dispute row so individual tests don't have to wire the chained
+// supabase select any more.
+const { getDisputeForAccountMock } = vi.hoisted(() => ({
+  getDisputeForAccountMock: vi.fn(),
+}));
+vi.mock("@/lib/disputes", () => ({
+  getDisputeForAccount: getDisputeForAccountMock,
+}));
+
 vi.mock("@/lib/playbooks", () => ({
   getPlaybook: vi.fn(),
 }));
@@ -227,6 +238,18 @@ describe("POST /api/disputes/[disputeId]/submit", () => {
       evidence: { uncategorized_text: "mocked narrative" },
       warnings: [],
       concat_receipts: [],
+    });
+    // Default: getDisputeForAccount returns a valid local dispute row.
+    // Tests that need a different behavior (e.g. 404) override per-test.
+    getDisputeForAccountMock.mockResolvedValue({
+      data: {
+        id: LOCAL_DISPUTE_ID,
+        stripe_dispute_id: DISPUTE_ID,
+        network: "visa",
+        reason_code: "10.4",
+        narrative_text: "Merchant narrative text",
+      },
+      error: null,
     });
   });
 
@@ -424,6 +447,19 @@ describe("POST /api/disputes/[disputeId]/submit", () => {
     getDisputeMock.mockResolvedValueOnce({
       ...stripeDispute,
       charge: stripeCharge,
+    });
+
+    // Override default: this test needs narrative_text to be null so the
+    // validation guard triggers.
+    getDisputeForAccountMock.mockResolvedValueOnce({
+      data: {
+        id: LOCAL_DISPUTE_ID,
+        stripe_dispute_id: DISPUTE_ID,
+        network: "visa",
+        reason_code: "10.4",
+        narrative_text: null,
+      },
+      error: null,
     });
 
     supabaseMock.from.mockImplementation((table: string) => {

@@ -10,6 +10,7 @@ import {
 import { downloadStripeFile, uploadCombinedEvidence } from "@/lib/stripe/client";
 import { ensureMerchant } from "@/lib/merchants";
 import { supabase } from "@/lib/supabase";
+import { getDisputeForAccount } from "@/lib/disputes";
 import { getPlaybook } from "@/lib/playbooks";
 import { evaluateSubmissionGuard } from "@/lib/disputes/submission-guard";
 import { assembleEvidence } from "@/lib/disputes/assemble-evidence";
@@ -106,42 +107,28 @@ export const POST = withStripeAuth(
       return errorResponse(400, "invalid_request", "Missing dispute ID");
     }
 
-    // Step 1: Auth + merchant lookup
+    // Step 1: Auth + merchant-scoped dispute lookup in one query (WIN-42)
     await ensureMerchant(accountId, userId);
 
-    const { data: merchant } = await supabase
-      .from("merchants")
-      .select("id")
-      .eq("stripe_account_id", accountId)
-      .single();
+    const { data: localDispute } = await getDisputeForAccount<{
+      id: string;
+      stripe_dispute_id: string;
+      network: string;
+      reason_code: string;
+      narrative_text: string | null;
+    }>(
+      stripeDisputeId,
+      accountId,
+      "id, stripe_dispute_id, network, reason_code, narrative_text",
+    );
 
-    if (!merchant) {
-      return errorResponse(404, "merchant_not_found", "Merchant row missing");
-    }
-
-    // Step 2: Load local dispute row
-    const { data: dispute } = await supabase
-      .from("disputes")
-      .select("id, stripe_dispute_id, network, reason_code, narrative_text")
-      .eq("stripe_dispute_id", stripeDisputeId)
-      .eq("merchant_id", (merchant as { id: string }).id)
-      .single();
-
-    if (!dispute) {
+    if (!localDispute) {
       return errorResponse(
         404,
         "dispute_not_found",
         "Dispute not found. Refresh this page and try again.",
       );
     }
-
-    const localDispute = dispute as {
-      id: string;
-      stripe_dispute_id: string;
-      network: string;
-      reason_code: string;
-      narrative_text: string | null;
-    };
 
     // Step 3: Load evidence files
     const { data: evidenceFilesRaw } = await supabase

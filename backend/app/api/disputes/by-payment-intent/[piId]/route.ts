@@ -18,7 +18,7 @@ export const POST = withStripeAuth(async (
     );
   }
 
-  ensureMerchant(accountId, userId);
+  await ensureMerchant(accountId, userId);
 
   try {
     const disputes = await listDisputes(accountId, {

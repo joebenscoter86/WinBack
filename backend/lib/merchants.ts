@@ -3,13 +3,17 @@ import { supabase } from "@/lib/supabase";
 /**
  * Upserts a merchant row keyed by Stripe account ID. Idempotent.
  *
- * Must be awaited by any route that depends on the merchant row existing
- * immediately after -- fire-and-forget is fragile and has caused races.
- * See WIN-42 for the broader cleanup of merchant-scoped query patterns.
+ * **MUST be awaited.** Every caller should `await ensureMerchant(...)` --
+ * never fire-and-forget. The previous convention of skipping `await` in
+ * routes that "don't depend on the merchant row existing right away" was
+ * too easy to get wrong: WIN-19 QA found a race where the narrative
+ * generate route's SELECT raced against an un-awaited upsert and returned
+ * "Merchant not found" on first use. WIN-42 cleaned up the pattern by
+ * making "always await" the only rule.
  *
- * Note: this function intentionally updates `updated_at` on conflict so that
- * the row's touch timestamp stays fresh, while preserving any fields that
- * have been set previously (email, business_name, subscription_*, etc.).
+ * Note: this function intentionally updates `updated_at` on conflict so
+ * that the row's touch timestamp stays fresh, while preserving any fields
+ * that have been set previously (email, business_name, subscription_*, etc.).
  */
 export async function ensureMerchant(
   accountId: string,
