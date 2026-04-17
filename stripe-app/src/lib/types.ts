@@ -65,6 +65,10 @@ export interface Dispute {
 // Playbook types (mirrors backend PlaybookData)
 
 export interface EvidenceChecklistItem {
+  // Stable identifier that mirrors backend/lib/playbooks/types.ts EvidenceChecklistItem.key.
+  // Used everywhere the playbook item needs a stable handle (filesByKey,
+  // checklist_state, checklist_notes). The `item` field is the display label. (WIN-40)
+  key: string;
   item: string;
   category: 'mandatory' | 'recommended' | 'situational';
   context: string;

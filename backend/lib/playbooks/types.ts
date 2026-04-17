@@ -28,6 +28,14 @@ export type StripeEvidenceFileField =
   | "uncategorized_file";
 
 export interface EvidenceChecklistItem {
+  /**
+   * Stable identifier used as the database key in evidence_files.checklist_item_key
+   * and in disputes.checklist_state / disputes.checklist_notes JSONB. NEVER
+   * change once assigned -- changing this orphans every piece of data keyed
+   * to it. Must be unique within a playbook. The `item` field is the human
+   * label and can be rewritten freely. (WIN-40)
+   */
+  key: string;
   item: string;
   category: EvidenceCategory;
   context: EvidenceContext;
