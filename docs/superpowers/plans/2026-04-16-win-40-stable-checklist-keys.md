@@ -1334,4 +1334,53 @@ Run through these before marking the plan executed:
 
 - `stripe-app/src/lib/types.ts` `EvidenceChecklistItem` still does not mirror `stripe_evidence_field` from the backend type. Unrelated pre-existing drift; leave for a separate cleanup.
 - The `narrative_fallback` field on the backend type is also not on the frontend type; see above.
-- Migration 011 does not drop-and-rebuild indexes — the `uq_evidence_files_dispute_item` unique constraint on `(dispute_id, checklist_item_key)` is still valid post-migration because the update rewrites values, not rows.
+- Migration 011 does not drop-and-rebuild indexes -- the `uq_evidence_files_dispute_item` unique constraint on `(dispute_id, checklist_item_key)` is still valid post-migration because the update rewrites values, not rows.
+
+---
+
+## Post-execution notes (2026-04-16)
+
+### Rules of playbook edits, post-WIN-40
+
+For future editors of `backend/lib/playbooks/data/*.ts`:
+
+| What you change | Reseed suffices | Notes |
+|---|---|---|
+| `item` (display label) | YES | Point of WIN-40. Edit freely. |
+| `why_matters`, `where_to_find` | YES | Pure copy. |
+| `narrative_fallback` | YES | Per-playbook canned assertion. |
+| All non-checklist copy (coach_*, pro_tips, common_mistakes, narrative_template, etc.) | YES | Copy-only. |
+| `key` | **NO** | Orphans every row keyed to the old value. Never change. |
+| `stripe_field` / `stripe_evidence_field` / `narrative_only` | NO | Changes assembly behavior for existing uploads. |
+| Adding a new checklist item | YES | Future uploads work; existing disputes won't have it populated. |
+| Removing a checklist item | NO (orphans) | Files stay in Stripe; `evidence_files` rows become unreachable from the UI. Run a manual cleanup + migration if you need to remove. |
+
+### Migration 011 run against dev Supabase
+
+- Pre-flight collision check returned empty -- no visa-10.4 legacy-label collisions in dev data.
+- 31 `evidence_files` rows updated from label to stable key.
+- 0 rows lost, 0 collisions.
+- `disputes.checklist_state` and `disputes.checklist_notes` rebuild ran on a small number of rows with test data; no ghost keys surfaced.
+
+### Coverage debt found during Task 7 review (pre-existing, not fixed here)
+
+Several playbook items don't have corresponding sections in their prompt templates (`backend/lib/prompts/templates/*.ts`). Files uploaded under these keys will appear in the prompt as uploaded evidence but won't be associated with a named narrative section:
+
+- `visa-13.2`: `customer_email_subscription`, `installment_plan_proof`
+- `visa-13.3`: `service_agreement`, `service_delivery_proof`, `client_signoff`
+- `mastercard-4808`: `renewed_payment_approval`, `charge_before_expiry_timestamp`
+- `mastercard-4853`: `signed_scope_of_work`, `service_delivery_proof`, `milestone_signoffs`
+
+Not blocking -- the LLM still receives the file reference -- but worth a follow-up to improve narrative quality on disputes that use these items.
+
+### Improvement flagged during Task 5 review
+
+`backend/lib/disputes/assemble-evidence.ts` silently `continue`s when `itemByKey.get(file.checklist_item_key)` returns `undefined`. Pre-existing (existed before WIN-40), but now more visible because a typo in `key` on a new playbook item would cause files to silently drop from the Stripe submission. Worth adding a warning in `assembly.warnings` for files that don't map to any playbook item. Follow-up.
+
+### Env setup gotcha
+
+When running `npm run test:integration` locally, Node's `process.loadEnvFile` does not overwrite existing env vars. If your shell has an empty `ANTHROPIC_API_KEY` set (easy to accidentally inherit), the integration test fails with "Missing ANTHROPIC_API_KEY" despite the key being correctly set in `.env.local`. Workaround: `unset ANTHROPIC_API_KEY && npm run test:integration`. Unrelated to WIN-40 but cost 15 minutes to diagnose.
+
+### Files in Stripe vs. metadata in our backend
+
+For the record: the actual evidence file bytes flow directly from the merchant's browser to Stripe via `StripeFileUploader` in the iframe. They never touch Vercel. What WIN-40 fixed is the *linking metadata* in our backend (`evidence_files.checklist_item_key`, `disputes.checklist_state` and `checklist_notes` JSONB keys) that associates Stripe file IDs with playbook items. Renaming a label no longer breaks that association.
