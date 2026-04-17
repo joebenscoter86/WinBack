@@ -10,11 +10,13 @@ export const visa131Template: ReasonCodePromptTemplate = {
       name: "Delivery Confirmation",
       bank_criterion: "Is there carrier confirmation of delivery?",
       instruction:
-        "State the tracking number, carrier name, delivery date, and delivery status. If a signature was obtained, include that. Present these as factual statements from carrier records.",
+        "State the tracking number, carrier name, delivery date, and delivery status. If a signature was obtained, include that. Reference the order confirmation showing the agreed delivery timeline and the order details (items, quantities, shipping method) that tie the carrier record to the disputed purchase. Present these as factual statements from carrier and order records.",
       auto_pull_fields: [],
       evidence_keys: [
         "tracking_delivery_scan",
         "signed_delivery",
+        "order_confirmation_delivery_date",
+        "order_details_screenshot",
       ],
       priority: 1,
     },
@@ -33,11 +35,12 @@ export const visa131Template: ReasonCodePromptTemplate = {
       name: "Digital Access Proof",
       bank_criterion: "Did the customer access the product?",
       instruction:
-        "For digital goods only. State access log timestamps, IP addresses, and what the customer accessed or downloaded. Include email delivery confirmation of license keys or download links.",
+        "For digital goods only. State access log timestamps, IP addresses, and what the customer accessed or downloaded. Include email delivery confirmation of license keys or download links. Reference the checkout terms the customer accepted, which define what 'delivery' means for the product — useful when the customer disputes something your ToS defines as delivered.",
       auto_pull_fields: [],
       evidence_keys: [
         "digital_access_logs",
         "digital_delivery_email",
+        "checkout_terms",
       ],
       priority: 1,
     },

@@ -10,12 +10,14 @@ export const mastercard4808Template: ReasonCodePromptTemplate = {
       name: "Authorization Confirmation",
       bank_criterion: "Was a valid authorization obtained?",
       instruction:
-        "State the authorization code and network status from Stripe. These are verified by the payment network. If the network status is 'approved_by_network_rules', state this as confirmation that the authorization was valid.",
+        "State the authorization code and network status from Stripe. These are verified by the payment network. If the network status is 'approved_by_network_rules', state this as confirmation that the authorization was valid. If the original authorization expired before the charge was finalized, reference the renewed payment approval record and the timestamps showing the charge was captured within the valid authorization window.",
       auto_pull_fields: ["authorization_code", "network_status"],
       evidence_keys: [
         "authorization_record",
         "approval_number",
         "final_charge_tied_to_authorization",
+        "renewed_payment_approval",
+        "charge_before_expiry_timestamp",
       ],
       priority: 1,
     },

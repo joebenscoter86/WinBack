@@ -67,5 +67,18 @@ export const visa133Template: ReasonCodePromptTemplate = {
       ],
       priority: 2,
     },
+    {
+      name: "Service Delivery",
+      bank_criterion: "Was the service performed as agreed?",
+      instruction:
+        "For services disputes: reference the signed scope of work or service agreement, the deliverables or work product that was provided, and any client sign-off or written acceptance. If the client approved milestones or the final work, this directly refutes a 'not as described' claim.",
+      auto_pull_fields: [],
+      evidence_keys: [
+        "service_agreement",
+        "service_delivery_proof",
+        "client_signoff",
+      ],
+      priority: 1,
+    },
   ],
 };

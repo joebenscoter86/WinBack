@@ -67,5 +67,18 @@ export const mastercard4853Template: ReasonCodePromptTemplate = {
       ],
       priority: 2,
     },
+    {
+      name: "Service Delivery",
+      bank_criterion: "Was the service performed as agreed?",
+      instruction:
+        "For services disputes: reference the signed scope of work, the deliverables provided, and any milestone sign-offs or approval emails from the customer. Interim approvals are strong evidence that the work matched what was agreed — if the customer approved deliverables along the way, a 'not as described' claim becomes hard to credibly support.",
+      auto_pull_fields: [],
+      evidence_keys: [
+        "signed_scope_of_work",
+        "service_delivery_proof",
+        "milestone_signoffs",
+      ],
+      priority: 1,
+    },
   ],
 };

@@ -45,9 +45,12 @@ export const visa132Template: ReasonCodePromptTemplate = {
       name: "Customer Communication",
       bank_criterion: "Did the customer follow the cancellation process?",
       instruction:
-        "Reference any correspondence about the subscription or cancellation. If the customer was informed of the billing terms and did not follow the cancellation process, state this factually.",
+        "Reference any correspondence about the subscription or cancellation, including the customer email on file where renewal reminders and cancellation confirmations were sent. If the customer was informed of the billing terms and did not follow the cancellation process, state this factually.",
       auto_pull_fields: [],
-      evidence_keys: ["customer_communication_history"],
+      evidence_keys: [
+        "customer_communication_history",
+        "customer_email_subscription",
+      ],
       priority: 2,
     },
     {
@@ -61,6 +64,15 @@ export const visa132Template: ReasonCodePromptTemplate = {
         "refund_confirmation",
       ],
       priority: 2,
+    },
+    {
+      name: "Installment Plan Defense",
+      bank_criterion: "Is this actually a recurring transaction?",
+      instruction:
+        "If the transaction is a fixed installment plan (e.g., 3 payments of $100) rather than an open-ended subscription, reason code 13.2 does not apply. Reference the installment agreement showing the fixed payment schedule. This is a threshold defense — if successful, the dispute code itself is invalid.",
+      auto_pull_fields: [],
+      evidence_keys: ["installment_plan_proof"],
+      priority: 1,
     },
   ],
 };
