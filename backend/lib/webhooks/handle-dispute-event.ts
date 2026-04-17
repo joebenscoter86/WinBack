@@ -1,5 +1,7 @@
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
+import { reportDisputeWonFee } from "@/lib/billing";
+import { captureRouteError } from "@/lib/sentry";
 
 /**
  * WIN-21: Map a Stripe dispute object to the columns we persist.
@@ -49,7 +51,7 @@ export async function handleDisputeEvent(
 
   const { data: merchant } = await supabase
     .from("merchants")
-    .select("id")
+    .select("id, billing_tier")
     .eq("stripe_account_id", accountId)
     .maybeSingle();
 
@@ -59,7 +61,8 @@ export async function handleDisputeEvent(
     return;
   }
 
-  const merchantId = (merchant as { id: string }).id;
+  const merchantRow = merchant as { id: string; billing_tier: "usage" | "pro" };
+  const merchantId = merchantRow.id;
   const baseRow = disputeToRow(dispute);
 
   if (event.type === "charge.dispute.closed") {
@@ -73,6 +76,31 @@ export async function handleDisputeEvent(
         { ...baseRow, merchant_id: merchantId, outcome_at: outcomeAt },
         { onConflict: "stripe_dispute_id" },
       );
+
+    // WIN-24: report 15% success fee as a meter event on usage-tier wins.
+    // Meter events are idempotent via `identifier` (keyed by dispute_id), so
+    // webhook retries or reconciliation replays never double-charge. Pro
+    // merchants (post pro_since_at) skip metering entirely.
+    if (dispute.status === "won" && merchantRow.billing_tier === "usage") {
+      try {
+        await reportDisputeWonFee({
+          merchantId,
+          disputeId: dispute.id,
+          amountRecoveredCents: dispute.amount,
+        });
+      } catch (err) {
+        // Billing failures should not re-queue the webhook — the dispute row
+        // is already persisted and reconciliation can retry. Log to Sentry.
+        captureRouteError(err, {
+          route: "webhooks.stripe.report_success_fee",
+          extra: {
+            dispute_id: dispute.id,
+            merchant_id: merchantId,
+            amount: dispute.amount,
+          },
+        });
+      }
+    }
     return;
   }
 

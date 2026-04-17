@@ -1,35 +1,214 @@
+import { useEffect, useRef, useState } from 'react';
 import {
   Box,
+  Badge,
   Banner,
-  Inline,
-  SettingsView,
+  Button,
   Divider,
+  Inline,
+  Link,
+  SettingsView,
+  Spinner,
 } from '@stripe/ui-extension-sdk/ui';
 import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
+import { fetchBackend, ApiError } from '../lib/apiClient';
 
-const AppSettings = ({ environment, userContext }: ExtensionContextValue) => {
+type BillingStatus = {
+  tier: 'usage' | 'pro';
+  subscription_status: string | null;
+  pro_since_at: string | null;
+  upgrade_prompted_at: string | null;
+  next_billing_at: string | null;
+  ytd_success_fees_cents: number;
+};
+
+type ViewState = 'loading' | 'ready' | 'error';
+
+function formatCents(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+function formatDate(iso: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+const AppSettings = (context: ExtensionContextValue) => {
+  const [viewState, setViewState] = useState<ViewState>('loading');
+  const [billing, setBilling] = useState<BillingStatus | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [upgrading, setUpgrading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
+
+  const contextRef = useRef(context);
+  contextRef.current = context;
+
+  useEffect(() => {
+    const loadBilling = async () => {
+      try {
+        const result = await fetchBackend<BillingStatus>(
+          '/api/billing/status',
+          contextRef.current,
+        );
+        setBilling(result);
+        setViewState('ready');
+      } catch (err) {
+        const msg = err instanceof ApiError ? err.message : 'Failed to load billing status';
+        setErrorMessage(msg);
+        setViewState('error');
+      }
+    };
+    loadBilling();
+  }, []);
+
+  const handleUpgrade = async () => {
+    setUpgrading(true);
+    setUpgradeError(null);
+    try {
+      // Dashboard is the natural "return here" destination — the iframe will
+      // refresh when Stripe redirects back, and the billing webhook will have
+      // flipped the tier by then.
+      const returnUrl = 'https://dashboard.stripe.com/settings/apps';
+      const result = await fetchBackend<{ url: string }>(
+        '/api/billing/checkout',
+        contextRef.current,
+        { success_url: returnUrl, cancel_url: returnUrl },
+      );
+      // Open Checkout in a new tab — the Stripe Dashboard iframe blocks
+      // Checkout from rendering inside it.
+      if (typeof window !== 'undefined') {
+        window.open(result.url, '_blank', 'noopener');
+      }
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Failed to start upgrade';
+      setUpgradeError(msg);
+    } finally {
+      setUpgrading(false);
+    }
+  };
+
+  if (viewState === 'loading') {
+    return (
+      <SettingsView>
+        <Box css={{ stack: 'x', gap: 'small', alignX: 'center', padding: 'medium' }}>
+          <Spinner />
+          <Inline>Loading billing status…</Inline>
+        </Box>
+      </SettingsView>
+    );
+  }
+
+  if (viewState === 'error' || !billing) {
+    return (
+      <SettingsView>
+        <Box css={{ padding: 'medium' }}>
+          <Banner
+            type="critical"
+            title="Could not load billing status"
+            description={errorMessage ?? 'Please try again.'}
+          />
+        </Box>
+      </SettingsView>
+    );
+  }
+
+  const isPastDue = billing.subscription_status === 'past_due';
+  const isPro = billing.tier === 'pro';
+
   return (
     <SettingsView>
       <Box css={{ stack: 'y', gap: 'medium', padding: 'medium' }}>
-        <Box css={{ stack: 'y', gap: 'xsmall' }}>
+        {isPastDue && (
+          <Banner
+            type="caution"
+            title="Payment past due"
+            description="Your Pro subscription has a payment issue. Update your payment method in Stripe to avoid interruption. You can still file and submit disputes."
+          />
+        )}
+
+        <Box css={{ stack: 'y', gap: 'small' }}>
           <Inline css={{ font: 'heading', fontWeight: 'semibold' }}>
-            Subscription
+            Billing
           </Inline>
-          <Inline css={{ font: 'caption', color: 'secondary' }}>
-            Subscription management will be available here. Coming in WIN-24.
-          </Inline>
+
+          <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
+            <Inline css={{ font: 'body' }}>Plan:</Inline>
+            {isPro ? (
+              <Badge type="positive">Pro · $79/mo</Badge>
+            ) : (
+              <Badge type="info">Pay-Per-Win · 15% of recovered amount</Badge>
+            )}
+          </Box>
+
+          {isPro ? (
+            <>
+              <Inline css={{ font: 'caption', color: 'secondary' }}>
+                Unlimited disputes. Zero success fee.
+              </Inline>
+              <Inline css={{ font: 'caption' }}>
+                Pro since {formatDate(billing.pro_since_at)} · Next billing{' '}
+                {formatDate(billing.next_billing_at)}
+              </Inline>
+            </>
+          ) : (
+            <>
+              <Inline css={{ font: 'caption', color: 'secondary' }}>
+                You pay nothing until you win. We charge 15% of what you recover.
+              </Inline>
+              <Inline css={{ font: 'caption' }}>
+                Success fees this year: {formatCents(billing.ytd_success_fees_cents)}
+              </Inline>
+            </>
+          )}
         </Box>
 
-        <Divider />
+        {!isPro && (
+          <>
+            <Divider />
+            <Box css={{ stack: 'y', gap: 'small' }}>
+              <Inline css={{ font: 'heading', fontWeight: 'semibold' }}>
+                Upgrade to Pro
+              </Inline>
+              <Inline css={{ font: 'body' }}>
+                $79/month, unlimited disputes, no success fee. Break-even after
+                ~1 win/month at a $500 average dispute.
+              </Inline>
+              {upgradeError && (
+                <Banner type="critical" title="Upgrade failed" description={upgradeError} />
+              )}
+              <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
+                <Button type="primary" onPress={handleUpgrade} disabled={upgrading}>
+                  {upgrading ? 'Opening Checkout…' : 'Upgrade to Pro'}
+                </Button>
+                <Inline css={{ font: 'caption', color: 'secondary' }}>
+                  Opens Stripe Checkout in a new tab
+                </Inline>
+              </Box>
+            </Box>
+          </>
+        )}
 
-        <Box css={{ stack: 'y', gap: 'xsmall' }}>
-          <Inline css={{ font: 'heading', fontWeight: 'semibold' }}>
-            Account
-          </Inline>
-          <Inline css={{ font: 'caption', color: 'secondary' }}>
-            Connected Stripe account information will appear here.
-          </Inline>
-        </Box>
+        {isPro && (
+          <>
+            <Divider />
+            <Box css={{ stack: 'y', gap: 'xsmall' }}>
+              <Inline css={{ font: 'heading', fontWeight: 'semibold' }}>
+                Manage subscription
+              </Inline>
+              <Inline css={{ font: 'caption' }}>
+                Update your payment method or cancel from the{' '}
+                <Link href="https://dashboard.stripe.com/settings/billing" target="_blank">
+                  Stripe billing portal
+                </Link>
+                . Canceling reverts you to Pay-Per-Win at period end.
+              </Inline>
+            </Box>
+          </>
+        )}
 
         <Divider />
 
@@ -37,9 +216,7 @@ const AppSettings = ({ environment, userContext }: ExtensionContextValue) => {
           <Inline css={{ font: 'heading', fontWeight: 'semibold' }}>
             About WinBack
           </Inline>
-          <Inline css={{ font: 'body' }}>
-            Version 0.0.1
-          </Inline>
+          <Inline css={{ font: 'body' }}>Version 0.0.1</Inline>
           <Inline css={{ font: 'caption', color: 'secondary' }}>
             Guided dispute resolution for Stripe merchants. Built by JKB Tech.
           </Inline>

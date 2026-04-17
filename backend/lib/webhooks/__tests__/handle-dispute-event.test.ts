@@ -1,10 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import Stripe from "stripe";
 
-const { supabaseMock } = vi.hoisted(() => ({
+const { supabaseMock, billingMock, sentryMock } = vi.hoisted(() => ({
   supabaseMock: { from: vi.fn() },
+  billingMock: { reportDisputeWonFee: vi.fn() },
+  sentryMock: { captureRouteError: vi.fn() },
 }));
 vi.mock("@/lib/supabase", () => ({ supabase: supabaseMock }));
+vi.mock("@/lib/billing", () => billingMock);
+vi.mock("@/lib/sentry", () => sentryMock);
 
 import { handleDisputeEvent } from "../handle-dispute-event";
 
@@ -40,19 +44,13 @@ function makeEvent(type: Stripe.Event.Type, dispute: Stripe.Dispute): Stripe.Eve
 describe("handleDisputeEvent", () => {
   let upsertSpy: ReturnType<typeof vi.fn>;
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    upsertSpy = vi.fn().mockResolvedValue({ error: null });
-
+  function mockMerchant(row: { id: string; billing_tier: "usage" | "pro" } | null) {
     supabaseMock.from.mockImplementation((table: string) => {
       if (table === "merchants") {
         return {
           select: () => ({
             eq: () => ({
-              maybeSingle: vi.fn().mockResolvedValue({
-                data: { id: MERCHANT_ID },
-                error: null,
-              }),
+              maybeSingle: vi.fn().mockResolvedValue({ data: row, error: null }),
             }),
           }),
         };
@@ -62,6 +60,13 @@ describe("handleDisputeEvent", () => {
       }
       throw new Error(`unexpected table ${table}`);
     });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    upsertSpy = vi.fn().mockResolvedValue({ error: null });
+    billingMock.reportDisputeWonFee.mockResolvedValue({ feeCents: 0, identifier: "x" });
+    mockMerchant({ id: MERCHANT_ID, billing_tier: "usage" });
   });
 
   it("upserts dispute with merchant_id on dispute.created", async () => {
@@ -97,19 +102,53 @@ describe("handleDisputeEvent", () => {
   });
 
   it("ignores event when merchant is not installed", async () => {
-    supabaseMock.from.mockImplementation(() => ({
-      select: () => ({
-        eq: () => ({
-          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-        }),
-      }),
-    }));
+    mockMerchant(null);
 
     await handleDisputeEvent(
       makeEvent("charge.dispute.created", makeDispute()),
       ACCOUNT_ID,
     );
     expect(upsertSpy).not.toHaveBeenCalled();
+  });
+
+  it("reports success fee on won close for usage-tier merchant", async () => {
+    await handleDisputeEvent(
+      makeEvent("charge.dispute.closed", makeDispute({ status: "won", amount: 10000 })),
+      ACCOUNT_ID,
+    );
+    expect(billingMock.reportDisputeWonFee).toHaveBeenCalledOnce();
+    expect(billingMock.reportDisputeWonFee).toHaveBeenCalledWith({
+      merchantId: MERCHANT_ID,
+      disputeId: "dp_test_1",
+      amountRecoveredCents: 10000,
+    });
+  });
+
+  it("does NOT report success fee when merchant is Pro", async () => {
+    mockMerchant({ id: MERCHANT_ID, billing_tier: "pro" });
+    await handleDisputeEvent(
+      makeEvent("charge.dispute.closed", makeDispute({ status: "won", amount: 10000 })),
+      ACCOUNT_ID,
+    );
+    expect(billingMock.reportDisputeWonFee).not.toHaveBeenCalled();
+  });
+
+  it("does NOT report success fee when dispute closed as lost", async () => {
+    await handleDisputeEvent(
+      makeEvent("charge.dispute.closed", makeDispute({ status: "lost" })),
+      ACCOUNT_ID,
+    );
+    expect(billingMock.reportDisputeWonFee).not.toHaveBeenCalled();
+  });
+
+  it("dispute upsert still happens if metering throws", async () => {
+    billingMock.reportDisputeWonFee.mockRejectedValueOnce(new Error("stripe down"));
+    await handleDisputeEvent(
+      makeEvent("charge.dispute.closed", makeDispute({ status: "won" })),
+      ACCOUNT_ID,
+    );
+    expect(upsertSpy).toHaveBeenCalledOnce();
+    expect(sentryMock.captureRouteError).toHaveBeenCalledOnce();
   });
 
   it("infers visa network from reason code prefix", async () => {
