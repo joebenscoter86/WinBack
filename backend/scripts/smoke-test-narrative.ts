@@ -82,12 +82,12 @@ const CASE_2_FRAUD: PromptContext = {
   authorization_code: "AUTH789",
   evidence_files: [
     {
-      checklist_item_key: "delivery_communication",
+      checklist_item_key: "customer_engagement_communication",
       file_name: "support-chat-transcript.pdf",
     },
   ],
   checklist_notes: {
-    delivery_communication:
+    customer_engagement_communication:
       "Customer emailed support on March 25 asking about upgrading their plan, 3 days after the disputed charge. Used same email as on the account.",
   },
   issuer_evaluation:

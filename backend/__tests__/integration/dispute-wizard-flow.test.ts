@@ -495,14 +495,9 @@ describe("WIN-43: dispute wizard integration flow", () => {
 
   it("WIN-20: step 10 — submits evidence with multi-file concat in one slot", async () => {
     // visa-13.1 has two checklist items that both map to the
-    // customer_communication slot:
-    //   - "Communication with customer about delivery (emails, chat logs)"
-    //   - "Email delivery confirmation (license key, download link sent to
-    //      customer's email)"
+    // customer_communication slot: delivery_communication and digital_delivery_email.
     // Thanks to the (dispute_id, checklist_item_key) unique constraint on
     // evidence_files, this is the only way to land 2+ files in the same slot.
-    // visa-13.1 has two checklist items that both map to the
-    // customer_communication slot: delivery_communication and digital_delivery_email.
     const ITEM_KEY_A = "delivery_communication";
     const ITEM_KEY_B = "digital_delivery_email";
     const CONCAT_DISPUTE_ID = "du_WIN20_CONCAT_TEST";
