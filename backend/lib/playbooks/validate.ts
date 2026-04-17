@@ -16,7 +16,20 @@ export function validatePlaybookChecklist(
   playbookKey: string,
   checklist: EvidenceChecklistItem[],
 ): void {
+  const seenKeys = new Set<string>();
   for (const item of checklist) {
+    if (!item.key || item.key.trim().length === 0) {
+      throw new PlaybookInvariantError(
+        `Playbook ${playbookKey} item "${item.item}" has an empty key. Every checklist item must have a non-empty stable key.`,
+      );
+    }
+    if (seenKeys.has(item.key)) {
+      throw new PlaybookInvariantError(
+        `Playbook ${playbookKey} has duplicate checklist key "${item.key}" (on item "${item.item}"). Keys must be unique within a playbook.`,
+      );
+    }
+    seenKeys.add(item.key);
+
     const flags = [
       Boolean(item.stripe_field),
       Boolean(item.narrative_only),

@@ -4,6 +4,7 @@ import type { EvidenceChecklistItem } from "./types";
 
 function baseItem(overrides: Partial<EvidenceChecklistItem> = {}): EvidenceChecklistItem {
   return {
+    key: "test_key",
     item: "Test item",
     category: "recommended",
     context: "all",
@@ -68,5 +69,22 @@ describe("validatePlaybookChecklist", () => {
       expect((err as Error).message).toContain("visa-10.4");
       expect((err as Error).message).toContain("bad item");
     }
+  });
+
+  it("rejects a playbook with two items sharing the same key", () => {
+    expect(() =>
+      validatePlaybookChecklist("visa-10.4", [
+        baseItem({ key: "shared_key", item: "First", stripe_field: "authorization" }),
+        baseItem({ key: "shared_key", item: "Second", stripe_field: "avs_result" }),
+      ]),
+    ).toThrow(PlaybookInvariantError);
+  });
+
+  it("rejects a playbook with an empty-string key", () => {
+    expect(() =>
+      validatePlaybookChecklist("visa-10.4", [
+        baseItem({ key: "", stripe_field: "authorization" }),
+      ]),
+    ).toThrow(PlaybookInvariantError);
   });
 });
