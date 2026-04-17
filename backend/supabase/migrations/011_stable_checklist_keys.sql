@@ -39,8 +39,11 @@ INSERT INTO win40_label_map (label, stable_key) VALUES
   ('Order confirmation showing agreed delivery date', 'order_confirmation_delivery_date'),
   ('Screenshot of order details (items, quantities, shipping method)', 'order_details_screenshot'),
   ('Communication with customer about delivery (emails, chat logs)', 'delivery_communication'),
-  -- Access logs label is scoped to visa-13.1; `digital_access_logs` is intentionally
-  -- reused between visa-10.4 and visa-13.1 because the evidence concept is the same.
+  -- Different label text from visa-10.4's access logs entry, so no INSERT conflict.
+  -- Intentionally maps to the same stable key because the evidence concept is
+  -- identical. Cross-playbook key reuse is safe: a dispute has one reason code,
+  -- so only one of these label variants can appear in a given dispute's
+  -- evidence_files rows.
   ('Access logs showing customer used the product/service (IP address, login timestamps, download confirmation)', 'digital_access_logs'),
   ('Email delivery confirmation (license key, download link sent to customer''s email)', 'digital_delivery_email'),
   ('Terms of service / delivery terms accepted at checkout', 'checkout_terms'),
@@ -109,7 +112,31 @@ INSERT INTO win40_label_map (label, stable_key) VALUES
   ('Signed scope of work or service agreement', 'signed_scope_of_work'),
   ('Proof of service delivery (reports, deliverables, login/access logs)', 'service_delivery_proof'),
   ('Milestone sign-offs or approval emails from the customer', 'milestone_signoffs')
+-- All 79 labels are unique, so this never fires. Kept as a safety net against
+-- future label additions being inadvertently duplicated.
 ON CONFLICT (label) DO NOTHING;
+
+-- Pre-flight collision check (MUST be run before applying this migration against
+-- a DB that may contain WIN-19-era legacy labels). Run this as a bare SELECT in
+-- the same session AFTER the temp-table INSERT above but BEFORE the three UPDATEs
+-- below. If it returns any rows, two evidence_files rows on the same dispute
+-- would collide into the same (dispute_id, stable_key) after UPDATE -- violating
+-- uq_evidence_files_dispute_item and aborting the whole transaction.
+--
+-- SELECT dispute_id, m.stable_key, array_agg(ef.checklist_item_key) AS colliding_labels
+-- FROM evidence_files ef
+-- JOIN win40_label_map m ON m.label = ef.checklist_item_key
+-- GROUP BY dispute_id, m.stable_key
+-- HAVING count(*) > 1;
+--
+-- The only same-playbook collisions possible in this map are in visa-10.4:
+--   (CVV2 verification result, Security code (CVV) verification result)
+--     -> cvc_verification
+--   (3D Secure / Visa Secure authentication proof,
+--    Bank verification (3D Secure) authentication proof)
+--     -> three_d_secure_proof
+-- If the check returns rows, manually dedupe them (keep the most recent by
+-- uploaded_at) before proceeding. Task 9 step 2 covers the ops side.
 
 -- 1. evidence_files.checklist_item_key
 UPDATE evidence_files ef
@@ -121,6 +148,9 @@ WHERE ef.checklist_item_key = m.label;
 -- Entries whose old key is not in the map are preserved as-is so we don't
 -- silently drop unknown state (it was already orphaned before this migration).
 UPDATE disputes d
+-- COALESCE on the outer edge is defensive: jsonb_object_agg cannot return NULL
+-- inside this subquery because the WHERE guard below ensures the input is
+-- non-empty. Kept as belt-and-suspenders.
 SET checklist_state = (
   SELECT COALESCE(jsonb_object_agg(
     COALESCE(m.stable_key, entry.key),
@@ -134,6 +164,9 @@ WHERE d.checklist_state IS NOT NULL
 
 -- 3. disputes.checklist_notes -- same pattern.
 UPDATE disputes d
+-- COALESCE on the outer edge is defensive: jsonb_object_agg cannot return NULL
+-- inside this subquery because the WHERE guard below ensures the input is
+-- non-empty. Kept as belt-and-suspenders.
 SET checklist_notes = (
   SELECT COALESCE(jsonb_object_agg(
     COALESCE(m.stable_key, entry.key),
