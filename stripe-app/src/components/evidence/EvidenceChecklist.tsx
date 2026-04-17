@@ -44,10 +44,10 @@ function buildInitialState(
 ): ChecklistState {
   const state: ChecklistState = {};
   for (const item of items) {
-    state[item.item] = false;
+    state[item.key] = false;
     const result = getStripeFieldResult(item, dispute);
     if (result?.status === 'positive') {
-      state[item.item] = true;
+      state[item.key] = true;
     }
   }
   if (dispute.checklist_state) {
@@ -76,7 +76,7 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
       const initial = new Map<string, Set<ExpandedSection>>();
       for (const item of items) {
         if (item.narrative_only) {
-          initial.set(item.item, new Set<ExpandedSection>(['notes']));
+          initial.set(item.key, new Set<ExpandedSection>(['notes']));
         }
       }
       return initial;
@@ -103,7 +103,7 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
     const nextExpanded = new Map<string, Set<ExpandedSection>>();
     for (const item of items) {
       if (item.narrative_only) {
-        nextExpanded.set(item.item, new Set<ExpandedSection>(['notes']));
+        nextExpanded.set(item.key, new Set<ExpandedSection>(['notes']));
       }
     }
     setExpandedSections(nextExpanded);
@@ -207,36 +207,36 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispute.id]);
 
-  const handleToggle = useCallback((itemName: string) => {
+  const handleToggle = useCallback((itemKey: string) => {
     setChecklistState((prev) => {
-      const newState = { ...prev, [itemName]: !prev[itemName] };
+      const newState = { ...prev, [itemKey]: !prev[itemKey] };
       persistChecklist(newState);
       return newState;
     });
   }, [persistChecklist]);
 
-  const handleNotesChange = useCallback((itemName: string, value: string) => {
+  const handleNotesChange = useCallback((itemKey: string, value: string) => {
     setNotesState((prev) => {
-      const newNotes = { ...prev, [itemName]: value };
+      const newNotes = { ...prev, [itemKey]: value };
       persistNotes(newNotes);
       return newNotes;
     });
   }, [persistNotes]);
 
-  const handleFileChange = useCallback((itemName: string, file: EvidenceFile | null) => {
-    setFilesState((prev) => ({ ...prev, [itemName]: file }));
+  const handleFileChange = useCallback((itemKey: string, file: EvidenceFile | null) => {
+    setFilesState((prev) => ({ ...prev, [itemKey]: file }));
   }, []);
 
-  const handleSectionToggle = useCallback((itemName: string, section: ExpandedSection) => {
+  const handleSectionToggle = useCallback((itemKey: string, section: ExpandedSection) => {
     setExpandedSections((prev) => {
       const next = new Map(prev);
-      const sections = new Set(prev.get(itemName) ?? []);
+      const sections = new Set(prev.get(itemKey) ?? []);
       if (sections.has(section)) {
         sections.delete(section);
       } else {
         sections.add(section);
       }
-      next.set(itemName, sections);
+      next.set(itemKey, sections);
       return next;
     });
   }, []);
@@ -272,7 +272,7 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
 
   // Progress counts (always against full list, not filtered)
   const totalItems = items.length;
-  const completedItems = items.filter((item) => checklistState[item.item]).length;
+  const completedItems = items.filter((item) => checklistState[item.key]).length;
 
   return (
     <Box css={{ padding: 'medium', stack: 'y', gap: 'large' }}>
@@ -319,20 +319,20 @@ const EvidenceChecklist = ({ dispute, playbook, context, isUrgent, daysRemaining
             const stripeResult = getStripeFieldResult(item, dispute);
             return (
               <ChecklistItem
-                key={item.item}
+                key={item.key}
                 item={item}
-                checked={!!checklistState[item.item]}
+                checked={!!checklistState[item.key]}
                 stripeFieldResult={stripeResult ?? undefined}
-                expandedSections={expandedSections.get(item.item) ?? new Set()}
-                notes={notesState[item.item] ?? ''}
-                existingFile={filesState[item.item] ?? null}
+                expandedSections={expandedSections.get(item.key) ?? new Set()}
+                notes={notesState[item.key] ?? ''}
+                existingFile={filesState[item.key] ?? null}
                 disputeId={dispute.id}
                 context={contextRef.current}
-                onToggle={() => handleToggle(item.item)}
-                onSectionToggle={(section) => handleSectionToggle(item.item, section)}
-                onNotesChange={(value) => handleNotesChange(item.item, value)}
+                onToggle={() => handleToggle(item.key)}
+                onSectionToggle={(section) => handleSectionToggle(item.key, section)}
+                onNotesChange={(value) => handleNotesChange(item.key, value)}
                 onSaveNotes={flushNotes}
-                onFileChange={(file) => handleFileChange(item.item, file)}
+                onFileChange={(file) => handleFileChange(item.key, file)}
                 submitted={submitted}
               />
             );

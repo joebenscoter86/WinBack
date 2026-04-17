@@ -50,10 +50,10 @@ const NarrativePreGeneration = ({
   const checklistNotes = dispute.checklist_notes ?? {};
   const checklistItems = playbook?.evidence_checklist ?? [];
   const itemStatuses = checklistItems.map((item) => {
-    const matchedFile = filesByKey.get(item.item);
+    const matchedFile = filesByKey.get(item.key);
     const stripeField = getStripeFieldResult(item, dispute);
     const autoFilled = stripeField?.status === 'positive';
-    const hasMerchantNote = !!(checklistNotes[item.item]?.trim());
+    const hasMerchantNote = !!(checklistNotes[item.key]?.trim());
     const isNarrativeOnly = !!item.narrative_only;
     const satisfied = !!matchedFile || autoFilled || isNarrativeOnly;
     let statusLabel: string;
@@ -136,7 +136,7 @@ const NarrativePreGeneration = ({
             {itemStatuses.map(({ item, satisfied }, index) => {
               const isFirst = index === 0;
               return (
-                <Box key={item.item} css={{ stack: 'y', gap: 0 }}>
+                <Box key={item.key} css={{ stack: 'y', gap: 0 }}>
                   {!isFirst && <Divider />}
                   <Box
                     css={{

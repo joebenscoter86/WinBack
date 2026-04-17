@@ -232,7 +232,7 @@ const ChecklistItem = ({
         <Box css={{ marginLeft: 'xlarge' }}>
           <FileUploadSection
             disputeId={disputeId}
-            checklistItemKey={item.item}
+            checklistItemKey={item.key}
             existingFile={existingFile}
             context={context}
             onFileChange={onFileChange}
