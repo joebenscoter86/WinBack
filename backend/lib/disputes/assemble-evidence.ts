@@ -77,7 +77,7 @@ export async function assembleEvidence(input: AssembleInput): Promise<AssemblyRe
   >();
   const itemByKey = new Map<string, EvidenceChecklistItem>();
   for (const item of playbook.evidence_checklist) {
-    itemByKey.set(item.item, item);
+    itemByKey.set(item.key, item);
   }
 
   for (const file of evidenceFiles) {

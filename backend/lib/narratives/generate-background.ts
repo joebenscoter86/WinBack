@@ -148,13 +148,14 @@ export async function runBackgroundGeneration(
       checklist_notes: (dispute.checklist_notes ?? {}) as Record<string, string>,
       narrative_only_items: (
         (playbook.evidence_checklist ?? []) as Array<{
+          key: string;
           item: string;
           narrative_only?: boolean;
           narrative_fallback?: string;
         }>
       )
         .filter((it) => it.narrative_only === true)
-        .map((it) => ({ item: it.item, fallback: it.narrative_fallback })),
+        .map((it) => ({ key: it.key, item: it.item, fallback: it.narrative_fallback })),
       issuer_evaluation: String(playbook.issuer_evaluation ?? ""),
       merchant_feedback: merchantFeedback,
     };

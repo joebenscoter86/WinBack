@@ -51,7 +51,7 @@ export function evaluateSubmissionGuard(input: GuardInput): GuardResult {
     .filter((i) => i.category === "mandatory")
     .filter((i) => !(i as { narrative_only?: boolean }).narrative_only)
     .filter((i) => !(i as { stripe_field?: boolean }).stripe_field)
-    .filter((i) => !filedKeys.has(i.item))
+    .filter((i) => !filedKeys.has(i.key))
     .map((i) => i.item);
   if (missingMandatory.length > 0) {
     warnings.push({ code: "missing_mandatory_items", items: missingMandatory });

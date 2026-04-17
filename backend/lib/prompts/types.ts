@@ -36,6 +36,7 @@ export interface EvidenceFileRef {
  * string. (WIN-49)
  */
 export interface NarrativeOnlyItem {
+  key: string;
   item: string;
   fallback?: string;
 }
