@@ -140,7 +140,7 @@ const DisputeListView = (context: ExtensionContextValue) => {
   const filteredDisputes = sortedDisputes.filter((d) => matchesFilter(d, statusFilter));
 
   const handleDismissOnboarding = async () => {
-    // Optimistic — hide the panel immediately. If the backend call fails we
+    // Optimistic: hide the panel immediately. If the backend call fails we
     // will rehydrate on next mount, which is fine; worst case the merchant
     // sees it once more.
     setOnboardingCompleted(true);
@@ -149,7 +149,7 @@ const DisputeListView = (context: ExtensionContextValue) => {
         completed: true,
       });
     } catch {
-      // Swallow — the next load will correct state.
+      // Swallow: the next load will correct state.
     }
   };
 
