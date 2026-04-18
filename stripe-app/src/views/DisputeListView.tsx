@@ -15,7 +15,7 @@ import {
 import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 import DisputeCard from '../components/DisputeCard';
 import DisputeWorkflow from '../components/DisputeWorkflow';
-import EmptyState from '../components/EmptyState';
+import EmptyDisputesState from '../components/EmptyDisputesState';
 import ErrorBanner from '../components/ErrorBanner';
 import UpgradePromptBanner from '../components/UpgradePromptBanner';
 import { fetchBackend, ApiError } from '../lib/apiClient';
@@ -80,6 +80,7 @@ const DisputeListView = (context: ExtensionContextValue) => {
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('needs_response');
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean>(true);
 
   const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
   const [showWorkflow, setShowWorkflow] = useState(false);
@@ -91,8 +92,15 @@ const DisputeListView = (context: ExtensionContextValue) => {
   const loadDisputes = useCallback(async () => {
     setViewState('loading');
     try {
-      const result = await fetchBackend<{ data: Dispute[] }>('/api/disputes', contextRef.current);
-      setDisputes(result.data);
+      const [disputesResult, onboardingResult] = await Promise.all([
+        fetchBackend<{ data: Dispute[] }>('/api/disputes', contextRef.current),
+        fetchBackend<{ completed: boolean; completed_at: string | null }>(
+          '/api/merchant/onboarding',
+          contextRef.current,
+        ),
+      ]);
+      setDisputes(disputesResult.data);
+      setOnboardingCompleted(onboardingResult.completed);
       setViewState('ready');
     } catch (err) {
       const message =
@@ -131,6 +139,20 @@ const DisputeListView = (context: ExtensionContextValue) => {
 
   const filteredDisputes = sortedDisputes.filter((d) => matchesFilter(d, statusFilter));
 
+  const handleDismissOnboarding = async () => {
+    // Optimistic — hide the panel immediately. If the backend call fails we
+    // will rehydrate on next mount, which is fine; worst case the merchant
+    // sees it once more.
+    setOnboardingCompleted(true);
+    try {
+      await fetchBackend('/api/merchant/onboarding/update', contextRef.current, {
+        completed: true,
+      });
+    } catch {
+      // Swallow — the next load will correct state.
+    }
+  };
+
   return (
     <ContextView title="WinBack" description="Guided dispute resolution">
       {viewState === 'loading' && (
@@ -163,9 +185,9 @@ const DisputeListView = (context: ExtensionContextValue) => {
               <Box css={{ padding: 'small', stack: 'y', gap: 'small' }}>
                 <UpgradePromptBanner context={contextRef.current} />
                 {disputes.length === 0 ? (
-                  <EmptyState
-                    title="No disputes yet"
-                    description="When a dispute comes in, we'll walk you through exactly what to do."
+                  <EmptyDisputesState
+                    onboardingCompleted={onboardingCompleted}
+                    onDismissOnboarding={handleDismissOnboarding}
                   />
                 ) : (
                   <>
