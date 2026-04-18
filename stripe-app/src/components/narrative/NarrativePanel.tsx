@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 import type { Dispute, PlaybookData, EvidenceFile } from '../../lib/types';
-import type { NarrativePhase, NarrativeAnnotation, StatusResponse } from '../../lib/narrative-types';
+import type { NarrativePhase, NarrativeAnnotation, StatusResponse, FeedbackTag } from '../../lib/narrative-types';
 import { POLL_INTERVAL_MS, MAX_POLL_DURATION_MS } from '../../lib/narrative-types';
 import { fetchBackend, ApiError } from '../../lib/apiClient';
 import NarrativePreGeneration from './NarrativePreGeneration';
@@ -102,7 +102,7 @@ const NarrativePanel = ({
     return () => clearInterval(interval);
   }, [phase, generationId, onEditedNarrativeChange]);
 
-  const handleGenerate = useCallback(async (merchantFeedback: string) => {
+  const handleGenerate = useCallback(async (merchantFeedback: string, tags: FeedbackTag[] = []) => {
     setPhase('generating');
     setErrorMessage(null);
     setIsGenerationLimit(false);
@@ -116,6 +116,7 @@ const NarrativePanel = ({
           reason_code: dispute.reason_code,
           network: dispute.network,
           merchant_feedback: merchantFeedback,
+          merchant_feedback_tags: tags,
         },
       );
 
@@ -138,8 +139,8 @@ const NarrativePanel = ({
     onApprove(editedNarrative);
   }, [onApprove, editedNarrative]);
 
-  const handleRegenerate = useCallback((merchantFeedback: string) => {
-    handleGenerate(merchantFeedback);
+  const handleRegenerate = useCallback((merchantFeedback: string, tags: FeedbackTag[]) => {
+    handleGenerate(merchantFeedback, tags);
   }, [handleGenerate]);
 
   const handleRetry = useCallback(() => {
