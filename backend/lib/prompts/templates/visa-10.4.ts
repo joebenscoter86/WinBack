@@ -32,11 +32,12 @@ export const visa104Template: ReasonCodePromptTemplate = {
       name: "Customer Identity Match",
       bank_criterion: "Does the purchaser match the cardholder?",
       instruction:
-        "State the customer name, email, and billing address on the transaction. If the billing address matches AVS records, note this. State the statement descriptor the cardholder saw on their bank statement (calculated_statement_descriptor) so the issuer can see the merchant identity as it was billed. Reference any account details showing the customer's identity.",
+        "State the customer name, email, and billing address on the transaction. If the billing address matches AVS records, note this. State the statement descriptor the cardholder saw on their bank statement (calculated_statement_descriptor) so the issuer can see the merchant identity as it was billed. Reference any account details showing the customer's identity. If device identifier or IP address records place the transaction in the cardholder's geography, include that — an IP in the same region as the billing address directly undermines a fraud claim.",
       auto_pull_fields: ["avs_address_check", "avs_zip_check", "calculated_statement_descriptor"],
       evidence_keys: [
         "customer_account_details",
         "statement_descriptor_proof",
+        "device_and_ip",
       ],
       priority: 1,
     },
