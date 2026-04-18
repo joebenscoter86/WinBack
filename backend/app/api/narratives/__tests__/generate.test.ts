@@ -52,15 +52,19 @@ let mockInsertResult: { data: unknown; error: unknown } = {
   data: { id: "gen-uuid-1" },
   error: null,
 };
+let lastInsertPayload: Record<string, unknown> | null = null;
 
 function makeMockFrom(table: string) {
   if (table === "narrative_generations") {
     return {
-      insert: () => ({
-        select: () => ({
-          single: () => Promise.resolve(mockInsertResult),
-        }),
-      }),
+      insert: (payload: Record<string, unknown>) => {
+        lastInsertPayload = payload;
+        return {
+          select: () => ({
+            single: () => Promise.resolve(mockInsertResult),
+          }),
+        };
+      },
     };
   }
   return {};
@@ -89,6 +93,7 @@ describe("POST /api/narratives/generate", () => {
     };
     mockIncrementResult = { newCount: 1, error: null };
     mockInsertResult = { data: { id: "gen-uuid-1" }, error: null };
+    lastInsertPayload = null;
   });
 
   it("returns 400 when required fields are missing", async () => {
@@ -150,5 +155,65 @@ describe("POST /api/narratives/generate", () => {
     expect(json.status).toBe("pending");
     // Background generation should be scheduled via after()
     expect(after).toHaveBeenCalledOnce();
+  });
+
+  // ---------------------------------------------------------------------
+  // WIN-35: structured feedback tags
+  // ---------------------------------------------------------------------
+
+  it("stores structured feedback tags and composed feedback text", async () => {
+    const { POST } = await import("../generate/route");
+
+    await POST(
+      makeRequest({
+        dispute_id: "dp_123",
+        reason_code: "13.1",
+        network: "visa",
+        merchant_feedback: "be more specific about delivery dates",
+        merchant_feedback_tags: ["too_long", "missing_evidence"],
+      }),
+    );
+
+    expect(lastInsertPayload).not.toBeNull();
+    expect(lastInsertPayload!.merchant_feedback_tags).toEqual([
+      "too_long",
+      "missing_evidence",
+    ]);
+    // Composed feedback prepends canonical guidance for each tag and
+    // includes the merchant's free text under an attributed heading.
+    const composed = lastInsertPayload!.merchant_feedback as string;
+    expect(composed).toMatch(/too long/i);
+    expect(composed).toMatch(/evidence/i);
+    expect(composed).toMatch(/Merchant's own words: be more specific/);
+  });
+
+  it("drops unknown tag values silently", async () => {
+    const { POST } = await import("../generate/route");
+
+    await POST(
+      makeRequest({
+        dispute_id: "dp_123",
+        reason_code: "13.1",
+        network: "visa",
+        merchant_feedback_tags: ["too_long", "hacker_attack", 42],
+      }),
+    );
+
+    expect(lastInsertPayload!.merchant_feedback_tags).toEqual(["too_long"]);
+  });
+
+  it("stores null tags and null feedback when merchant skips feedback", async () => {
+    const { POST } = await import("../generate/route");
+
+    await POST(
+      makeRequest({
+        dispute_id: "dp_123",
+        reason_code: "13.1",
+        network: "visa",
+      }),
+    );
+
+    expect(lastInsertPayload!.merchant_feedback_tags).toBeNull();
+    expect(lastInsertPayload!.merchant_feedback).toBeNull();
   });
 });

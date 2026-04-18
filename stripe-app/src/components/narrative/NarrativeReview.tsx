@@ -10,7 +10,12 @@ import {
   Inline,
   TextArea,
 } from '@stripe/ui-extension-sdk/ui';
-import { NarrativeAnnotation, MAX_GENERATIONS } from '../../lib/narrative-types';
+import {
+  NarrativeAnnotation,
+  MAX_GENERATIONS,
+  FEEDBACK_TAGS,
+  FeedbackTag,
+} from '../../lib/narrative-types';
 
 interface NarrativeReviewProps {
   narrative: string;
@@ -19,7 +24,7 @@ interface NarrativeReviewProps {
   generationNumber: number;
   onEditChange: (text: string) => void;
   onApprove: () => void;
-  onRegenerate: (merchantFeedback: string) => void;
+  onRegenerate: (merchantFeedback: string, tags: FeedbackTag[]) => void;
   submitted?: boolean;
 }
 
@@ -35,22 +40,29 @@ const NarrativeReview = ({
 }: NarrativeReviewProps) => {
   const [showRegenConfirm, setShowRegenConfirm] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [selectedTags, setSelectedTags] = useState<FeedbackTag[]>([]);
 
   const remaining = MAX_GENERATIONS - generationNumber;
   const limitReached = remaining <= 0;
   const hasEdits = editedNarrative !== narrative;
 
+  const toggleTag = (tag: FeedbackTag) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  };
+
   const handleRegenerateClick = () => {
     if (hasEdits) {
       setShowRegenConfirm(true);
     } else {
-      onRegenerate(feedback);
+      onRegenerate(feedback, selectedTags);
     }
   };
 
   const handleConfirmRegenerate = () => {
     setShowRegenConfirm(false);
-    onRegenerate(feedback);
+    onRegenerate(feedback, selectedTags);
   };
 
   return (
@@ -175,14 +187,29 @@ const NarrativeReview = ({
           }}
         >
           <Inline css={{ font: 'subheading', fontWeight: 'semibold' }}>
-            Want to try again with different guidance?
+            What would you like to change?
           </Inline>
           <Inline css={{ font: 'caption', color: 'secondary' }}>
-            Optional. Tell the AI what to emphasize or change before regenerating.
+            Optional. Pick one or more, add notes, or skip and click Regenerate.
           </Inline>
+          <Box css={{ stack: 'x', gap: 'small', wrap: 'wrap' }}>
+            {FEEDBACK_TAGS.map((tag) => {
+              const isSelected = selectedTags.includes(tag.id);
+              return (
+                <Button
+                  key={tag.id}
+                  type={isSelected ? 'primary' : 'secondary'}
+                  size="small"
+                  onPress={() => toggleTag(tag.id)}
+                >
+                  {tag.label}
+                </Button>
+              );
+            })}
+          </Box>
           <TextArea
             label=""
-            placeholder="e.g. Emphasize the delivery tracking more"
+            placeholder="Anything specific? e.g. Emphasize the delivery tracking more"
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
             rows={2}

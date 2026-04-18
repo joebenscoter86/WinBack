@@ -15,6 +15,10 @@ import {
   disputeExpiredResponse,
   isDisputeSubmittable,
 } from "@/lib/disputes/expired-guard";
+import {
+  sanitizeFeedbackTags,
+  composeFeedback,
+} from "@/lib/narratives/feedback-tags";
 
 const MAX_GENERATIONS = 5;
 
@@ -23,12 +27,24 @@ export const POST = withStripeAuth(async (
   { identity, body },
 ) => {
   const { accountId, userId } = identity;
-  const { dispute_id, reason_code, network, merchant_feedback } = body as {
+  const {
+    dispute_id,
+    reason_code,
+    network,
+    merchant_feedback,
+    merchant_feedback_tags,
+  } = body as {
     dispute_id?: string;
     reason_code?: string;
     network?: string;
     merchant_feedback?: string;
+    merchant_feedback_tags?: unknown;
   };
+
+  // Drop unknown values silently so a malformed UI payload doesn't block
+  // regeneration. Invalid tag strings are filtered out; valid ones survive.
+  const tags = sanitizeFeedbackTags(merchant_feedback_tags);
+  const composedFeedback = composeFeedback(tags, merchant_feedback);
 
   if (!dispute_id || !reason_code || !network) {
     return NextResponse.json(
@@ -107,7 +123,8 @@ export const POST = withStripeAuth(async (
       dispute_id: dispute.id,
       status: "pending",
       generation_number: newCount,
-      merchant_feedback: merchant_feedback ?? null,
+      merchant_feedback: composedFeedback ?? null,
+      merchant_feedback_tags: tags ?? null,
     })
     .select("id")
     .single();
@@ -138,7 +155,7 @@ export const POST = withStripeAuth(async (
       stripeDisputeId: dispute_id,
       reasonCode: reason_code,
       network,
-      merchantFeedback: merchant_feedback,
+      merchantFeedback: composedFeedback,
     }),
   );
 
