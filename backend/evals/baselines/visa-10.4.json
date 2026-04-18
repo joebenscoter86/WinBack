@@ -1,0 +1,14 @@
+{
+  "fixtureId": "visa-10.4",
+  "criteria": {
+    "no_hallucination": true,
+    "evidence_grounding": true,
+    "no_fabricated_facts": true,
+    "section_coverage": true,
+    "annotations_valid": true,
+    "conciseness": true,
+    "tone": true
+  },
+  "wordCount": 284,
+  "generatedAt": "2026-04-18T20:51:46.806Z"
+}

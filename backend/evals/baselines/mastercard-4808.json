@@ -1,0 +1,14 @@
+{
+  "fixtureId": "mastercard-4808",
+  "criteria": {
+    "no_hallucination": true,
+    "evidence_grounding": true,
+    "no_fabricated_facts": true,
+    "section_coverage": true,
+    "annotations_valid": true,
+    "conciseness": true,
+    "tone": true
+  },
+  "wordCount": 236,
+  "generatedAt": "2026-04-18T20:52:49.123Z"
+}

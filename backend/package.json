@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "seed:playbooks": "tsx supabase/seed-playbooks.ts"
+    "seed:playbooks": "tsx supabase/seed-playbooks.ts",
+    "eval:prompts": "tsx evals/run.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
