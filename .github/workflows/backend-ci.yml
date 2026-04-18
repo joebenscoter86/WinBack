@@ -57,3 +57,20 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
       - run: npm run test:integration
+
+  evals-mock:
+    name: prompt eval harness (mock)
+    needs: unit
+    runs-on: ubuntu-latest
+    # Mock mode exercises the eval runner, criteria, and fixtures without
+    # calling the real Claude API. Confirms the harness compiles and wires
+    # up cleanly. The real-API run is local-only -- see backend/evals/README.md.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run eval:prompts -- --mock

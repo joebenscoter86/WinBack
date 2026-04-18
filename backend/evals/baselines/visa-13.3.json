@@ -1,0 +1,14 @@
+{
+  "fixtureId": "visa-13.3",
+  "criteria": {
+    "no_hallucination": true,
+    "evidence_grounding": true,
+    "no_fabricated_facts": true,
+    "section_coverage": true,
+    "annotations_valid": true,
+    "conciseness": true,
+    "tone": true
+  },
+  "wordCount": 269,
+  "generatedAt": "2026-04-18T20:52:25.096Z"
+}
