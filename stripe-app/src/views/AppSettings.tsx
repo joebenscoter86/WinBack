@@ -44,8 +44,29 @@ const AppSettings = (context: ExtensionContextValue) => {
   const [upgrading, setUpgrading] = useState(false);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
+  const [reopening, setReopening] = useState(false);
+  const [reopenDone, setReopenDone] = useState(false);
+  const [reopenError, setReopenError] = useState<string | null>(null);
+
   const contextRef = useRef(context);
   contextRef.current = context;
+
+  const handleReopenOnboarding = async () => {
+    setReopening(true);
+    setReopenError(null);
+    setReopenDone(false);
+    try {
+      await fetchBackend('/api/merchant/onboarding/update', contextRef.current, {
+        completed: false,
+      });
+      setReopenDone(true);
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Failed to reopen guide';
+      setReopenError(msg);
+    } finally {
+      setReopening(false);
+    }
+  };
 
   useEffect(() => {
     const loadBilling = async () => {
@@ -209,6 +230,30 @@ const AppSettings = (context: ExtensionContextValue) => {
             </Box>
           </>
         )}
+
+        <Divider />
+
+        <Box css={{ stack: 'y', gap: 'xsmall' }}>
+          <Inline css={{ font: 'heading', fontWeight: 'semibold' }}>
+            Getting started guide
+          </Inline>
+          <Inline css={{ font: 'caption', color: 'secondary' }}>
+            Show the "How WinBack works" guide again in the Disputes tab next time you have no active disputes.
+          </Inline>
+          {reopenError && (
+            <Banner type="critical" title="Could not reopen guide" description={reopenError} />
+          )}
+          {reopenDone && !reopenError && (
+            <Inline css={{ font: 'caption', color: 'secondary' }}>
+              Done. The guide will appear the next time your disputes list is empty.
+            </Inline>
+          )}
+          <Box css={{ stack: 'x', alignX: 'start' }}>
+            <Button type="secondary" onPress={handleReopenOnboarding} disabled={reopening}>
+              {reopening ? 'Reopening\u2026' : 'Show getting started guide'}
+            </Button>
+          </Box>
+        </Box>
 
         <Divider />
 
