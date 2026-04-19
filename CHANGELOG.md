@@ -2,6 +2,11 @@
 
 All notable changes to WinBack will be documented in this file.
 
+## [0.0.1.5] - 2026-04-18
+
+### Added
+- Newly arrived disputes now surface a "New" badge on the dispute list card and a "(N new)" count on the Disputes tab label. The badge clears the first time the merchant opens the dispute in WinBack, so the list always tells the merchant at a glance what needs their attention next. Historical disputes from before this release are treated as already viewed and do not badge. (WIN-26)
+
 ## [0.0.1.4] - 2026-04-14
 
 ### Added
