@@ -54,7 +54,7 @@ const OnboardingPanel = ({ onDismiss }: OnboardingPanelProps) => {
           How WinBack works
         </Inline>
         <Inline css={{ font: 'caption', color: 'secondary' }}>
-          Guided dispute resolution for Stripe merchants. You keep 100% of what you recover.
+          Guided dispute resolution for Stripe merchants.
         </Inline>
       </Box>
 
