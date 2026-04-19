@@ -120,7 +120,17 @@ const DisputeListView = (context: ExtensionContextValue) => {
   const handleSelectDispute = (dispute: Dispute) => {
     setSelectedDispute(dispute);
     setShowWorkflow(true);
+    // WIN-26: optimistically clear the "New" badge. The backend marks
+    // viewed_at on the next GET /api/disputes/[id]; if that fails the next
+    // full list fetch will re-surface the badge.
+    if (dispute.is_new) {
+      setDisputes((prev) =>
+        prev.map((d) => (d.id === dispute.id ? { ...d, is_new: false } : d)),
+      );
+    }
   };
+
+  const newDisputeCount = disputes.filter((d) => d.is_new).length;
 
   const handleCloseWorkflow = (shown: boolean) => {
     setShowWorkflow(shown);
@@ -191,7 +201,9 @@ const DisputeListView = (context: ExtensionContextValue) => {
       {viewState === 'ready' && (
         <Tabs fitted size="medium">
           <TabList>
-            <Tab id="disputes">Disputes</Tab>
+            <Tab id="disputes">
+              {newDisputeCount > 0 ? `Disputes (${newDisputeCount} new)` : 'Disputes'}
+            </Tab>
             <Tab id="insights">Insights</Tab>
           </TabList>
           <TabPanels>

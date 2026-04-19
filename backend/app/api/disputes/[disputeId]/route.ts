@@ -85,6 +85,16 @@ export const POST = withStripeAuth(async (
           console.error("Failed to backfill dispute row:", upsertError.message);
         }
 
+        // WIN-26: mark the dispute as viewed the first time the merchant
+        // opens it. Done via a guarded update rather than the upsert above
+        // so webhook retries or Stripe-driven updates never re-clear the
+        // timestamp.
+        await supabase
+          .from("disputes")
+          .update({ viewed_at: new Date().toISOString() })
+          .eq("stripe_dispute_id", normalized.id)
+          .is("viewed_at", null);
+
         // Hydrate persisted narrative + submission + checklist state so the
         // wizard can resume a dispute across sessions AND across tab switches
         // within the same session. (WIN-20, WIN-49)

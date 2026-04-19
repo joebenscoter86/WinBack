@@ -47,6 +47,7 @@ const DisputeCard = ({ dispute, onSelect }: DisputeCardProps) => {
             {formatAmount(dispute.amount, dispute.currency)}
           </Inline>
           <Box css={{ stack: 'x', gap: 'xsmall' }}>
+            {dispute.is_new && <Badge type="info">New</Badge>}
             {statusBadge && (
               <Badge type={statusBadge.type}>{statusBadge.label}</Badge>
             )}

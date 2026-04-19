@@ -36,6 +36,9 @@ export interface Dispute {
   customer_email?: string;
   created: number;
   evidence_due_by: number;
+  // WIN-26: true until the merchant opens the dispute in WinBack. Drives the
+  // "New" badge on the list card.
+  is_new?: boolean;
   // Enriched fields (available after detail fetch)
   transaction_date?: number;
   card_brand?: string;
