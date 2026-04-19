@@ -2,7 +2,7 @@
 import PaymentDisputeView from '../src/views/PaymentDisputeView';import DisputeListView from '../src/views/DisputeListView';import AppSettings from '../src/views/AppSettings';
 
 export * from '@stripe/ui-extension-sdk/version';
-export const BUILD_TIME = '2026-04-14 22:48:14.6421 -0700 PDT m=+0.006297417';
+export const BUILD_TIME = '2026-04-18 21:03:07.112397 -0700 PDT m=+0.015122793';
 
 export { 
   PaymentDisputeView,
