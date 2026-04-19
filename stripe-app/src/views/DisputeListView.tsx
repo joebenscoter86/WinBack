@@ -16,6 +16,7 @@ import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 import DisputeCard from '../components/DisputeCard';
 import DisputeWorkflow from '../components/DisputeWorkflow';
 import EmptyDisputesState from '../components/EmptyDisputesState';
+import OnboardingPanel from '../components/OnboardingPanel';
 import ErrorBanner from '../components/ErrorBanner';
 import UpgradePromptBanner from '../components/UpgradePromptBanner';
 import { fetchBackend, ApiError } from '../lib/apiClient';
@@ -182,13 +183,13 @@ const DisputeListView = (context: ExtensionContextValue) => {
           </TabList>
           <TabPanels>
             <TabPanel id="disputes">
-              <Box css={{ padding: 'small', stack: 'y', gap: 'small' }}>
+              <Box css={{ padding: 'small', stack: 'y', gap: 'medium' }}>
                 <UpgradePromptBanner context={contextRef.current} />
+                {!onboardingCompleted && (
+                  <OnboardingPanel onDismiss={handleDismissOnboarding} />
+                )}
                 {disputes.length === 0 ? (
-                  <EmptyDisputesState
-                    onboardingCompleted={onboardingCompleted}
-                    onDismissOnboarding={handleDismissOnboarding}
-                  />
+                  <EmptyDisputesState />
                 ) : (
                   <>
                     <Select

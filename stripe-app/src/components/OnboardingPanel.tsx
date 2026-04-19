@@ -1,31 +1,33 @@
 // stripe-app/src/components/OnboardingPanel.tsx
 //
-// WIN-25: First-run onboarding block shown in the disputes tab when a merchant
-// has zero disputes AND has not yet dismissed the guide. Explains what WinBack
-// does, how it works, and what happens when a dispute arrives.
+// WIN-25: First-run onboarding block shown at the top of the disputes tab
+// for every new merchant, regardless of whether they currently have disputes.
+// Coach tone, scannable visual rhythm via leading icons.
 
 import { useState } from 'react';
-import { Box, Button, Divider, Inline } from '@stripe/ui-extension-sdk/ui';
+import { Box, Button, Divider, Icon, Inline } from '@stripe/ui-extension-sdk/ui';
 
 interface OnboardingPanelProps {
   onDismiss: () => Promise<void>;
 }
 
-const STEPS: { title: string; description: string }[] = [
+type IconName = 'notifications' | 'clipboardCheck' | 'sparkle';
+
+const STEPS: { icon: IconName; title: string; description: string }[] = [
   {
-    title: '1. A new dispute arrives',
-    description:
-      'When a customer disputes a charge, it shows up here with an alert. No email rules or Slack integrations to configure.',
+    icon: 'notifications',
+    title: 'A new dispute arrives',
+    description: "You'll see it here the moment it lands. No setup, no configs.",
   },
   {
-    title: '2. We walk you through the evidence',
-    description:
-      'WinBack gives you a reason-code-specific checklist of exactly what to gather: receipts, shipping records, customer communication, whatever fits that dispute type.',
+    icon: 'clipboardCheck',
+    title: 'We walk you through the evidence',
+    description: 'A reason-code-specific checklist, tailored to that dispute. No guessing.',
   },
   {
-    title: '3. AI drafts your response',
-    description:
-      'Once your evidence is in, we draft a narrative that ties it all together. You review, edit, and submit when ready.',
+    icon: 'sparkle',
+    title: 'AI drafts your response',
+    description: 'We tie your evidence into a clean narrative. You review, edit, submit.',
   },
 ];
 
@@ -47,37 +49,40 @@ const OnboardingPanel = ({ onDismiss }: OnboardingPanelProps) => {
         padding: 'large',
         stack: 'y',
         gap: 'medium',
+        backgroundColor: 'container',
+        borderRadius: 'medium',
       }}
     >
       <Box css={{ stack: 'y', gap: 'xsmall' }}>
         <Inline css={{ font: 'heading', fontWeight: 'semibold' }}>
-          How WinBack works
+          Welcome to WinBack
         </Inline>
         <Inline css={{ font: 'caption', color: 'secondary' }}>
-          Guided dispute resolution for Stripe merchants.
+          We'll handle disputes with you, step by step. Here's what to expect.
         </Inline>
       </Box>
 
       <Divider />
 
       {STEPS.map((step) => (
-        <Box key={step.title} css={{ stack: 'y', gap: 'xsmall' }}>
-          <Inline css={{ font: 'body', fontWeight: 'semibold' }}>
-            {step.title}
-          </Inline>
-          <Inline css={{ font: 'caption', color: 'secondary' }}>
-            {step.description}
-          </Inline>
+        <Box key={step.title} css={{ stack: 'x', gap: 'medium', alignY: 'top' }}>
+          <Box css={{ paddingTop: 'xxsmall' }}>
+            <Icon name={step.icon} size="small" css={{ fill: 'brand' }} />
+          </Box>
+          <Box css={{ stack: 'y', gap: 'xxsmall' }}>
+            <Inline css={{ font: 'body', fontWeight: 'semibold' }}>
+              {step.title}
+            </Inline>
+            <Inline css={{ font: 'caption', color: 'secondary' }}>
+              {step.description}
+            </Inline>
+          </Box>
         </Box>
       ))}
 
       <Box css={{ stack: 'x', alignX: 'end' }}>
-        <Button
-          type="secondary"
-          onPress={handleDismiss}
-          disabled={dismissing}
-        >
-          {dismissing ? 'Saving...' : 'Got it'}
+        <Button type="secondary" onPress={handleDismiss} disabled={dismissing}>
+          {dismissing ? 'Saving...' : "Got it, let's go"}
         </Button>
       </Box>
     </Box>
