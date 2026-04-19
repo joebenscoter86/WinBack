@@ -2,10 +2,11 @@
 //
 // WIN-25: First-run onboarding block shown at the top of the disputes tab
 // for every new merchant, regardless of whether they currently have disputes.
-// Coach tone, scannable visual rhythm via leading icons.
+// Each section renders as its own tile so the eye lands on one idea at a
+// time as the merchant scans down the panel.
 
 import { useState } from 'react';
-import { Box, Button, Divider, Icon, Inline } from '@stripe/ui-extension-sdk/ui';
+import { Box, Button, Icon, Inline } from '@stripe/ui-extension-sdk/ui';
 
 interface OnboardingPanelProps {
   onDismiss: () => Promise<void>;
@@ -31,6 +32,14 @@ const STEPS: { icon: IconName; title: string; description: string }[] = [
   },
 ];
 
+const tileCss = {
+  padding: 'large',
+  backgroundColor: 'container',
+  borderRadius: 'medium',
+  stack: 'y',
+  gap: 'small',
+} as const;
+
 const OnboardingPanel = ({ onDismiss }: OnboardingPanelProps) => {
   const [dismissing, setDismissing] = useState(false);
 
@@ -44,16 +53,8 @@ const OnboardingPanel = ({ onDismiss }: OnboardingPanelProps) => {
   };
 
   return (
-    <Box
-      css={{
-        padding: 'large',
-        stack: 'y',
-        gap: 'medium',
-        backgroundColor: 'container',
-        borderRadius: 'medium',
-      }}
-    >
-      <Box css={{ stack: 'y', gap: 'xsmall' }}>
+    <Box css={{ stack: 'y', gap: 'small' }}>
+      <Box css={tileCss}>
         <Inline css={{ font: 'heading', fontWeight: 'semibold' }}>
           Welcome to WinBack
         </Inline>
@@ -62,26 +63,25 @@ const OnboardingPanel = ({ onDismiss }: OnboardingPanelProps) => {
         </Inline>
       </Box>
 
-      <Divider />
-
-      {STEPS.map((step) => (
-        <Box key={step.title} css={{ stack: 'x', gap: 'medium', alignY: 'top' }}>
-          <Box css={{ paddingTop: 'xxsmall' }}>
+      {STEPS.map((step, idx) => (
+        <Box key={step.title} css={tileCss}>
+          <Box css={{ stack: 'x', gap: 'medium', alignY: 'center' }}>
             <Icon name={step.icon} size="small" css={{ fill: 'brand' }} />
-          </Box>
-          <Box css={{ stack: 'y', gap: 'xxsmall' }}>
-            <Inline css={{ font: 'body', fontWeight: 'semibold' }}>
-              {step.title}
-            </Inline>
-            <Inline css={{ font: 'caption', color: 'secondary' }}>
-              {step.description}
+            <Inline css={{ font: 'caption', color: 'secondary', fontWeight: 'semibold' }}>
+              Step {idx + 1}
             </Inline>
           </Box>
+          <Inline css={{ font: 'subheading', fontWeight: 'semibold' }}>
+            {step.title}
+          </Inline>
+          <Inline css={{ font: 'body', color: 'secondary' }}>
+            {step.description}
+          </Inline>
         </Box>
       ))}
 
-      <Box css={{ stack: 'x', alignX: 'end' }}>
-        <Button type="secondary" onPress={handleDismiss} disabled={dismissing}>
+      <Box css={{ stack: 'x', alignX: 'end', paddingTop: 'small' }}>
+        <Button type="primary" onPress={handleDismiss} disabled={dismissing}>
           {dismissing ? 'Saving...' : "Got it, let's go"}
         </Button>
       </Box>
