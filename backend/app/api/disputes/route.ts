@@ -8,6 +8,16 @@ import Stripe from "stripe";
 export const POST = withStripeAuth(async (_request, { identity }) => {
   const { accountId, userId } = identity;
 
+  // Dev-only escape hatch for previewing the empty-disputes onboarding state
+  // when the test Stripe account already has open disputes. Hard-gated on
+  // NODE_ENV so it cannot ship to production.
+  if (
+    process.env.NODE_ENV !== "production" &&
+    process.env.WINBACK_FORCE_EMPTY === "1"
+  ) {
+    return NextResponse.json({ data: [] });
+  }
+
   await ensureMerchant(accountId, userId);
 
   try {
