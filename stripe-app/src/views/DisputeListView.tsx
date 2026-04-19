@@ -154,6 +154,19 @@ const DisputeListView = (context: ExtensionContextValue) => {
     }
   };
 
+  const handleShowGuide = async () => {
+    // Optimistic: show the panel immediately, then persist so it stays
+    // open across reloads until the merchant dismisses again.
+    setOnboardingCompleted(false);
+    try {
+      await fetchBackend('/api/merchant/onboarding/update', contextRef.current, {
+        completed: false,
+      });
+    } catch {
+      // Swallow: the next load will correct state.
+    }
+  };
+
   return (
     <ContextView title="WinBack" description="Guided dispute resolution">
       {viewState === 'loading' && (
@@ -189,7 +202,10 @@ const DisputeListView = (context: ExtensionContextValue) => {
                   <OnboardingPanel onDismiss={handleDismissOnboarding} />
                 )}
                 {disputes.length === 0 ? (
-                  <EmptyDisputesState />
+                  <EmptyDisputesState
+                    onboardingCompleted={onboardingCompleted}
+                    onShowGuide={handleShowGuide}
+                  />
                 ) : (
                   <>
                     <Select
