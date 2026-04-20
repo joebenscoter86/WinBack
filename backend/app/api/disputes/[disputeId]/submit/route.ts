@@ -76,6 +76,27 @@ function classifyStripeSubmissionError(err: unknown): {
   return { code: "internal_error", status: 500, message };
 }
 
+// Returns the original evidence_files.stripe_file_id values that were actually
+// shipped to Stripe: single-file slots contribute their one id; multi-file
+// slots get concat'd into a new combined file, so we credit the source inputs
+// rather than the combined output (which isn't in evidence_files).
+function collectSubmittedFileIds(
+  evidence: Record<string, unknown>,
+  concatReceipts: ReadonlyArray<{ input_file_ids: string[]; combined_file_id: string }>,
+): string[] {
+  const combinedIds = new Set(concatReceipts.map((r) => r.combined_file_id));
+  const ids = new Set<string>();
+  for (const receipt of concatReceipts) {
+    for (const id of receipt.input_file_ids) ids.add(id);
+  }
+  for (const value of Object.values(evidence)) {
+    if (typeof value === "string" && value.startsWith("file_") && !combinedIds.has(value)) {
+      ids.add(value);
+    }
+  }
+  return Array.from(ids);
+}
+
 async function failSubmission(
   submissionId: string,
   err: unknown,
@@ -476,6 +497,23 @@ export const POST = withStripeAuth(
         disputeId: stripeDisputeId,
         extra: { submission_id: submissionId, severity: "data_drift_after_stripe_success" },
       });
+    }
+
+    const submittedFileIds = collectSubmittedFileIds(evidence, concat_receipts);
+    if (submittedFileIds.length > 0) {
+      const { error: efErr } = await supabase
+        .from("evidence_files")
+        .update({ submitted_to_stripe: true })
+        .eq("dispute_id", localDispute.id)
+        .in("stripe_file_id", submittedFileIds);
+      if (efErr) {
+        console.error("[WIN-20] Failed to flag evidence_files as submitted:", efErr);
+        captureRouteError(efErr, {
+          route: "disputes.submit.persist_evidence_files",
+          disputeId: stripeDisputeId,
+          extra: { submission_id: submissionId, severity: "data_drift_after_stripe_success" },
+        });
+      }
     }
 
     return NextResponse.json({

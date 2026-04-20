@@ -25,7 +25,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "WinBack: Win Your Stripe Disputes. Keep Every Dollar.",
   description:
-    "Guided dispute resolution for Stripe merchants. Reason-code playbooks built from 10+ years of issuer-side experience. $29/month flat. No success fees.",
+    "Guided dispute resolution for Stripe merchants. Reason-code playbooks built from 10+ years of payments experience. Pay 15% only when you win, or go flat at $79/month.",
   metadataBase: new URL("https://winbackpay.com"),
   alternates: {
     canonical: "/",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "WinBack: Win Your Stripe Disputes. Keep Every Dollar.",
     description:
-      "Guided dispute resolution for Stripe merchants. $29/month flat. No success fees.",
+      "Guided dispute resolution for Stripe merchants. Pay 15% only when you win, or go flat at $79/month.",
     url: "https://winbackpay.com",
     siteName: "WinBack",
     type: "website",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "WinBack: Win Your Stripe Disputes. Keep Every Dollar.",
     description:
-      "Guided dispute resolution for Stripe merchants. $29/month flat. No success fees.",
+      "Guided dispute resolution for Stripe merchants. Pay 15% only when you win, or go flat at $79/month.",
   },
 };
 

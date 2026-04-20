@@ -4,7 +4,7 @@
 
 ## Project Overview
 
-WinBack is a $29/month flat-rate Stripe App that guides small merchants through winning payment disputes using reason-code-specific playbooks and AI-generated narratives. It runs inside the Stripe Dashboard.
+WinBack is a Stripe App that guides small merchants through winning payment disputes using reason-code-specific playbooks and AI-generated narratives. It runs inside the Stripe Dashboard. Hybrid pricing: 15% success fee (Pay-Per-Win, $0/mo) or $79/month flat (Pro, zero success fee); see `.taskmaster/docs/pricing-strategy.md` for details.
 
 **Key Documents:**
 - PRD: `.taskmaster/docs/prd.md` - Comprehensive product requirements (original baseline)
@@ -19,7 +19,7 @@ WinBack is a $29/month flat-rate Stripe App that guides small merchants through 
 
 - **Frontend:** Stripe Apps SDK (React-based, runs in Stripe Dashboard iframe)
 - **Backend:** Next.js 15+ (App Router) on Vercel
-- **Database:** Supabase (PostgreSQL + Storage + RLS)
+- **Database:** Supabase (PostgreSQL + RLS) — metadata only, no evidence file storage
 - **AI:** Claude API (Anthropic) for narrative generation
 - **Billing:** Stripe App Marketplace billing or Stripe Billing (TBD per research)
 - **Monitoring:** Sentry for error tracking
@@ -32,8 +32,8 @@ Stripe Dashboard (iframe) → Vercel API Routes → Supabase + Claude API + Stri
 
 - Stripe App frontend communicates with Vercel backend via **Stripe App signature verification**
 - Backend handles: Stripe API calls, Claude API narrative generation, Supabase operations
-- Supabase: playbooks, dispute tracking, temporary evidence storage (30-day TTL via cron)
-- No PCI-scoped data stored outside Stripe
+- Supabase: playbooks, dispute tracking, evidence file metadata (Stripe file IDs + filename/size/mime). Evidence file bytes are NEVER stored on our infrastructure -- merchants upload files directly from the browser to Stripe via the Files API, and the backend only persists the returned file ID.
+- No PCI-scoped data stored outside Stripe; no customer-uploaded files stored on our servers
 
 ### Critical Architecture Decisions (from /autoplan review)
 
@@ -41,7 +41,7 @@ Stripe Dashboard (iframe) → Vercel API Routes → Supabase + Claude API + Stri
 - **Auth middleware is mandatory** — Every Vercel API route (except webhooks) MUST verify the Stripe App signature via `fetchStripeSignature()`. Without this, the backend is an open API. See WIN-31.
 - **Background AI generation** — Claude API calls take 3-15 seconds. Don't block in the iframe. Use async generation with polling: POST returns a `generation_id`, client polls for completion. See WIN-18.
 - **Evidence submission is irrevocable** — Stripe's `submit: true` on the Disputes API is final. No undo. Must implement partial-failure handling and idempotency. See WIN-20.
-- **Supabase Storage has no native TTL** — 30-day evidence cleanup requires a cron job (Edge Function or pg_cron). See WIN-33.
+- **No evidence file storage** — files go browser-direct to Stripe via the Files API; the backend only stores the returned `stripe_file_id` plus metadata in the `evidence_files` table. The original "30-day Supabase Storage TTL" plan (WIN-33, migrations 003/004) was torn down in migration 018 -- nothing ever wrote to the bucket once the architecture pivoted to direct upload. Do not reintroduce a server-side evidence storage path without explicit discussion.
 - **Stripe App Marketplace review takes 4-8 weeks** — Submit earliest possible version during Phase 1-2, not Phase 3. See WIN-29.
 
 ## Key Dependencies
@@ -124,10 +124,10 @@ QA caught this during WIN-20: the plan backfilled `stripe_evidence_field` on eve
 
 ## Important Constraints
 
-- **Stripe Apps SDK runs in an iframe** — cannot make external API calls from the frontend. All external calls (Claude API, Supabase) must go through Vercel backend routes. SDK components only: Box, Button, TextField, TextArea, Select, Checkbox, Badge, Banner, Icon, Link, Spinner, Tabs, Table, Accordion. No custom HTML, no drag-and-drop, no rich text editor, no modals (use FocusView for fullscreen).
+- **Stripe Apps SDK runs in an iframe** — cannot make external API calls from the frontend, with one exception: file uploads go directly to Stripe's Files API from the browser (so file bytes never traverse our backend). All other external calls (Claude API, Supabase) must go through Vercel backend routes. SDK components only: Box, Button, TextField, TextArea, Select, Checkbox, Badge, Banner, Icon, Link, Spinner, Tabs, Table, Accordion. No custom HTML, no drag-and-drop, no rich text editor, no modals (use FocusView for fullscreen).
 - **Auth middleware on every route** — Verify Stripe App signature on all API routes. Webhook routes use separate Stripe webhook signature verification.
-- **No PCI data** — cardholder data stays in Stripe. We only store evidence files and dispute metadata.
-- **Evidence file TTL** — 30-day auto-deletion in Supabase Storage (requires cron — no native TTL).
+- **No PCI data** — cardholder data stays in Stripe. We only store dispute metadata and Stripe file IDs; we never store the evidence file bytes themselves.
+- **Evidence files are not on our servers** — uploaded browser-direct to Stripe; we keep the returned file ID in `evidence_files`, nothing else. If a feature seems to need server-side file access, raise it before building.
 - **Evidence submission is irrevocable** — `submit: true` on Stripe Disputes API is final. Implement idempotency keys and partial-failure handling.
 - **AI cost guardrail** — 5 narrative generations per dispute maximum.
 - **AI hallucination validation** — After generating a narrative, verify all referenced evidence actually exists in uploaded files. Strip fabricated references.

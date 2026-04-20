@@ -69,7 +69,7 @@ function Hero() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-container opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-container" />
           </span>
-          Now available on Stripe
+          Coming soon in Stripe Marketplace
         </div>
 
         <h1 className="text-5xl sm:text-6xl md:text-8xl font-[family-name:var(--font-plus-jakarta)] font-extrabold tracking-tighter text-white leading-[0.9]">
@@ -81,7 +81,8 @@ function Hero() {
         <p className="text-on-surface-variant text-xl md:text-2xl max-w-lg leading-relaxed">
           You&apos;re losing disputes you should be winning. WinBack gives you
           step-by-step playbooks that show you exactly what to submit and why
-          it wins. $29/month flat. You keep every dollar you recover.
+          it wins. Pay 15% only when you win, or go flat at $79/month and keep
+          every dollar you recover.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 max-w-md" id="waitlist">
@@ -107,23 +108,40 @@ function PricingCallout() {
   return (
     <section id="pricing" className="max-w-7xl mx-auto px-6 py-12">
       <div className="bg-surface-low rounded-[2rem] p-1 shadow-2xl overflow-hidden">
-        <div className="bg-background/40 backdrop-blur-md rounded-[1.9rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 border border-white/5">
-          <div className="space-y-2">
+        <div className="bg-background/40 backdrop-blur-md rounded-[1.9rem] p-8 md:p-12 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 border border-white/5">
+          <div className="space-y-2 lg:max-w-sm">
             <h2 className="text-2xl sm:text-3xl md:text-5xl font-[family-name:var(--font-plus-jakarta)] font-bold text-white tracking-tight">
-              Radically simple pricing.
+              Pick your pricing. Win either way.
             </h2>
             <p className="text-on-surface-variant text-base sm:text-lg">
-              Other services take 25-30% of money that was already yours.
+              Other services take 25-30% of money that was already yours. We
+              take half that, or nothing at all.
             </p>
           </div>
-          <div className="flex flex-col items-center md:items-end">
-            <div className="text-primary font-[family-name:var(--font-plus-jakarta)] font-extrabold text-6xl md:text-7xl">
-              $29
-              <span className="text-2xl text-slate-500">/mo</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full lg:w-auto">
+            <div className="bg-surface-container rounded-2xl p-6 border border-white/10">
+              <div className="text-slate-400 font-[family-name:var(--font-inter)] text-[10px] tracking-widest uppercase mb-2">
+                Pay-Per-Win
+              </div>
+              <div className="text-primary font-[family-name:var(--font-plus-jakarta)] font-extrabold text-5xl md:text-6xl leading-none">
+                15%
+              </div>
+              <div className="text-slate-500 text-sm mt-2">
+                $0/month. Only pay when you win.
+              </div>
             </div>
-            <p className="text-slate-400 font-[family-name:var(--font-inter)] text-xs tracking-widest uppercase mt-2">
-              Flat fee. No success fees. Ever.
-            </p>
+            <div className="bg-primary/10 rounded-2xl p-6 border border-primary/30">
+              <div className="text-primary-container font-[family-name:var(--font-inter)] text-[10px] tracking-widest uppercase mb-2">
+                Pro
+              </div>
+              <div className="text-primary font-[family-name:var(--font-plus-jakarta)] font-extrabold text-5xl md:text-6xl leading-none">
+                $79
+                <span className="text-xl text-slate-500">/mo</span>
+              </div>
+              <div className="text-slate-500 text-sm mt-2">
+                Unlimited disputes. Zero success fee.
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -202,19 +220,34 @@ function ComparisonTable() {
                 </td>
               </tr>
             ))}
-            {/* WinBack row */}
+            {/* WinBack Pay-Per-Win */}
             <tr className="bg-primary/5">
+              <td className="px-4 sm:px-8 py-5 sm:py-8 font-[family-name:var(--font-plus-jakarta)] font-extrabold text-base sm:text-xl text-primary">
+                WinBack <span className="text-primary/60 font-bold text-xs sm:text-sm uppercase tracking-wider">Pay-Per-Win</span>
+              </td>
+              <td className="px-4 sm:px-8 py-5 sm:py-8 text-primary/90 font-medium text-sm">
+                15% Success Fee
+              </td>
+              <td className="px-4 sm:px-8 py-5 sm:py-8 text-primary/90 font-medium hidden sm:table-cell">
+                1-Click Stripe App
+              </td>
+              <td className="px-4 sm:px-8 py-5 sm:py-8 text-primary font-extrabold text-xl sm:text-2xl">
+                $1,500
+              </td>
+            </tr>
+            {/* WinBack Pro */}
+            <tr className="bg-primary/10">
               <td className="px-4 sm:px-8 py-6 sm:py-10 font-[family-name:var(--font-plus-jakarta)] font-extrabold text-xl sm:text-2xl text-primary">
-                WinBack
+                WinBack <span className="text-primary/60 font-bold text-xs sm:text-sm uppercase tracking-wider">Pro</span>
               </td>
               <td className="px-4 sm:px-8 py-6 sm:py-10 text-primary/90 font-medium text-sm">
-                Flat $29/mo
+                Flat $79/mo
               </td>
               <td className="px-4 sm:px-8 py-6 sm:py-10 text-primary/90 font-medium hidden sm:table-cell">
                 1-Click Stripe App
               </td>
               <td className="px-4 sm:px-8 py-6 sm:py-10 text-primary font-extrabold text-2xl sm:text-3xl">
-                $29
+                $79
               </td>
             </tr>
           </tbody>
@@ -444,24 +477,24 @@ function Footer() {
             WinBack
           </span>
           <p className="text-slate-500 font-[family-name:var(--font-inter)] tracking-widest uppercase text-[10px]">
-            &copy; 2026 WinBack
+            &copy; 2026 JB Technology LLC
           </p>
         </div>
         <div className="flex gap-8">
           <a
-            href="#"
+            href="/terms"
             className="text-slate-500 hover:text-cyan-400 transition-colors font-[family-name:var(--font-inter)] tracking-widest uppercase text-[10px] opacity-80 hover:opacity-100"
           >
             Terms
           </a>
           <a
-            href="#"
+            href="/privacy"
             className="text-slate-500 hover:text-cyan-400 transition-colors font-[family-name:var(--font-inter)] tracking-widest uppercase text-[10px] opacity-80 hover:opacity-100"
           >
             Privacy
           </a>
           <a
-            href="#"
+            href="mailto:support@winbackpay.com"
             className="text-slate-500 hover:text-cyan-400 transition-colors font-[family-name:var(--font-inter)] tracking-widest uppercase text-[10px] opacity-80 hover:opacity-100"
           >
             Contact

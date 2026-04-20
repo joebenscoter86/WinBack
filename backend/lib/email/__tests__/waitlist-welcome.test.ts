@@ -18,7 +18,8 @@ describe("buildWaitlistWelcomeEmail", () => {
 
   it("includes the value prop", () => {
     const { html } = buildWaitlistWelcomeEmail();
-    expect(html).toContain("$29/month");
+    expect(html).toContain("15%");
+    expect(html).toContain("$79/month");
   });
 
   it("does not contain em dashes", () => {

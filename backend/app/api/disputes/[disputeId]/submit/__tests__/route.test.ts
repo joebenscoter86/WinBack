@@ -910,11 +910,22 @@ describe("POST /api/disputes/[disputeId]/submit", () => {
    * submissions.update payload. Returns { setup, captured } so each test can
    * install it on supabaseMock.from and read what the route tried to persist.
    */
-  function buildSuccessSupabaseMock() {
+  function buildSuccessSupabaseMock(
+    evidenceFilesRows: Array<{ checklist_item_key: string; stripe_file_id: string }> = [
+      { checklist_item_key: "receipt", stripe_file_id: "file_receipt" },
+    ],
+  ) {
     const captured: {
       submissionsUpdate: Record<string, unknown> | null;
       submissionsInsert: Record<string, unknown> | null;
-    } = { submissionsUpdate: null, submissionsInsert: null };
+      evidenceFilesUpdate: Record<string, unknown> | null;
+      evidenceFilesUpdateIn: { column: string; values: unknown[] } | null;
+    } = {
+      submissionsUpdate: null,
+      submissionsInsert: null,
+      evidenceFilesUpdate: null,
+      evidenceFilesUpdateIn: null,
+    };
 
     const setup = (table: string) => {
       if (table === "merchants") {
@@ -954,11 +965,20 @@ describe("POST /api/disputes/[disputeId]/submit", () => {
         return {
           select: vi.fn().mockReturnValue({
             eq: vi.fn().mockResolvedValue({
-              data: [
-                { checklist_item_key: "receipt", stripe_file_id: "file_receipt" },
-              ],
+              data: evidenceFilesRows,
               error: null,
             }),
+          }),
+          update: vi.fn().mockImplementation((row: Record<string, unknown>) => {
+            captured.evidenceFilesUpdate = row;
+            return {
+              eq: vi.fn().mockReturnValue({
+                in: vi.fn().mockImplementation((column: string, values: unknown[]) => {
+                  captured.evidenceFilesUpdateIn = { column, values };
+                  return Promise.resolve({ error: null });
+                }),
+              }),
+            };
           }),
         };
       }
@@ -1096,6 +1116,52 @@ describe("POST /api/disputes/[disputeId]/submit", () => {
       status: "succeeded",
       concat_receipts: receipts,
     });
+  });
+
+  it("flags submitted evidence_files rows as submitted_to_stripe after a successful submission", async () => {
+    // Mixed scenario: one single-file slot passes through, one multi-file slot
+    // is concat'd. The submitted_to_stripe flag should flip on ALL three source
+    // file rows (single pass-through + two concat inputs).
+    const concatReceipts = [
+      {
+        slot: "service_documentation" as const,
+        input_file_ids: ["file_svc_a", "file_svc_b"],
+        combined_file_id: "file_svc_merged",
+      },
+    ];
+    assembleEvidenceMock.mockResolvedValueOnce({
+      evidence: {
+        receipt: "file_receipt_single",
+        service_documentation: "file_svc_merged",
+      },
+      warnings: [],
+      concat_receipts: concatReceipts,
+    });
+
+    const stripeDispute = makeStripeDispute();
+    getDisputeMock.mockResolvedValueOnce({
+      ...stripeDispute,
+      charge: makeStripeCharge(),
+    });
+    submitDisputeMock.mockResolvedValueOnce(
+      makeStripeDispute({ status: "under_review" }),
+    );
+
+    const { setup, captured } = buildSuccessSupabaseMock([
+      { checklist_item_key: "ce3_prior_transactions", stripe_file_id: "file_receipt_single" },
+      { checklist_item_key: "customer_account_details", stripe_file_id: "file_svc_a" },
+      { checklist_item_key: "digital_access_logs", stripe_file_id: "file_svc_b" },
+    ]);
+    supabaseMock.from.mockImplementation(setup);
+
+    const res = await POST(mkRequest());
+    expect(res.status).toBe(200);
+
+    expect(captured.evidenceFilesUpdate).toMatchObject({ submitted_to_stripe: true });
+    expect(captured.evidenceFilesUpdateIn?.column).toBe("stripe_file_id");
+    expect(new Set(captured.evidenceFilesUpdateIn?.values ?? [])).toEqual(
+      new Set(["file_receipt_single", "file_svc_a", "file_svc_b"]),
+    );
   });
 });
 

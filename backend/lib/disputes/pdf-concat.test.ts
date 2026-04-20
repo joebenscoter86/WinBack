@@ -29,12 +29,12 @@ describe("compressImageForEvidence", () => {
 });
 
 describe("concatFilesToPDF", () => {
-  it("produces a valid PDF from a single image", async () => {
+  it("produces a valid PDF from a single image (1 cover + 1 image)", async () => {
     const jpg = await loadFixture("sample.jpg");
     const inputs: ConcatInput[] = [{ name: "a.jpg", buffer: jpg, kind: "image" }];
     const result = await concatFilesToPDF(inputs);
     const doc = await PDFDocument.load(result);
-    expect(doc.getPageCount()).toBe(1);
+    expect(doc.getPageCount()).toBe(2);
   });
 
   it("produces a valid PDF from a single source PDF (page copy)", async () => {
@@ -45,7 +45,7 @@ describe("concatFilesToPDF", () => {
     expect(doc.getPageCount()).toBeGreaterThanOrEqual(1);
   });
 
-  it("merges 3 images into a 3-page PDF", async () => {
+  it("merges 3 images into a 6-page PDF (3 cover pages + 3 image pages)", async () => {
     const jpg = await loadFixture("sample.jpg");
     const inputs: ConcatInput[] = [
       { name: "a.jpg", buffer: jpg, kind: "image" },
@@ -54,7 +54,39 @@ describe("concatFilesToPDF", () => {
     ];
     const result = await concatFilesToPDF(inputs);
     const doc = await PDFDocument.load(result);
-    expect(doc.getPageCount()).toBe(3);
+    expect(doc.getPageCount()).toBe(6);
+  });
+
+  it("prepends one cover page per input file (issuer can locate narrative-referenced files inside a concat)", async () => {
+    const jpg = await loadFixture("sample.jpg");
+    const inputs: ConcatInput[] = [
+      { name: "alpha.jpg", buffer: jpg, kind: "image" },
+      { name: "beta.jpg", buffer: jpg, kind: "image" },
+    ];
+    const result = await concatFilesToPDF(inputs);
+    const doc = await PDFDocument.load(result);
+    // 2 files x (1 cover + 1 content) = 4 pages
+    expect(doc.getPageCount()).toBe(4);
+  });
+
+  it("writes a visually-inspectable sample concat with cover pages to /tmp (manual QA hook)", async () => {
+    // pdf-lib compresses content streams so asserting on rendered filename
+    // bytes is brittle. Instead save a sample and let a human eyeball it.
+    // Path is logged when the test runs with reporter=verbose.
+    const jpg = await loadFixture("sample.jpg");
+    const pdf = await loadFixture("sample.pdf");
+    const inputs: ConcatInput[] = [
+      { name: "invoice-004-international.pdf", buffer: pdf, kind: "pdf" },
+      { name: "delivery-screenshot.png", buffer: jpg, kind: "image" },
+      { name: "customer-email-chain.pdf", buffer: pdf, kind: "pdf" },
+    ];
+    const result = await concatFilesToPDF(inputs);
+    const outDir = path.join(__dirname, "../../../docs/qa/samples");
+    await fs.mkdir(outDir, { recursive: true });
+    const outPath = path.join(outDir, "concat-cover-sample.pdf");
+    await fs.writeFile(outPath, result);
+    const stat = await fs.stat(outPath);
+    expect(stat.size).toBeGreaterThan(1000);
   });
 
   it("merges a PDF + 2 images into a multi-page PDF", async () => {

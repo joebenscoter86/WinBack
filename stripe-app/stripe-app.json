@@ -2,8 +2,8 @@
   "$schema": "https://stripe.com/stripe-app.schema.json",
   "id": "com.jkbtech.winback",
   "name": "WinBack",
-  "version": "0.0.1",
-  "icon": "",
+  "version": "1.0.0",
+  "icon": "./src/assets/winback_logo.png",
   "ui_extension": {
     "views": [
       {
@@ -24,7 +24,7 @@
         "https://winbackpay.com/api/",
         "http://localhost:3000/api/"
       ],
-      "purpose": ""
+      "purpose": "Backend API calls to WinBack services for dispute guidance, AI narrative generation, evidence metadata, and billing. Localhost endpoint is used only during local development with stripe apps start."
     }
   },
   "extensions": null,
