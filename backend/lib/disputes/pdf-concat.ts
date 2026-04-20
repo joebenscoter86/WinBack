@@ -1,5 +1,5 @@
 import sharp from "sharp";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 
 export type ConcatInput = {
   name: string;
@@ -34,8 +34,11 @@ export async function compressImageForEvidence(imgBuffer: Buffer): Promise<Buffe
  */
 export async function concatFilesToPDF(items: ConcatInput[]): Promise<Buffer> {
   const combined = await PDFDocument.create();
+  const font = await combined.embedFont(StandardFonts.Helvetica);
+  const fontBold = await combined.embedFont(StandardFonts.HelveticaBold);
 
   for (const item of items) {
+    addCoverPage(combined, item.name, font, fontBold);
     if (item.kind === "pdf") {
       const src = await PDFDocument.load(item.buffer);
       const pages = await combined.copyPages(src, src.getPageIndices());
@@ -59,4 +62,39 @@ export async function concatFilesToPDF(items: ConcatInput[]): Promise<Buffer> {
   }
 
   return Buffer.from(await combined.save());
+}
+
+// Inserts a simple cover page before a file's content so an issuer reading
+// a concatted evidence bundle can map narrative filename references ("see
+// invoice-007-saas.pdf") to the correct section inside the combined PDF.
+function addCoverPage(
+  doc: PDFDocument,
+  filename: string,
+  font: PDFFont,
+  fontBold: PDFFont,
+): void {
+  const pageW = 612;
+  const pageH = 792;
+  const page = doc.addPage([pageW, pageH]);
+
+  const labelSize = 11;
+  const label = "Evidence file";
+  const labelWidth = font.widthOfTextAtSize(label, labelSize);
+  page.drawText(label, {
+    x: (pageW - labelWidth) / 2,
+    y: pageH / 2 + 20,
+    size: labelSize,
+    font,
+    color: rgb(0.4, 0.4, 0.4),
+  });
+
+  const nameSize = 18;
+  const nameWidth = fontBold.widthOfTextAtSize(filename, nameSize);
+  page.drawText(filename, {
+    x: Math.max(40, (pageW - nameWidth) / 2),
+    y: pageH / 2 - 10,
+    size: nameSize,
+    font: fontBold,
+    color: rgb(0, 0, 0),
+  });
 }
