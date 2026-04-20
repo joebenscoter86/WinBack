@@ -37,7 +37,7 @@ export function buildWaitlistWelcomeEmail(): WelcomeEmail {
                 WinBack is a Stripe App that gives you step-by-step playbooks to win payment disputes. Built on 10+ years of issuer-side experience.
               </p>
               <p style="margin: 0 0 16px 0;">
-                $29/month flat. No success fees, ever. You keep every dollar you recover.
+                Pay 15% only when you win, or go flat at $79/month and keep every dollar you recover.
               </p>
               <p style="margin: 0;">
                 We'll reach out when your spot is ready.
