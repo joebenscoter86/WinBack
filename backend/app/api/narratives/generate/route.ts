@@ -151,7 +151,13 @@ export const POST = withStripeAuth(async (
   // could terminate before Claude's 3-15s call completed — stranding the
   // narrative_generations row as `pending` forever and burning a generation
   // from the 5-per-dispute cap with no output.
-  after(() =>
+  //
+  // The `await` is intentional: in production after() returns void and
+  // awaiting void is a no-op. In tests the mocked after() invokes the thunk
+  // and returns its promise, so awaiting here lets integration tests observe
+  // the resulting DB state before this response resolves (without this the
+  // background write races the test's next assertion in CI).
+  await after(() =>
     runBackgroundGeneration({
       generationId,
       accountId,
