@@ -1,8 +1,10 @@
 import fetchStripeSignature from '@stripe/ui-extension-sdk/signature';
 import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 
-// Toggle for local development: set to true when running `stripe apps start`
-const USE_LOCAL_BACKEND = true;
+// Toggle for local development: set to true when running `stripe apps start`.
+// MUST be false for any bundle uploaded to Stripe (stripe apps upload), because
+// the CSP connect-src on the uploaded manifest only allows the production URL.
+const USE_LOCAL_BACKEND = false;
 
 const BACKEND_URL = USE_LOCAL_BACKEND
   ? 'http://localhost:3000'
