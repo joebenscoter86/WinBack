@@ -27,7 +27,6 @@
     }
   },
   "extensions": null,
-  "stripe_api_access_type": "platform",
   "permissions": [
     {
       "permission": "dispute_read",
