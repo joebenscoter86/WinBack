@@ -5,13 +5,23 @@ import { captureRouteError } from "@/lib/sentry";
 /**
  * WIN-21: Daily reconciliation cron. Triggered by Vercel Cron via vercel.json.
  *
- * Vercel cron requests carry an `Authorization: Bearer ${CRON_SECRET}` header
- * when CRON_SECRET is set in env. Without that env var the route is open —
- * fine for dev, must be set in prod.
+ * Vercel cron requests carry an `Authorization: Bearer ${CRON_SECRET}` header.
+ * WIN-64: if CRON_SECRET is unset we fail closed in production so a missing
+ * env var can't silently expose the route to the internet. In dev/test we
+ * still allow an open route to keep local iteration friction low.
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
+
+  if (!cronSecret) {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        { error: "CRON_SECRET not configured" },
+        { status: 500 },
+      );
+    }
+    // Dev/test: open route — fall through.
+  } else {
     const authHeader = request.headers.get("authorization");
     if (authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
