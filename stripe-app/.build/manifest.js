@@ -2,7 +2,7 @@
 import PaymentDisputeView from '../src/views/PaymentDisputeView';import DisputeListView from '../src/views/DisputeListView';import AppSettings from '../src/views/AppSettings';
 
 export * from '@stripe/ui-extension-sdk/version';
-export const BUILD_TIME = '2026-04-18 21:03:07.112397 -0700 PDT m=+0.015122793';
+export const BUILD_TIME = '2026-04-20 21:40:46.629754 -0700 PDT m=+7.356487376';
 
 export { 
   PaymentDisputeView,
@@ -14,7 +14,8 @@ export {
 
 export default {
   "$schema": "https://stripe.com/stripe-app.schema.json",
-  "icon": "",
+  "distribution_type": "PRIVATE",
+  "icon": "./src/assets/winback_logo.png",
   "id": "com.jkbtech.winback",
   "name": "WinBack",
   "permissions": [
@@ -53,10 +54,9 @@ export default {
   "ui_extension": {
     "content_security_policy": {
       "connect-src": [
-        "https://winbackpay.com/api/",
-        "http://localhost:3000/api/"
+        "https://winbackpay.com/api/"
       ],
-      "purpose": ""
+      "purpose": "Backend API calls to WinBack services for dispute guidance, AI narrative generation, evidence metadata, and billing."
     },
     "views": [
       {
@@ -73,5 +73,5 @@ export default {
       }
     ]
   },
-  "version": "0.0.1"
+  "version": "1.0.1"
 };

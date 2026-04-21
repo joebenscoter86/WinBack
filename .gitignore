@@ -1,6 +1,10 @@
 # Dependencies
 node_modules/
 
+# Playwright MCP scratch output (screenshots, page snapshots, console logs)
+/*.png
+.playwright-mcp/
+
 # Next.js
 .next/
 out/
