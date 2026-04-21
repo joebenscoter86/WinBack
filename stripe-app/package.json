@@ -1,6 +1,6 @@
 {
   "name": "winback-stripe-app",
-  "version": "0.0.1",
+  "version": "1.1.0",
   "description": "WinBack — Guided dispute resolution for Stripe merchants",
   "scripts": {
     "build": "stripe apps build",
