@@ -11,7 +11,7 @@ vi.mock("next/server", async (importOriginal) => {
 });
 
 vi.mock("@/lib/stripe-auth", () => ({
-  withStripeAuth: (handler: Function) => async (req: NextRequest) => {
+  withStripeAuth: (handler: (req: NextRequest, ctx: { identity: { userId: string; accountId: string }; body: unknown }) => Promise<Response>) => async (req: NextRequest) => {
     const body = await req.clone().json();
     return handler(req, {
       identity: { userId: "usr_test", accountId: "acct_test" },

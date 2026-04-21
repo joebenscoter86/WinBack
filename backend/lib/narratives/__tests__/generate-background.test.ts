@@ -78,7 +78,7 @@ const MOCK_STRIPE_DISPUTE = {
 
 const mockFrom = vi.fn();
 vi.mock("@/lib/supabase", () => ({
-  supabase: { from: (...args: any[]) => mockFrom(...args) },
+  supabase: { from: (...args: unknown[]) => mockFrom(...args) },
 }));
 
 import { runBackgroundGeneration } from "../generate-background";
@@ -158,7 +158,7 @@ function buildSupabaseMock({
   updateResult?: { data: unknown; error: unknown };
 }) {
   return (tableName: string) => {
-    const chain: Record<string, any> = {};
+    const chain: Record<string, unknown> = {};
 
     chain.select = (_cols?: string) => {
       if (tableName === "disputes") {
@@ -330,7 +330,7 @@ describe("runBackgroundGeneration", () => {
     let capturedUpdateData: unknown = null;
 
     mockFrom.mockImplementation((tableName: string) => {
-      const chain: Record<string, any> = {};
+      const chain: Record<string, unknown> = {};
 
       chain.select = (_cols?: string) => {
         if (tableName === "disputes") {

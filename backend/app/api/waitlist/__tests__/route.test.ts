@@ -24,13 +24,17 @@ function makeRequest(body: unknown): Request {
 
 function mockSupabaseInsert(error: { code: string; message: string } | null) {
   const mockInsert = vi.fn().mockResolvedValue({ error });
-  vi.mocked(supabase.from).mockReturnValue({ insert: mockInsert } as any);
+  vi.mocked(supabase.from).mockReturnValue({
+    insert: mockInsert,
+  } as unknown as ReturnType<typeof supabase.from>);
   return mockInsert;
 }
 
 function mockResendSend() {
   const mockSend = vi.fn().mockResolvedValue({ data: { id: "email_123" }, error: null });
-  vi.mocked(getResend).mockReturnValue({ emails: { send: mockSend } } as any);
+  vi.mocked(getResend).mockReturnValue({
+    emails: { send: mockSend },
+  } as unknown as ReturnType<typeof getResend>);
   return mockSend;
 }
 
@@ -81,7 +85,9 @@ describe("POST /api/waitlist", () => {
   it("returns 200 even when Resend fails", async () => {
     mockSupabaseInsert(null);
     const mockSend = vi.fn().mockRejectedValue(new Error("Resend is down"));
-    vi.mocked(getResend).mockReturnValue({ emails: { send: mockSend } } as any);
+    vi.mocked(getResend).mockReturnValue({
+      emails: { send: mockSend },
+    } as unknown as ReturnType<typeof getResend>);
 
     const res = await POST(makeRequest({ email: "test@example.com" }));
     const json = await res.json();

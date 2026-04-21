@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 vi.mock("@/lib/stripe-auth", () => ({
-  withStripeAuth: (handler: Function) => async (req: NextRequest) => {
+  withStripeAuth: (handler: (req: NextRequest, ctx: { identity: { userId: string; accountId: string }; body: unknown }) => Promise<Response>) => async (req: NextRequest) => {
     const body = await req.clone().json().catch(() => ({}));
     return handler(req, {
       identity: { userId: "usr_test", accountId: "acct_test" },
@@ -32,7 +32,7 @@ function setTableResult(table: string, ...results: ChainResult[]) {
   tableCallCounts[table] = 0;
 }
 
-function makeChainBuilder(table: string): Record<string, Function> {
+function makeChainBuilder(table: string): Record<string, (...args: unknown[]) => unknown> {
   const getResult = (): ChainResult => {
     const results = tableResults[table] || [{ data: null, error: null }];
     const idx = tableCallCounts[table] || 0;
@@ -59,10 +59,13 @@ function makeChainBuilder(table: string): Record<string, Function> {
     return Promise.resolve(result).then(resolve, reject);
   };
 
-  return chain as Record<string, Function>;
+  return chain as Record<string, (...args: unknown[]) => unknown>;
 }
 
-const chainBuilders: Record<string, Record<string, Function>> = {};
+const chainBuilders: Record<
+  string,
+  Record<string, (...args: unknown[]) => unknown>
+> = {};
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 vi.mock("@/lib/stripe-auth", () => ({
-  withStripeAuth: (handler: Function) => async (req: NextRequest) => {
+  withStripeAuth: (handler: (req: NextRequest, ctx: { identity: { userId: string; accountId: string }; body: unknown }) => Promise<Response>) => async (req: NextRequest) => {
     let body = {};
     try {
       body = await req.clone().json();
