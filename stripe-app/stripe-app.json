@@ -3,7 +3,7 @@
   "id": "com.jkbtech.winback",
   "name": "WinBack",
   "version": "1.0.0",
-  "icon": "./src/assets/winback_logo_nobg.png",
+  "icon": "./src/assets/winback_logo.png",
   "ui_extension": {
     "views": [
       {
