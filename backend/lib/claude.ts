@@ -17,7 +17,7 @@ const anthropic = new Proxy({} as Anthropic, {
       }
       _client = new Anthropic({ apiKey, maxRetries: 2 });
     }
-    return (_client as any)[prop];
+    return Reflect.get(_client as unknown as object, prop);
   },
 });
 
@@ -47,7 +47,9 @@ export async function generateNarrative(
     { timeout: 60_000 },
   );
 
-  const textBlock = response.content.find((block: any) => block.type === "text");
+  const textBlock = response.content.find(
+    (block: { type: string }) => block.type === "text",
+  );
   if (!textBlock || textBlock.type !== "text") {
     throw new Error("No text content in Claude response");
   }
@@ -82,9 +84,11 @@ export async function generateNarrative(
       { timeout: 60_000 },
     );
 
-    const fixBlock = fixResponse.content.find((b: any) => b.type === "text");
+    const fixBlock = fixResponse.content.find(
+      (b: { type: string }) => b.type === "text",
+    );
     if (fixBlock && fixBlock.type === "text") {
-      let fixText = fixBlock.text
+      const fixText = fixBlock.text
         .replace(/^```(?:json)?\s*\n?/i, "")
         .replace(/\n?```\s*$/i, "")
         .trim();
