@@ -51,7 +51,10 @@ describe("evaluateSubmissionGuard", () => {
     "blocks when status is %s",
     (status) => {
       const result = evaluateSubmissionGuard({
-        stripeDispute: mkDispute({ status }),
+        // Cast covers "charge_refunded" which the guard treats as a
+        // non-submittable status even though Stripe's current Dispute.Status
+        // type union doesn't list it.
+        stripeDispute: mkDispute({ status: status as Stripe.Dispute.Status }),
         playbook: mkPlaybook(),
         evidenceFiles: [{ checklist_item_key: "Mandatory A" }],
         narrativeText: "defense",

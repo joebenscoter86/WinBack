@@ -6,6 +6,7 @@ describe("classifyStripeError", () => {
   it("should return 429 for rate limit errors", () => {
     const err = new Stripe.errors.StripeRateLimitError({
       message: "Too many requests",
+      type: "rate_limit_error",
     });
     const result = classifyStripeError(err);
     expect(result).toEqual({
@@ -19,8 +20,8 @@ describe("classifyStripeError", () => {
     const err = new Stripe.errors.StripeInvalidRequestError({
       message: "No such dispute",
       type: "invalid_request_error",
+      code: "resource_missing",
     });
-    err.code = "resource_missing";
     const result = classifyStripeError(err);
     expect(result).toEqual({
       code: "not_found",
@@ -45,6 +46,7 @@ describe("classifyStripeError", () => {
   it("should return 403 for auth errors", () => {
     const err = new Stripe.errors.StripeAuthenticationError({
       message: "Invalid API Key",
+      type: "authentication_error",
     });
     const result = classifyStripeError(err);
     expect(result).toEqual({
@@ -57,6 +59,7 @@ describe("classifyStripeError", () => {
   it("should return 502 for unknown Stripe errors", () => {
     const err = new Stripe.errors.StripeAPIError({
       message: "Internal error",
+      type: "api_error",
     });
     const result = classifyStripeError(err);
     expect(result).toEqual({
