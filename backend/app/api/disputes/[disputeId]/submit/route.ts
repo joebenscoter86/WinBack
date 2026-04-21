@@ -250,12 +250,19 @@ export const POST = withStripeAuth(
       | {
           id: string;
           status: "pending" | "succeeded";
+          idempotency_key: string;
           stripe_response: Stripe.Dispute | null;
           created_at: string;
           completed_at: string | null;
           warnings: SubmissionWarning[] | null;
         }
       | undefined;
+
+    // WIN-59: if we fall through to a new attempt after a stale-pending recovery,
+    // we MUST reuse the original idempotency key so Stripe dedupes the retry
+    // against any still-in-flight original request. A new UUID would bypass
+    // Stripe's dedup and could submit evidence twice irrevocably.
+    let reclaimedIdempotencyKey: string | null = null;
 
     if (prior?.status === "succeeded") {
       // Return cached result — no need to re-call Stripe (and no need to
@@ -331,6 +338,9 @@ export const POST = withStripeAuth(
 
       // Stripe hasn't processed it — mark the stale row failed and try fresh.
       // Fall through to the guard and a new submission attempt below.
+      // WIN-59: capture the idempotency key first so the retry reuses it and
+      // Stripe can dedupe against any still-in-flight original request.
+      reclaimedIdempotencyKey = prior.idempotency_key;
       await supabase
         .from("dispute_submissions")
         .update({
@@ -412,8 +422,15 @@ export const POST = withStripeAuth(
       );
     }
 
-    // Step 10: Insert pending submission row — idempotency key is a fresh UUID
-    const idempotencyKey = randomUUID();
+    // Step 10: Insert pending submission row.
+    // WIN-58: the partial unique index on (dispute_id) WHERE status IN
+    // ('pending','succeeded') enforces at-most-one-active-submission at the DB
+    // level; a concurrent POST that slipped past Step 7 will fail here with
+    // Postgres 23505.
+    // WIN-59: reuse the idempotency key from a just-reclaimed stale-pending row
+    // so Stripe's own dedup catches the case where the original request was
+    // still in flight. Only fresh attempts (no prior pending) get a new UUID.
+    const idempotencyKey = reclaimedIdempotencyKey ?? randomUUID();
     const { data: insertedRow, error: insertErr } = await supabase
       .from("dispute_submissions")
       .insert({
@@ -427,11 +444,26 @@ export const POST = withStripeAuth(
       .single();
 
     if (insertErr || !insertedRow) {
-      // Unique constraint violation means another concurrent request won the race
+      // 23505 = unique_violation. With migration 019 this now genuinely means
+      // another concurrent request beat us to the active-row slot — return
+      // 409 so the client can surface an in-flight message. Any other error
+      // (DB down, permission, etc.) is a 500.
+      const pgCode = (insertErr as { code?: string } | null)?.code;
+      if (pgCode === "23505") {
+        return errorResponse(
+          409,
+          "submission_in_progress",
+          "A submission is already in flight. Please wait a moment.",
+        );
+      }
+      captureRouteError(insertErr ?? new Error("insert returned no row"), {
+        route: "disputes.submit.insert_pending",
+        disputeId: stripeDisputeId,
+      });
       return errorResponse(
-        409,
-        "submission_in_progress",
-        "A submission is already in flight. Please wait a moment.",
+        500,
+        "internal_error",
+        "Failed to record submission. Please try again.",
       );
     }
     const submissionId = (insertedRow as { id: string }).id;

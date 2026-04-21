@@ -1163,6 +1163,174 @@ describe("POST /api/disputes/[disputeId]/submit", () => {
       new Set(["file_receipt_single", "file_svc_a", "file_svc_b"]),
     );
   });
+
+  // -------------------------------------------------------------------------
+  // WIN-58: Concurrent double-POST — Step 7 sees no active row (the other
+  // request hasn't inserted yet), Step 10 insert is blocked by the new
+  // partial unique index in migration 019 with Postgres code 23505.
+  // Must return 409 submission_in_progress without calling Stripe.
+  // -------------------------------------------------------------------------
+  it("submission_in_progress — returns 409 when insert races with concurrent POST (23505)", async () => {
+    const stripeDispute = makeStripeDispute();
+    const stripeCharge = makeStripeCharge();
+    getDisputeMock.mockResolvedValueOnce({
+      ...stripeDispute,
+      charge: stripeCharge,
+    });
+
+    supabaseMock.from.mockImplementation((table: string) => {
+      if (table === "merchants") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { id: "merchant-uuid" }, error: null }),
+        };
+      }
+      if (table === "evidence_files") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({
+              data: [{ checklist_item_key: "receipt", stripe_file_id: "file_receipt" }],
+              error: null,
+            }),
+          }),
+        };
+      }
+      if (table === "dispute_submissions") {
+        return {
+          // Step 7: no active row visible yet — the racing request hasn't
+          // committed its insert.
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              in: vi.fn().mockReturnValue({
+                order: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+                }),
+              }),
+            }),
+          }),
+          // Step 10: partial unique index fires — Postgres 23505.
+          insert: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: null,
+                error: {
+                  code: "23505",
+                  message: 'duplicate key value violates unique constraint "idx_submissions_active_unique"',
+                },
+              }),
+            }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    const res = await POST(mkRequest());
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.code).toBe("submission_in_progress");
+    expect(submitDisputeMock).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------------
+  // WIN-59: Stale pending retry must reuse the reclaimed idempotency key so
+  // Stripe dedupes against any still-in-flight original request. Minting a
+  // fresh UUID here could irrevocably submit evidence twice with different
+  // payloads.
+  // -------------------------------------------------------------------------
+  it("stale pending retry reuses the reclaimed idempotency key", async () => {
+    const RECLAIMED_KEY = "idem-reclaimed-uuid";
+
+    const stripeDispute = makeStripeDispute(); // still needs_response at Stripe
+    const stripeCharge = makeStripeCharge();
+    getDisputeMock.mockResolvedValueOnce({
+      ...stripeDispute,
+      charge: stripeCharge,
+    });
+    submitDisputeMock.mockResolvedValueOnce(
+      makeStripeDispute({ status: "under_review" }),
+    );
+
+    const stalePendingRow = {
+      id: "sub-stale-uuid",
+      status: "pending",
+      idempotency_key: RECLAIMED_KEY,
+      stripe_response: null,
+      created_at: new Date(Date.now() - 120_000).toISOString(), // 2 min old
+      completed_at: null,
+      warnings: [],
+    };
+
+    supabaseMock.from.mockImplementation((table: string) => {
+      if (table === "merchants") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { id: "merchant-uuid" }, error: null }),
+        };
+      }
+      if (table === "disputes") {
+        return {
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ error: null }),
+          }),
+        };
+      }
+      if (table === "evidence_files") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({
+              data: [{ checklist_item_key: "receipt", stripe_file_id: "file_receipt" }],
+              error: null,
+            }),
+          }),
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              in: vi.fn().mockResolvedValue({ error: null }),
+            }),
+          }),
+        };
+      }
+      if (table === "dispute_submissions") {
+        return {
+          // Step 7: stale pending row is returned.
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              in: vi.fn().mockReturnValue({
+                order: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue({ data: [stalePendingRow], error: null }),
+                }),
+              }),
+            }),
+          }),
+          // Step 7 (stale branch): mark the old row failed, then Step 10
+          // inserts a new row with the reclaimed key.
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ error: null }),
+          }),
+          insert: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: { id: "sub-retry-uuid" },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    const res = await POST(mkRequest());
+    expect(res.status).toBe(200);
+
+    // The crux: Stripe was called with the reclaimed key, not a new UUID.
+    expect(submitDisputeMock).toHaveBeenCalledTimes(1);
+    const call = submitDisputeMock.mock.calls[0];
+    expect(call[3]).toBe(RECLAIMED_KEY);
+  });
 });
 
 // Local type import for the test assertions above.
