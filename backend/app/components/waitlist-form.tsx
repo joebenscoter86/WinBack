@@ -1,18 +1,33 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useRef, FormEvent } from "react";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 
 type FormState = "idle" | "submitting" | "success" | "error";
+
+// WIN-68: only mount the Turnstile widget when a sitekey is configured.
+// Local dev without the env var still works end-to-end (the server-side
+// verifier also skips in that case).
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 export function WaitlistForm() {
   const [email, setEmail] = useState("");
   const [formState, setFormState] = useState<FormState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
     if (!email.trim()) return;
+
+    // If Turnstile is configured, require a solved token before submit.
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+      setFormState("error");
+      setErrorMessage("Please complete the verification.");
+      return;
+    }
 
     setFormState("submitting");
     setErrorMessage("");
@@ -21,7 +36,10 @@ export function WaitlistForm() {
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({
+          email: email.trim(),
+          turnstileToken,
+        }),
       });
 
       const data = await res.json();
@@ -31,10 +49,15 @@ export function WaitlistForm() {
       } else {
         setFormState("error");
         setErrorMessage(data.error || "Something went wrong. Please try again.");
+        // Reset Turnstile — tokens are single-use.
+        turnstileRef.current?.reset();
+        setTurnstileToken(null);
       }
     } catch {
       setFormState("error");
       setErrorMessage("Something went wrong. Please try again.");
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
     }
   }
 
@@ -95,6 +118,18 @@ export function WaitlistForm() {
           )}
         </button>
       </div>
+      {TURNSTILE_SITE_KEY && (
+        <div className="mt-4">
+          <Turnstile
+            ref={turnstileRef}
+            siteKey={TURNSTILE_SITE_KEY}
+            options={{ theme: "dark", size: "flexible" }}
+            onSuccess={(token) => setTurnstileToken(token)}
+            onExpire={() => setTurnstileToken(null)}
+            onError={() => setTurnstileToken(null)}
+          />
+        </div>
+      )}
       {formState === "error" && (
         <p className="text-error text-sm mt-3">{errorMessage}</p>
       )}

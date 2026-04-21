@@ -10,6 +10,20 @@ vi.mock("@/lib/resend", () => ({
   getResend: vi.fn(),
 }));
 
+// WIN-68: mock rate-limit and turnstile so existing tests hit the happy
+// path. Individual tests override per-case for the 429 and captcha cases.
+const { rateLimitMock, turnstileMock } = vi.hoisted(() => ({
+  rateLimitMock: vi.fn(),
+  turnstileMock: vi.fn(),
+}));
+vi.mock("@/lib/rate-limit", () => ({
+  checkWaitlistRateLimit: rateLimitMock,
+  getClientIp: () => "1.2.3.4",
+}));
+vi.mock("@/lib/turnstile", () => ({
+  verifyTurnstileToken: turnstileMock,
+}));
+
 import { POST } from "../route";
 import { supabase } from "@/lib/supabase";
 import { getResend } from "@/lib/resend";
@@ -41,6 +55,14 @@ function mockResendSend() {
 describe("POST /api/waitlist", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: rate limit allows, captcha passes (skipped in dev).
+    rateLimitMock.mockResolvedValue({
+      success: true,
+      limit: 5,
+      remaining: 4,
+      reset: Date.now() + 60_000,
+    });
+    turnstileMock.mockResolvedValue({ success: true, skipped: true });
   });
 
   it("returns 200 and inserts a valid email", async () => {
@@ -118,5 +140,66 @@ describe("POST /api/waitlist", () => {
     const json = await res.json();
     expect(res.status).toBe(500);
     expect(json).toEqual({ success: false, error: "Something went wrong. Please try again." });
+  });
+
+  // -------------------------------------------------------------------------
+  // WIN-68: rate limit + captcha
+  // -------------------------------------------------------------------------
+  describe("abuse protection (WIN-68)", () => {
+    it("returns 429 with Retry-After header when rate limit exceeded", async () => {
+      rateLimitMock.mockResolvedValue({
+        success: false,
+        limit: 5,
+        remaining: 0,
+        reset: Date.now() + 30_000,
+      });
+
+      const res = await POST(makeRequest({ email: "test@example.com" }));
+      expect(res.status).toBe(429);
+      const retryAfter = res.headers.get("Retry-After");
+      expect(retryAfter).toBeTruthy();
+      expect(Number(retryAfter)).toBeGreaterThan(0);
+      // Must short-circuit before hitting Supabase or Resend.
+      expect(supabase.from).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 when Turnstile verification fails", async () => {
+      turnstileMock.mockResolvedValue({
+        success: false,
+        skipped: false,
+        errors: ["invalid-input-response"],
+      });
+
+      const res = await POST(
+        makeRequest({ email: "test@example.com", turnstileToken: "bad" }),
+      );
+      const json = await res.json();
+      expect(res.status).toBe(400);
+      expect(json.error).toContain("Captcha");
+      // Must short-circuit before hitting Supabase.
+      expect(supabase.from).not.toHaveBeenCalled();
+    });
+
+    it("allows request when Turnstile verifier reports skipped (dev mode)", async () => {
+      mockSupabaseInsert(null);
+      mockResendSend();
+      turnstileMock.mockResolvedValue({ success: true, skipped: true });
+
+      const res = await POST(makeRequest({ email: "dev@example.com" }));
+      expect(res.status).toBe(200);
+    });
+
+    it("rate limit runs BEFORE captcha verification", async () => {
+      rateLimitMock.mockResolvedValue({
+        success: false,
+        limit: 5,
+        remaining: 0,
+        reset: Date.now() + 30_000,
+      });
+
+      await POST(makeRequest({ email: "test@example.com", turnstileToken: "x" }));
+      // Captcha should not be checked if the request was already rate-limited.
+      expect(turnstileMock).not.toHaveBeenCalled();
+    });
   });
 });
