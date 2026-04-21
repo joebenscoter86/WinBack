@@ -134,7 +134,14 @@ const DisputeListView = (context: ExtensionContextValue) => {
 
   const handleCloseWorkflow = (shown: boolean) => {
     setShowWorkflow(shown);
-    if (!shown) setSelectedDispute(null);
+    if (!shown) {
+      setSelectedDispute(null);
+      // Refetch so any status changes from inside the workflow (evidence
+      // submission → warning_under_review, new narrative generation, etc.)
+      // are reflected on the list instead of the merchant seeing stale
+      // "Needs response" after a successful submit.
+      loadDisputes();
+    }
   };
 
   // Sort by deadline (soonest first), but push expired disputes to the
