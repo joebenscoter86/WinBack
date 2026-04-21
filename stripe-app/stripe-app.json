@@ -21,10 +21,9 @@
     ],
     "content_security_policy": {
       "connect-src": [
-        "https://winbackpay.com/api/",
-        "http://localhost:3000/api/"
+        "https://winbackpay.com/api/"
       ],
-      "purpose": "Backend API calls to WinBack services for dispute guidance, AI narrative generation, evidence metadata, and billing. Localhost endpoint is used only during local development with stripe apps start."
+      "purpose": "Backend API calls to WinBack services for dispute guidance, AI narrative generation, evidence metadata, and billing."
     }
   },
   "extensions": null,
