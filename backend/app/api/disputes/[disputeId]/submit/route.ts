@@ -377,7 +377,11 @@ export const POST = withStripeAuth(
         playbook: playbook as unknown as import("@/lib/playbooks/types").PlaybookData,
         evidenceFiles,
         narrativeText,
-        stripeClient: { downloadStripeFile, uploadCombinedEvidence },
+        stripeClient: {
+          downloadStripeFile: (fileId) => downloadStripeFile(accountId, fileId),
+          uploadCombinedEvidence: (pdf, filename) =>
+            uploadCombinedEvidence(accountId, pdf, filename),
+        },
       });
     } catch (err) {
       console.error("[WIN-20] evidence assembly failed", err);

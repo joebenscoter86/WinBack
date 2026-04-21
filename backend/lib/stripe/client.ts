@@ -14,44 +14,63 @@ function getStripe(): Stripe {
 }
 
 export async function listDisputes(
-  _accountId: string,
+  accountId: string,
   params?: Stripe.DisputeListParams,
 ): Promise<Stripe.Dispute[]> {
-  const resp = await getStripe().disputes.list({ limit: 100, ...params });
+  const resp = await getStripe().disputes.list(
+    { limit: 100, ...params },
+    { stripeAccount: accountId },
+  );
   return resp.data;
 }
 
 export async function getDispute(
-  _accountId: string,
+  accountId: string,
   disputeId: string,
   expand?: string[],
 ): Promise<Stripe.Dispute> {
-  return getStripe().disputes.retrieve(disputeId, { expand });
+  return getStripe().disputes.retrieve(
+    disputeId,
+    { expand },
+    { stripeAccount: accountId },
+  );
 }
 
 export async function getCharge(
-  _accountId: string,
+  accountId: string,
   chargeId: string,
 ): Promise<Stripe.Charge> {
-  return getStripe().charges.retrieve(chargeId);
+  return getStripe().charges.retrieve(
+    chargeId,
+    undefined,
+    { stripeAccount: accountId },
+  );
 }
 
 export async function getCustomer(
-  _accountId: string,
+  accountId: string,
   customerId: string,
 ): Promise<Stripe.Customer | Stripe.DeletedCustomer> {
-  return getStripe().customers.retrieve(customerId);
+  return getStripe().customers.retrieve(
+    customerId,
+    undefined,
+    { stripeAccount: accountId },
+  );
 }
 
 export async function getPaymentIntent(
-  _accountId: string,
+  accountId: string,
   piId: string,
 ): Promise<Stripe.PaymentIntent> {
-  return getStripe().paymentIntents.retrieve(piId);
+  return getStripe().paymentIntents.retrieve(
+    piId,
+    undefined,
+    { stripeAccount: accountId },
+  );
 }
 
 export async function submitDispute(
-  _accountId: string,
+  accountId: string,
   disputeId: string,
   evidence: Stripe.DisputeUpdateParams.Evidence,
   idempotencyKey: string,
@@ -59,22 +78,33 @@ export async function submitDispute(
   return getStripe().disputes.update(
     disputeId,
     { evidence, submit: true },
-    { idempotencyKey },
+    { idempotencyKey, stripeAccount: accountId },
   );
 }
 
 /**
  * Download an existing Stripe File by ID as a Buffer. Uses the file's short-lived
- * URL from files.retrieve(). The file must have been uploaded with a purpose
- * that grants read access to the platform account.
+ * URL from files.retrieve(). The file lives on the installing merchant's
+ * account, so both the retrieve call and the URL fetch must be scoped via
+ * Stripe-Account.
  */
-export async function downloadStripeFile(fileId: string): Promise<Buffer> {
-  const file = await getStripe().files.retrieve(fileId);
+export async function downloadStripeFile(
+  accountId: string,
+  fileId: string,
+): Promise<Buffer> {
+  const file = await getStripe().files.retrieve(
+    fileId,
+    undefined,
+    { stripeAccount: accountId },
+  );
   if (!file.url) {
     throw new Error(`Stripe file ${fileId} has no URL`);
   }
   const res = await fetch(file.url, {
-    headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` },
+    headers: {
+      Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`,
+      "Stripe-Account": accountId,
+    },
   });
   if (!res.ok) {
     throw new Error(
@@ -86,19 +116,24 @@ export async function downloadStripeFile(fileId: string): Promise<Buffer> {
 }
 
 /**
- * Upload a combined PDF to Stripe Files as dispute evidence. Returns the new file_id.
+ * Upload a combined PDF to Stripe Files as dispute evidence on the installing
+ * merchant's account. Returns the new file_id.
  */
 export async function uploadCombinedEvidence(
+  accountId: string,
   pdf: Buffer,
   filename: string,
 ): Promise<string> {
-  const file = await getStripe().files.create({
-    purpose: "dispute_evidence",
-    file: {
-      data: pdf,
-      name: filename,
-      type: "application/pdf",
+  const file = await getStripe().files.create(
+    {
+      purpose: "dispute_evidence",
+      file: {
+        data: pdf,
+        name: filename,
+        type: "application/pdf",
+      },
     },
-  });
+    { stripeAccount: accountId },
+  );
   return file.id;
 }
