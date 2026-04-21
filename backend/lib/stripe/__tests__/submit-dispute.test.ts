@@ -29,7 +29,7 @@ describe("submitDispute", () => {
     expect(updateMock).toHaveBeenCalledWith(
       "dp_1",
       { evidence: { uncategorized_text: "defense" }, submit: true },
-      { idempotencyKey: "idem_abc" },
+      { idempotencyKey: "idem_abc", stripeAccount: "acct_123" },
     );
     expect(result.status).toBe("under_review");
   });

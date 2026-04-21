@@ -17,9 +17,12 @@ vi.mock("@/lib/stripe/client", async (importOriginal) => {
     await importOriginal<typeof import("@/lib/stripe/client")>();
   return {
     ...actual,
-    downloadStripeFile: vi.fn(async (_id: string) => Buffer.from([])),
+    downloadStripeFile: vi.fn(
+      async (_accountId: string, _id: string) => Buffer.from([]),
+    ),
     uploadCombinedEvidence: vi.fn(
-      async (_pdf: Buffer, _name: string) => "file_combined_default",
+      async (_accountId: string, _pdf: Buffer, _name: string) =>
+        "file_combined_default",
     ),
   };
 });
