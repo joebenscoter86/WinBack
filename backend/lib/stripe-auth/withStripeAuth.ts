@@ -48,16 +48,17 @@ export function withStripeAuth<
     try {
       verified = verifyStripeAppSignature<T>(rawBody, signature);
     } catch (error) {
-      console.error("Stripe App signature verification failed:", error);
-      console.error("Raw body:", rawBody);
-      console.error("Signature header:", signature?.substring(0, 50) + "...");
-      console.error("APP_SECRET set:", !!process.env.STRIPE_APP_SECRET);
-      console.error("APP_SECRET prefix:", process.env.STRIPE_APP_SECRET?.substring(0, 10));
+      // WIN-63: do not log rawBody, signature, or any STRIPE_APP_SECRET bytes
+      // here. Even a 10-char prefix of `absec_...` is a secret fragment, and
+      // rawBody can contain PII or session context. Sentry receives the
+      // exception (with its own scrubbing hooks); that's the one audit trail.
+      // The 401 response is intentionally minimal — no `debug` field — so the
+      // iframe doesn't see internal stack context.
       Sentry.captureException(error, {
         tags: { auth_failure: "signature_verification", route: request.nextUrl.pathname },
       });
       return NextResponse.json(
-        { error: "Invalid or expired signature", debug: String(error) },
+        { error: "Invalid or expired signature" },
         { status: 401 },
       );
     }
