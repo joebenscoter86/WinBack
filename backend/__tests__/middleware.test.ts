@@ -29,6 +29,24 @@ describe("middleware CORS allowlist (WIN-62)", () => {
       expect(res.headers.get("Vary")).toBe("Origin");
     });
 
+    // Stripe Apps run in a sandboxed iframe → all fetch requests carry
+    // Origin: null per the HTML spec. The middleware must echo "null" back
+    // for the preflight to pass. Signature auth (withStripeAuth) is the
+    // actual security gate, not CORS.
+    it("echoes 'null' origin (sandboxed Stripe App iframe)", () => {
+      const res = middleware(req(path, { origin: "null" }));
+      expect(res.headers.get("Access-Control-Allow-Origin")).toBe("null");
+      expect(res.headers.get("Vary")).toBe("Origin");
+    });
+
+    it("preflight with null origin returns 204 with ACAO: null", () => {
+      const res = middleware(
+        req(path, { method: "OPTIONS", origin: "null" }),
+      );
+      expect(res.status).toBe(204);
+      expect(res.headers.get("Access-Control-Allow-Origin")).toBe("null");
+    });
+
     it("omits ACAO for a non-allowlisted origin", () => {
       const res = middleware(req(path, { origin: "https://evil.example.com" }));
       expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
