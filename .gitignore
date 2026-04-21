@@ -31,6 +31,9 @@ supabase/.temp/
 *.swp
 *.swo
 
+# Claude Code — per-user settings, never commit
+.claude/settings.local.json
+
 # AI tool configs
 .adal/
 .agents/
