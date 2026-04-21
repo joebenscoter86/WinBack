@@ -143,11 +143,21 @@ export const POST = withStripeAuth(async (
 
   const generationId = (generation as { id: string }).id;
 
-  // Fire background generation (non-blocking via Next.js after() API).
-  // We await after() so that in test environments the mocked after()
-  // (which returns the promise directly) propagates the background work
-  // inline. In production, after() returns void and awaiting void is a no-op.
-  await after(
+  // WIN-60: fire background generation via the callback form of after().
+  // Passing a thunk lets Vercel's runtime start the work *after* the response
+  // is flushed and hold the function alive until it resolves. The previous
+  // `after(runBackgroundGeneration(...))` shape invoked the promise inline on
+  // the request's event loop, so on cold / serverless instances the function
+  // could terminate before Claude's 3-15s call completed — stranding the
+  // narrative_generations row as `pending` forever and burning a generation
+  // from the 5-per-dispute cap with no output.
+  //
+  // The `await` is intentional: in production after() returns void and
+  // awaiting void is a no-op. In tests the mocked after() invokes the thunk
+  // and returns its promise, so awaiting here lets integration tests observe
+  // the resulting DB state before this response resolves (without this the
+  // background write races the test's next assertion in CI).
+  await after(() =>
     runBackgroundGeneration({
       generationId,
       accountId,
