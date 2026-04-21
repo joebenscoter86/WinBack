@@ -23,6 +23,25 @@ function formatStripeField(value: string | undefined): string {
   return value;
 }
 
+/**
+ * WIN-61: Sanitize merchant-controlled text before it flows into the Claude
+ * user message. Strips the characters that could close a wrapper tag or
+ * switch the model into a different parsing mode:
+ *   - `<` and `>` become `&lt;` / `&gt;` so the merchant can't forge
+ *     pseudo-tags like `</merchant_note><system>...`.
+ *   - backticks are neutralized so the merchant can't flip the model into a
+ *     code-fence interpretation.
+ *
+ * This is defense-in-depth on top of the system-prompt instruction that
+ * anything inside <merchant_*> / <evidence_*> tags is data, not instructions.
+ */
+function sanitizeUntrusted(text: string): string {
+  return text
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/`/g, "'");
+}
+
 function formatRefunds(
   refunds: Array<{ amount: number; created: number; status: string }> | undefined
 ): string {
@@ -74,22 +93,33 @@ export function buildPrompt(context: PromptContext): PromptResult {
     ...new Set(template.sections.flatMap((s) => s.evidence_keys)),
   ];
 
+  // WIN-61: evidence_files.file_name is merchant-controlled (they name their
+  // uploads), so the value is wrapped in <evidence_filename> and sanitized.
+  // The checklist_item_key is ours (from the playbook) so it's not wrapped.
   const evidenceFilesList = [
     ...context.evidence_files.map(
-      (f) => `- "${f.checklist_item_key}": ${f.file_name}`
+      (f) =>
+        `- "${f.checklist_item_key}": <evidence_filename>${sanitizeUntrusted(f.file_name)}</evidence_filename>`
     ),
     ...allEvidenceKeys
       .filter((key) => !uploadedKeys.has(key))
       .map((key) => `- "${key}": (not uploaded)`),
   ].join("\n");
 
+  // WIN-61: checklist_notes values are merchant free-text. Wrap in
+  // <merchant_note> and sanitize before concatenation.
   const checklistNotesList = Object.entries(context.checklist_notes)
-    .map(([key, note]) => `- "${key}": "${note}"`)
+    .map(
+      ([key, note]) =>
+        `- "${key}": <merchant_note>${sanitizeUntrusted(note)}</merchant_note>`
+    )
     .join("\n");
 
   // Narrative-only (T-category) items: prefer merchant notes from
   // checklist_notes; fall back to the per-playbook canned assertion. Items
   // with neither are skipped to avoid emitting empty keys to the LLM. (WIN-49)
+  // WIN-61: merchant notes are wrapped in <merchant_note> and sanitized;
+  // playbook fallbacks are our own data and don't need wrapping.
   const narrativeOnlyItems = context.narrative_only_items ?? [];
   const narrativeAssertionsList = narrativeOnlyItems
     .map((item) => {
@@ -98,7 +128,7 @@ export function buildPrompt(context: PromptContext): PromptResult {
       // LLM sees a human-readable anchor, not an opaque identifier.
       const merchantNote = context.checklist_notes[item.key]?.trim();
       if (merchantNote) {
-        return `- "${item.item}": "${merchantNote}" (merchant's own words)`;
+        return `- "${item.item}": <merchant_note>${sanitizeUntrusted(merchantNote)}</merchant_note> (merchant's own words)`;
       }
       if (item.fallback) {
         return `- "${item.item}": "${item.fallback}" (standard assertion for this reason code)`;
@@ -112,8 +142,11 @@ export function buildPrompt(context: PromptContext): PromptResult {
     ? `${context.three_d_secure_result}${context.three_d_secure_version ? ` (version ${context.three_d_secure_version})` : ""}`
     : "not available";
 
+  // WIN-61: merchant_feedback is free-text from the merchant; wrap in
+  // <merchant_feedback> and sanitize so injection attempts inside can't
+  // escape the tag or forge new instructions.
   const feedbackBlock = context.merchant_feedback
-    ? `\nMERCHANT FEEDBACK ON PREVIOUS GENERATION:\n${context.merchant_feedback}\nIncorporate this feedback into the new narrative.\n`
+    ? `\nMERCHANT FEEDBACK ON PREVIOUS GENERATION:\n<merchant_feedback>${sanitizeUntrusted(context.merchant_feedback)}</merchant_feedback>\nIncorporate this feedback into the new narrative.\n`
     : "";
 
   const user = `DISPUTE CONTEXT:
