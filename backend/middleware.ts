@@ -1,22 +1,68 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Stripe-Signature",
-  "Access-Control-Max-Age": "86400",
-};
+// WIN-62: tight per-route CORS allowlists. The previous `Access-Control-Allow-Origin: *`
+// let any origin attempt cross-site POSTs against our API. `withStripeAuth` still
+// required a valid signature, but the wildcard was Stripe-review bait and left
+// `/api/waitlist` (unauthenticated) world-open.
+//
+// Three regimes:
+//   - /api/webhooks/*  — Stripe server-to-server. Browsers never hit these;
+//                        omit CORS headers entirely.
+//   - /api/waitlist    — Public marketing form. Allow the marketing origin only.
+//   - all other /api/* — Stripe App iframe. Allow the dashboard origin only.
+//
+// For any other origin on an allowlisted path, we simply don't emit the ACAO
+// header; the browser then blocks the cross-origin response. Server-to-server
+// callers (no Origin header, like Stripe's webhook fetcher) are unaffected.
+
+const STRIPE_DASHBOARD_ORIGIN = "https://dashboard.stripe.com";
+const MARKETING_ORIGINS = new Set([
+  "https://winbackpay.com",
+  "https://www.winbackpay.com",
+]);
+
+const ALLOWED_METHODS = "GET, POST, PATCH, OPTIONS";
+const ALLOWED_HEADERS = "Content-Type, Stripe-Signature";
+const MAX_AGE = "86400";
+
+function allowedOriginFor(pathname: string, origin: string | null): string | null {
+  if (pathname.startsWith("/api/webhooks/")) {
+    // Webhooks are server-to-server. No browser CORS path.
+    return null;
+  }
+  if (pathname === "/api/waitlist") {
+    return origin && MARKETING_ORIGINS.has(origin) ? origin : null;
+  }
+  // Default: Stripe App iframe only.
+  return origin === STRIPE_DASHBOARD_ORIGIN ? STRIPE_DASHBOARD_ORIGIN : null;
+}
+
+function applyCors(response: NextResponse, allowedOrigin: string): void {
+  response.headers.set("Access-Control-Allow-Origin", allowedOrigin);
+  response.headers.set("Vary", "Origin");
+  response.headers.set("Access-Control-Allow-Methods", ALLOWED_METHODS);
+  response.headers.set("Access-Control-Allow-Headers", ALLOWED_HEADERS);
+  response.headers.set("Access-Control-Max-Age", MAX_AGE);
+}
 
 export function middleware(request: NextRequest) {
-  // Handle CORS preflight
+  const pathname = request.nextUrl.pathname;
+  const origin = request.headers.get("origin");
+  const allowedOrigin = allowedOriginFor(pathname, origin);
+
   if (request.method === "OPTIONS") {
-    return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+    // Preflight: only acknowledge if the origin is allowlisted for this path.
+    if (!allowedOrigin) {
+      return new NextResponse(null, { status: 204 });
+    }
+    const res = new NextResponse(null, { status: 204 });
+    applyCors(res, allowedOrigin);
+    return res;
   }
 
-  // Add CORS headers to all API responses
   const response = NextResponse.next();
-  for (const [key, value] of Object.entries(CORS_HEADERS)) {
-    response.headers.set(key, value);
+  if (allowedOrigin) {
+    applyCors(response, allowedOrigin);
   }
   return response;
 }
