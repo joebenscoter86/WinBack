@@ -2,6 +2,11 @@
 
 All notable changes to WinBack will be documented in this file.
 
+## [1.1.0] - 2026-04-21
+
+### Changed
+- First public release: Stripe App Marketplace submission. `distribution_type` flipped from `PRIVATE` to `PUBLIC`. Version unified to `1.1.0` across `stripe-app.json`, `VERSION`, `stripe-app/package.json`, and this file — minor bump above the 1.0.1 build previously uploaded to Stripe to signal the public-release milestone. (WIN-56, WIN-57)
+
 ## [0.0.1.5] - 2026-04-18
 
 ### Added

@@ -2,7 +2,7 @@
   "$schema": "https://stripe.com/stripe-app.schema.json",
   "id": "com.jkbtech.winback",
   "name": "WinBack",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "icon": "./src/assets/winback_logo.png",
   "ui_extension": {
     "views": [
@@ -61,5 +61,5 @@
   "post_install_action": {
     "type": "settings"
   },
-  "distribution_type": "PRIVATE"
+  "distribution_type": "PUBLIC"
 }
