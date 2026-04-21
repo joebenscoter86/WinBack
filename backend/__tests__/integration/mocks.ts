@@ -89,14 +89,15 @@ vi.mock("@/lib/stripe-auth", () => ({
 }));
 
 // ---- next/server after() ----
-// The narrative generate route calls after(runBackgroundGeneration(...))
-// to fire-and-forget the Claude call. In tests we need the background
-// work to complete before the HTTP response resolves, so we replace
-// after() to await the promise inline.
+// WIN-60: the narrative generate route now calls after(() => runBackgroundGeneration(...))
+// — the callback form, which is the shape Vercel's runtime expects. In tests
+// we want the background work to run inline so the HTTP response sees the
+// resulting DB state, so we invoke the callback immediately and return its
+// promise.
 vi.mock("next/server", async (importOriginal) => {
   const actual = await importOriginal<typeof import("next/server")>();
   return {
     ...actual,
-    after: (promise: Promise<unknown>) => promise,
+    after: (fn: () => Promise<unknown> | unknown) => fn(),
   };
 });

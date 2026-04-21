@@ -155,6 +155,11 @@ describe("POST /api/narratives/generate", () => {
     expect(json.status).toBe("pending");
     // Background generation should be scheduled via after()
     expect(after).toHaveBeenCalledOnce();
+    // WIN-60: must pass a thunk (callback), not the already-invoked promise.
+    // Passing a promise runs the work inline on the request event loop and
+    // can terminate before Claude's 3-15s call resolves on serverless.
+    const afterArg = (after as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(typeof afterArg).toBe("function");
   });
 
   // ---------------------------------------------------------------------
