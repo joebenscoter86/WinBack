@@ -224,13 +224,13 @@ describe("runBackgroundGeneration", () => {
 
     // Verify narrative_generations was updated with "completed"
     const narrativeGenCalls = mockFrom.mock.calls.filter(
-      ([t]: [string]) => t === "narrative_generations",
+      ([t]: unknown[]) => t === "narrative_generations",
     );
     expect(narrativeGenCalls.length).toBeGreaterThanOrEqual(1);
 
     // Verify disputes was updated with narrative_text
     const disputeCalls = mockFrom.mock.calls.filter(
-      ([t]: [string]) => t === "disputes",
+      ([t]: unknown[]) => t === "disputes",
     );
     expect(disputeCalls.length).toBeGreaterThanOrEqual(2); // select + update
   });
@@ -374,7 +374,7 @@ describe("runBackgroundGeneration", () => {
 
     // narrative_generations must have been touched
     const narrativeGenCalls = mockFrom.mock.calls.filter(
-      ([t]: [string]) => t === "narrative_generations",
+      ([t]: unknown[]) => t === "narrative_generations",
     );
     expect(narrativeGenCalls.length).toBeGreaterThanOrEqual(1);
   });
@@ -409,7 +409,7 @@ describe("runBackgroundGeneration", () => {
 
     // narrative_generations must have been touched
     const narrativeGenCalls = mockFrom.mock.calls.filter(
-      ([t]: [string]) => t === "narrative_generations",
+      ([t]: unknown[]) => t === "narrative_generations",
     );
     expect(narrativeGenCalls.length).toBeGreaterThanOrEqual(1);
   });
