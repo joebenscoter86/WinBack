@@ -162,6 +162,15 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
   const daysRemaining = getDaysRemaining(dispute.due_by);
   const isUrgent = daysRemaining < 5 && !isResolved(dispute.status);
 
+  // Prefer the customer name on the disputed charge so merchants recognize the
+  // case at a glance. Fall back to the charge description, then to the short
+  // dispute id if neither is available (e.g., before enrichment).
+  const focusViewTitle = dispute.customer_name
+    ? `Dispute: ${dispute.customer_name}`
+    : dispute.charge_description
+      ? `Dispute: ${dispute.charge_description}`
+      : `Dispute ${dispute.id.slice(0, 12)}...`;
+
   const renderReviewTab = () => {
     const isLoadingPlaybook = loading.playbook;
 
@@ -208,7 +217,7 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
 
   return (
     <FocusView
-      title={`Dispute ${initialDispute.id.slice(0, 12)}...`}
+      title={focusViewTitle}
       shown={shown}
       setShown={setShown}
       confirmCloseMessages={{
