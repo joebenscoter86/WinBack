@@ -211,3 +211,45 @@ export async function cancelUsageSubscription(
     );
   }
 }
+
+/**
+ * Returns true if the merchant's billing Customer has a default payment
+ * method attached. Used by /api/billing/status and by the Submit pre-flight
+ * gate to decide whether to show the "add a card" banner/modal.
+ */
+export async function hasDefaultPaymentMethod(
+  merchantId: string,
+): Promise<boolean> {
+  const merchant = await getMerchant(merchantId);
+  if (!merchant.stripe_billing_customer_id) return false;
+  const customer = await getStripe().customers.retrieve(
+    merchant.stripe_billing_customer_id,
+  );
+  if (typeof customer === "string" || customer.deleted) return false;
+  const pm = customer.invoice_settings?.default_payment_method;
+  return pm !== null && pm !== undefined;
+}
+
+/**
+ * Create a Stripe Checkout session in `setup` mode to collect a payment
+ * method from the merchant without charging. The returned URL is opened on
+ * /setup-billing after the user clicks Continue on the confirmation page.
+ */
+export async function createSetupCheckoutSession(params: {
+  merchantId: string;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<{ url: string; sessionId: string }> {
+  const customerId = await getOrCreateBillingCustomer(params.merchantId);
+  const session = await getStripe().checkout.sessions.create({
+    mode: "setup",
+    customer: customerId,
+    success_url: params.successUrl,
+    cancel_url: params.cancelUrl,
+    payment_method_types: ["card"],
+  });
+  if (!session.url) {
+    throw new Error("Stripe did not return a setup Checkout URL");
+  }
+  return { url: session.url, sessionId: session.id };
+}

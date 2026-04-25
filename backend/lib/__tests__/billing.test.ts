@@ -2,13 +2,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { supabaseMock, stripeMock } = vi.hoisted(() => {
   const customersCreate = vi.fn();
+  const customersRetrieve = vi.fn();
+  const customersUpdate = vi.fn();
   const subscriptionsCreate = vi.fn();
   const subscriptionsUpdate = vi.fn();
   const meterEventsCreate = vi.fn();
   const checkoutSessionsCreate = vi.fn();
 
   class MockStripe {
-    customers = { create: customersCreate };
+    customers = {
+      create: customersCreate,
+      retrieve: customersRetrieve,
+      update: customersUpdate,
+    };
     subscriptions = { create: subscriptionsCreate, update: subscriptionsUpdate };
     billing = { meterEvents: { create: meterEventsCreate } };
     checkout = { sessions: { create: checkoutSessionsCreate } };
@@ -19,6 +25,8 @@ const { supabaseMock, stripeMock } = vi.hoisted(() => {
     stripeMock: {
       default: MockStripe,
       customersCreate,
+      customersRetrieve,
+      customersUpdate,
       subscriptionsCreate,
       subscriptionsUpdate,
       meterEventsCreate,
@@ -239,6 +247,96 @@ describe("cancelUsageSubscription", () => {
     expect(stripeMock.subscriptionsUpdate).toHaveBeenCalledWith(
       "sub_usage_1",
       { cancel_at_period_end: true },
+    );
+  });
+});
+
+describe("hasDefaultPaymentMethod", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setRequiredEnvVars();
+    __resetEnvCacheForTests();
+  });
+
+  it("returns false when no billing customer exists", async () => {
+    mockMerchantLookup({
+      id: MERCHANT_ID,
+      stripe_account_id: "acct_1",
+      email: null,
+      business_name: null,
+      stripe_billing_customer_id: null,
+    });
+    const { hasDefaultPaymentMethod } = await import("../billing");
+    expect(await hasDefaultPaymentMethod(MERCHANT_ID)).toBe(false);
+  });
+
+  it("returns true when customer.invoice_settings.default_payment_method is set", async () => {
+    mockMerchantLookup({
+      id: MERCHANT_ID,
+      stripe_account_id: "acct_1",
+      email: null,
+      business_name: null,
+      stripe_billing_customer_id: "cus_123",
+    });
+    stripeMock.customersRetrieve.mockResolvedValue({
+      id: "cus_123",
+      invoice_settings: { default_payment_method: "pm_1" },
+    });
+    const { hasDefaultPaymentMethod } = await import("../billing");
+    expect(await hasDefaultPaymentMethod(MERCHANT_ID)).toBe(true);
+  });
+
+  it("returns false when default_payment_method is null", async () => {
+    mockMerchantLookup({
+      id: MERCHANT_ID,
+      stripe_account_id: "acct_1",
+      email: null,
+      business_name: null,
+      stripe_billing_customer_id: "cus_123",
+    });
+    stripeMock.customersRetrieve.mockResolvedValue({
+      id: "cus_123",
+      invoice_settings: { default_payment_method: null },
+    });
+    const { hasDefaultPaymentMethod } = await import("../billing");
+    expect(await hasDefaultPaymentMethod(MERCHANT_ID)).toBe(false);
+  });
+});
+
+describe("createSetupCheckoutSession", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setRequiredEnvVars();
+    __resetEnvCacheForTests();
+  });
+
+  it("creates a setup-mode Checkout session for the merchant", async () => {
+    mockMerchantLookup({
+      id: MERCHANT_ID,
+      stripe_account_id: "acct_1",
+      email: "a@b.co",
+      business_name: "Biz",
+      stripe_billing_customer_id: "cus_123",
+    });
+    stripeMock.checkoutSessionsCreate.mockResolvedValue({
+      id: "cs_2",
+      url: "https://checkout.stripe.com/setup",
+    });
+
+    const { createSetupCheckoutSession } = await import("../billing");
+    const result = await createSetupCheckoutSession({
+      merchantId: MERCHANT_ID,
+      successUrl: "https://winbackpay.com/setup-billing/success",
+      cancelUrl: "https://winbackpay.com/setup-billing",
+    });
+    expect(result.url).toContain("checkout.stripe.com");
+    expect(stripeMock.checkoutSessionsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: "setup",
+        customer: "cus_123",
+        success_url: "https://winbackpay.com/setup-billing/success",
+        cancel_url: "https://winbackpay.com/setup-billing",
+      }),
     );
   });
 });
