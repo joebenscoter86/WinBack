@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Button,
   Banner,
   Checkbox,
+  FocusView,
   Inline,
   Spinner,
 } from '@stripe/ui-extension-sdk/ui';
@@ -72,8 +73,30 @@ export default function SubmitView({
 }: SubmitViewProps) {
   const [acknowledged, setAcknowledged] = useState(false);
   const [state, setState] = useState<State>({ kind: 'idle' });
+  const [billing, setBilling] = useState<{
+    tier: 'usage' | 'pro';
+    has_payment_method: boolean;
+  } | null>(null);
+  const [pmGateOpen, setPmGateOpen] = useState(false);
+  const [pmOpening, setPmOpening] = useState(false);
+  const [pmGateError, setPmGateError] = useState<string | null>(null);
   const contextRef = useRef(context);
   contextRef.current = context;
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const result = await fetchBackend<{
+          tier: 'usage' | 'pro';
+          has_payment_method: boolean;
+        }>('/api/billing/status', contextRef.current);
+        setBilling({ tier: result.tier, has_payment_method: result.has_payment_method });
+      } catch {
+        // If billing status fails, fall through and let submit proceed without gating.
+      }
+    };
+    load();
+  }, []);
 
   const { attached, total } = countMandatoryAttached(playbook, evidenceFiles);
   const narrativeWords = narrativeText.trim().split(/\s+/).filter(Boolean).length;
@@ -110,6 +133,14 @@ export default function SubmitView({
       }
     }
   }
+
+  const attemptSubmit = async () => {
+    if (billing && billing.tier === 'usage' && !billing.has_payment_method) {
+      setPmGateOpen(true);
+      return;
+    }
+    await handleSubmit();
+  };
 
   if (state.kind === 'success') {
     return <SubmissionConfirmation response={state.response} />;
@@ -177,7 +208,7 @@ export default function SubmitView({
         <Button
           type="primary"
           disabled={submitDisabled}
-          onPress={handleSubmit}
+          onPress={attemptSubmit}
         >
           {isSubmitting ? (
             <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
@@ -189,6 +220,54 @@ export default function SubmitView({
           )}
         </Button>
       </Box>
+
+      {pmGateOpen && (
+        <FocusView
+          title="Add a payment method before submitting"
+          onClose={() => setPmGateOpen(false)}
+          primaryAction={
+            <Button
+              type="primary"
+              onPress={async () => {
+                setPmOpening(true);
+                setPmGateError(null);
+                try {
+                  const result = await fetchBackend<{ url: string }>(
+                    '/api/billing/setup-link',
+                    contextRef.current,
+                  );
+                  if (typeof window !== 'undefined') {
+                    window.open(result.url, '_blank', 'noopener');
+                  }
+                } catch (err) {
+                  setPmGateError(err instanceof ApiError ? err.message : 'Failed to open setup');
+                } finally {
+                  setPmOpening(false);
+                }
+              }}
+              disabled={pmOpening}
+            >
+              {pmOpening ? 'Opening…' : 'Add payment method'}
+            </Button>
+          }
+          secondaryAction={
+            <Button type="secondary" onPress={() => setPmGateOpen(false)}>
+              Cancel
+            </Button>
+          }
+        >
+          <Box css={{ stack: 'y', gap: 'small' }}>
+            <Inline css={{ font: 'body' }}>
+              WinBack's Pay-Per-Win plan charges 15% only when you win. Add a card
+              now so we can settle instantly if this dispute is resolved in your
+              favor. You won't be charged anything today.
+            </Inline>
+            {pmGateError && (
+              <Banner type="critical" title="Could not start setup" description={pmGateError} />
+            )}
+          </Box>
+        </FocusView>
+      )}
     </Box>
   );
 }
