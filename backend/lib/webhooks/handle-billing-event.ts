@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
 import { cancelUsageSubscription } from "@/lib/billing";
+import { env } from "@/lib/env";
 
 /**
  * WIN-24: Apply a Stripe Billing subscription webhook event to merchants.
@@ -31,17 +32,11 @@ export async function handleBillingEvent(event: Stripe.Event): Promise<void> {
   }
 }
 
-function proPriceId(): string {
-  const v = process.env.STRIPE_PRICE_PRO_MONTHLY;
-  if (!v) throw new Error("Missing STRIPE_PRICE_PRO_MONTHLY");
-  return v;
-}
-
 function subscriptionIsPro(sub: Stripe.Subscription): boolean {
   // Prefer metadata tag set at creation time; fall back to matching the Pro
   // price so subscriptions created outside our code path still classify.
   if (sub.metadata?.tier === "pro") return true;
-  const priceId = proPriceId();
+  const priceId = env().STRIPE_PRICE_PRO_MONTHLY;
   return sub.items.data.some((item) => item.price.id === priceId);
 }
 

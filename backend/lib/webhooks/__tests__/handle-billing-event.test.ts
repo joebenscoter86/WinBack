@@ -9,8 +9,22 @@ vi.mock("@/lib/supabase", () => ({ supabase: supabaseMock }));
 vi.mock("@/lib/billing", () => billingMock);
 
 import { handleBillingEvent } from "../handle-billing-event";
+import { __resetEnvCacheForTests } from "../../env";
 
 const MERCHANT_ID = "m-1";
+
+function setRequiredEnvVars() {
+  process.env.STRIPE_SECRET_KEY = "sk_test_x";
+  process.env.STRIPE_APP_SECRET = "absec_x";
+  process.env.STRIPE_WEBHOOK_SECRET = "whsec_x";
+  process.env.STRIPE_BILLING_WEBHOOK_SECRET = "whsec_b";
+  process.env.STRIPE_PRICE_PRO_MONTHLY = "price_pro";
+  process.env.STRIPE_PRICE_USAGE_FEE = "price_usage";
+  process.env.UPGRADE_LINK_SECRET = "a".repeat(32);
+  process.env.SUPABASE_URL = "https://x.supabase.co";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "svc-key";
+  process.env.ANTHROPIC_API_KEY = "sk-ant-x";
+}
 
 function makeEvent(
   type: Stripe.Event.Type,
@@ -47,7 +61,8 @@ function firstUpdateArg(update: ReturnType<typeof vi.fn>): Record<string, unknow
 describe("handleBillingEvent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.STRIPE_PRICE_PRO_MONTHLY = "price_pro";
+    setRequiredEnvVars();
+    __resetEnvCacheForTests();
   });
 
   it("flips merchant to Pro tier on subscription.created with Pro price and active status", async () => {
