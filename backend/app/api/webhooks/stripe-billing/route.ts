@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
 import { handleBillingEvent } from "@/lib/webhooks/handle-billing-event";
 import { captureRouteError } from "@/lib/sentry";
+import { env } from "@/lib/env";
 
 /**
  * WIN-24: Stripe Billing webhook. Separate from the dispute webhook (/api/webhooks/stripe)
@@ -34,11 +35,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
-  const webhookSecret = process.env.STRIPE_BILLING_WEBHOOK_SECRET;
-  if (!webhookSecret) {
-    console.error("[WIN-24] STRIPE_BILLING_WEBHOOK_SECRET not configured");
-    return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
-  }
+  const webhookSecret = env().STRIPE_BILLING_WEBHOOK_SECRET;
 
   const rawBody = await request.text();
 
