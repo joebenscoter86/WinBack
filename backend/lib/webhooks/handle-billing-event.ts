@@ -3,6 +3,14 @@ import { supabase } from "@/lib/supabase";
 import { cancelUsageSubscription } from "@/lib/billing";
 import { env } from "@/lib/env";
 
+let _stripe: Stripe | null = null;
+function getStripe(): Stripe {
+  if (!_stripe) {
+    _stripe = new Stripe(env().STRIPE_SECRET_KEY);
+  }
+  return _stripe;
+}
+
 /**
  * WIN-24: Apply a Stripe Billing subscription webhook event to merchants.
  * Handles the Pro upgrade lifecycle and payment state changes.
@@ -27,9 +35,24 @@ export async function handleBillingEvent(event: Stripe.Event): Promise<void> {
       // accompanies these handles the tier/status change. We log-only here.
       return;
     }
+    case "setup_intent.succeeded": {
+      await applySetupIntentSucceeded(event.data.object as Stripe.SetupIntent);
+      return;
+    }
     default:
       return;
   }
+}
+
+async function applySetupIntentSucceeded(si: Stripe.SetupIntent): Promise<void> {
+  const customerId = typeof si.customer === "string" ? si.customer : si.customer?.id ?? null;
+  const paymentMethodId =
+    typeof si.payment_method === "string" ? si.payment_method : si.payment_method?.id ?? null;
+  if (!customerId || !paymentMethodId) return;
+
+  await getStripe().customers.update(customerId, {
+    invoice_settings: { default_payment_method: paymentMethodId },
+  });
 }
 
 function subscriptionIsPro(sub: Stripe.Subscription): boolean {

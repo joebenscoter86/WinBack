@@ -1,12 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import Stripe from "stripe";
 
-const { supabaseMock, billingMock } = vi.hoisted(() => ({
-  supabaseMock: { from: vi.fn() },
-  billingMock: { cancelUsageSubscription: vi.fn() },
-}));
+const { supabaseMock, billingMock, stripeMock } = vi.hoisted(() => {
+  const customersUpdate = vi.fn();
+  class MockStripe {
+    customers = { update: customersUpdate };
+    webhooks = { constructEvent: vi.fn() };
+  }
+  return {
+    supabaseMock: { from: vi.fn() },
+    billingMock: { cancelUsageSubscription: vi.fn() },
+    stripeMock: {
+      default: MockStripe,
+      customersUpdate,
+    },
+  };
+});
 vi.mock("@/lib/supabase", () => ({ supabase: supabaseMock }));
 vi.mock("@/lib/billing", () => billingMock);
+vi.mock("stripe", () => ({ default: stripeMock.default }));
 
 import { handleBillingEvent } from "../handle-billing-event";
 import { __resetEnvCacheForTests } from "../../env";
@@ -156,5 +168,46 @@ describe("handleBillingEvent", () => {
 
     const payload = firstUpdateArg(update);
     expect(payload.pro_since_at).toBeUndefined();
+  });
+});
+
+describe("setup_intent.succeeded", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setRequiredEnvVars();
+    __resetEnvCacheForTests();
+  });
+
+  it("attaches the PaymentMethod as the customer's default", async () => {
+    stripeMock.customersUpdate.mockResolvedValue({});
+
+    const event = {
+      type: "setup_intent.succeeded",
+      data: {
+        object: {
+          id: "seti_1",
+          customer: "cus_123",
+          payment_method: "pm_1",
+        },
+      },
+    } as unknown as Stripe.Event;
+
+    const { handleBillingEvent } = await import("../handle-billing-event");
+    await handleBillingEvent(event);
+
+    expect(stripeMock.customersUpdate).toHaveBeenCalledWith("cus_123", {
+      invoice_settings: { default_payment_method: "pm_1" },
+    });
+  });
+
+  it("is a no-op if the SetupIntent has no payment_method or no customer", async () => {
+    const event = {
+      type: "setup_intent.succeeded",
+      data: { object: { id: "seti_2", customer: null, payment_method: null } },
+    } as unknown as Stripe.Event;
+
+    const { handleBillingEvent } = await import("../handle-billing-event");
+    await handleBillingEvent(event);
+    expect(stripeMock.customersUpdate).not.toHaveBeenCalled();
   });
 });

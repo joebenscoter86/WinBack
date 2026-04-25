@@ -17,6 +17,7 @@ const HANDLED_EVENT_TYPES = new Set<Stripe.Event.Type>([
   "customer.subscription.deleted",
   "invoice.payment_succeeded",
   "invoice.payment_failed",
+  "setup_intent.succeeded",
 ]);
 
 let _stripe: Stripe | null = null;
