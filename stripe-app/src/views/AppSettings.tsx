@@ -90,17 +90,10 @@ const AppSettings = (context: ExtensionContextValue) => {
     setUpgrading(true);
     setUpgradeError(null);
     try {
-      // Dashboard is the natural "return here" destination — the iframe will
-      // refresh when Stripe redirects back, and the billing webhook will have
-      // flipped the tier by then.
-      const returnUrl = 'https://dashboard.stripe.com/settings/apps';
       const result = await fetchBackend<{ url: string }>(
-        '/api/billing/checkout',
+        '/api/billing/upgrade-link',
         contextRef.current,
-        { success_url: returnUrl, cancel_url: returnUrl },
       );
-      // Open Checkout in a new tab — the Stripe Dashboard iframe blocks
-      // Checkout from rendering inside it.
       if (typeof window !== 'undefined') {
         window.open(result.url, '_blank', 'noopener');
       }
@@ -206,7 +199,7 @@ const AppSettings = (context: ExtensionContextValue) => {
                   {upgrading ? 'Opening Checkout…' : 'Upgrade to Pro'}
                 </Button>
                 <Inline css={{ font: 'caption', color: 'secondary' }}>
-                  Opens Stripe Checkout in a new tab
+                  Opens winbackpay.com in a new tab
                 </Inline>
               </Box>
             </Box>
