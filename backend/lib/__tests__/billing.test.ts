@@ -37,8 +37,22 @@ import {
   createProCheckoutSession,
   cancelUsageSubscription,
 } from "../billing";
+import { __resetEnvCacheForTests } from "../env";
 
 const MERCHANT_ID = "m-1";
+
+function setRequiredEnvVars() {
+  process.env.STRIPE_SECRET_KEY = "sk_test_x";
+  process.env.STRIPE_APP_SECRET = "absec_x";
+  process.env.STRIPE_WEBHOOK_SECRET = "whsec_x";
+  process.env.STRIPE_BILLING_WEBHOOK_SECRET = "whsec_b";
+  process.env.STRIPE_PRICE_PRO_MONTHLY = "price_pro";
+  process.env.STRIPE_PRICE_USAGE_FEE = "price_usage";
+  process.env.UPGRADE_LINK_SECRET = "a".repeat(32);
+  process.env.SUPABASE_URL = "https://x.supabase.co";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "svc-key";
+  process.env.ANTHROPIC_API_KEY = "sk-ant-x";
+}
 
 function mockMerchantLookup(row: Record<string, unknown> | null) {
   const updateChain = {
@@ -66,7 +80,8 @@ describe("calculateSuccessFeeCents", () => {
 describe("getOrCreateBillingCustomer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.STRIPE_SECRET_KEY = "sk_test_x";
+    setRequiredEnvVars();
+    __resetEnvCacheForTests();
   });
 
   it("reuses existing customer id when already set", async () => {
@@ -105,8 +120,8 @@ describe("getOrCreateBillingCustomer", () => {
 describe("reportDisputeWonFee", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.STRIPE_SECRET_KEY = "sk_test_x";
-    process.env.STRIPE_PRICE_USAGE_FEE = "price_usage";
+    setRequiredEnvVars();
+    __resetEnvCacheForTests();
   });
 
   it("reports a meter event keyed by dispute id", async () => {
@@ -161,8 +176,8 @@ describe("reportDisputeWonFee", () => {
 describe("createProCheckoutSession", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.STRIPE_SECRET_KEY = "sk_test_x";
-    process.env.STRIPE_PRICE_PRO_MONTHLY = "price_pro";
+    setRequiredEnvVars();
+    __resetEnvCacheForTests();
   });
 
   it("creates a subscription-mode Checkout session and returns its URL", async () => {
@@ -195,7 +210,8 @@ describe("createProCheckoutSession", () => {
 describe("cancelUsageSubscription", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.STRIPE_SECRET_KEY = "sk_test_x";
+    setRequiredEnvVars();
+    __resetEnvCacheForTests();
   });
 
   it("no-ops when no usage subscription exists", async () => {

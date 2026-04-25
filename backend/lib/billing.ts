@@ -16,6 +16,7 @@
  */
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
+import { env } from "@/lib/env";
 
 export const SUCCESS_FEE_RATE = 0.15;
 export const METER_EVENT_NAME = "dispute_won_fee";
@@ -23,17 +24,10 @@ export const METER_EVENT_NAME = "dispute_won_fee";
 let _stripe: Stripe | null = null;
 function getStripe(): Stripe {
   if (!_stripe) {
-    const key = process.env.STRIPE_SECRET_KEY;
-    if (!key) throw new Error("Missing STRIPE_SECRET_KEY");
+    const key = env().STRIPE_SECRET_KEY;
     _stripe = new Stripe(key);
   }
   return _stripe;
-}
-
-function requireEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing ${name}`);
-  return v;
 }
 
 export function calculateSuccessFeeCents(amountRecoveredCents: number): number {
@@ -109,7 +103,7 @@ export async function getOrCreateUsageSubscription(
   }
 
   const customerId = await getOrCreateBillingCustomer(merchantId);
-  const priceId = requireEnv("STRIPE_PRICE_USAGE_FEE");
+  const priceId = env().STRIPE_PRICE_USAGE_FEE;
 
   const subscription = await getStripe().subscriptions.create({
     customer: customerId,
@@ -173,7 +167,7 @@ export async function createProCheckoutSession(params: {
   cancelUrl: string;
 }): Promise<{ url: string; sessionId: string }> {
   const customerId = await getOrCreateBillingCustomer(params.merchantId);
-  const priceId = requireEnv("STRIPE_PRICE_PRO_MONTHLY");
+  const priceId = env().STRIPE_PRICE_PRO_MONTHLY;
 
   const session = await getStripe().checkout.sessions.create({
     mode: "subscription",
