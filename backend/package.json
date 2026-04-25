@@ -15,6 +15,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "seed:playbooks": "tsx supabase/seed-playbooks.ts",
     "provision:billing": "tsx scripts/provision-billing.ts",
+    "verify:billing": "tsx scripts/verify-billing.ts",
     "eval:prompts": "tsx evals/run.ts"
   },
   "dependencies": {
