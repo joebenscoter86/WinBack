@@ -1,6 +1,6 @@
 {
   "$schema": "https://stripe.com/stripe-app.schema.json",
-  "id": "com.jkbtech.winback",
+  "id": "com.winbackpay.app",
   "name": "WinBack",
   "version": "1.1.1",
   "icon": "./src/assets/winback_logo_300.png",
