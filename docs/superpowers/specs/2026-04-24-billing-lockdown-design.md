@@ -156,7 +156,7 @@ export const env = {
 
 `req` throws `Error("Missing required env var: X")` if absent or empty-string. `opt` returns `string | undefined`.
 
-Imported from each billing route file and from a small `app/api/_preflight/route.ts` health endpoint. On Vercel, because Next.js cold-starts routes on first request, a missing var crashes the first hit after deploy with a clear message in Sentry and a 500 to the caller. Subsequent deploys that would silently 500 on user action now fail loudly at the boundary instead.
+Imported from each billing route file and from a small `app/api/preflight/route.ts` health endpoint. On Vercel, because Next.js cold-starts routes on first request, a missing var crashes the first hit after deploy with a clear message in Sentry and a 500 to the caller. Subsequent deploys that would silently 500 on user action now fail loudly at the boundary instead.
 
 CI addition: `npm run check:env -- --schema prod` that validates Vercel's `production` environment has every required key set (via `vercel env ls` parsed output, or equivalent). Runs in the deploy workflow.
 
@@ -190,7 +190,7 @@ New file: `docs/runbooks/billing-setup.md`. The sequence to stand up billing in 
 5. Verify the Connect webhook (for dispute events) already exists at `/api/webhooks/stripe` — this is not new but re-verify the signing secret is current (`STRIPE_WEBHOOK_SECRET`).
 6. Generate `UPGRADE_LINK_SECRET`: `openssl rand -hex 32`.
 7. Add the billing-specific vars to Vercel for the target environment (production or preview): `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_USAGE_FEE`, `STRIPE_BILLING_WEBHOOK_SECRET`, `UPGRADE_LINK_SECRET`. Confirm the existing vars (`STRIPE_SECRET_KEY`, `STRIPE_APP_SECRET`, `STRIPE_WEBHOOK_SECRET`) are set and valid for this mode. Deploy.
-8. Hit `https://winbackpay.com/api/_preflight` — expect 200 with `{ ok: true }`. A 500 here means a var is missing or wrong.
+8. Hit `https://winbackpay.com/api/preflight` — expect 200 with `{ ok: true }`. A 500 here means a var is missing or wrong.
 9. Run `backend/scripts/verify-billing.ts` pointed at the deployed backend. Expect exit 0.
 10. Manual smoke test: install the app in a Stripe test Dashboard, click "Upgrade to Pro" in Settings, verify you land on `/upgrade`, continue to Checkout, complete with test card, assert merchant row flips to Pro.
 11. For live-mode launch only: also run the script against a merchant you own on live Stripe, submit a real won dispute (or use Stripe's dispute simulation in live), and confirm the success-fee invoice appears.
@@ -281,7 +281,7 @@ Explicit trace of each requirement in Stripe's rejection to the section(s) that 
 - [ ] `backend/app/api/billing/checkout-from-token/route.ts`
 - [ ] `backend/app/api/billing/setup-link/route.ts`
 - [ ] `backend/app/api/billing/setup-session-from-token/route.ts`
-- [ ] `backend/app/api/_preflight/route.ts`
+- [ ] `backend/app/api/preflight/route.ts`
 - [ ] Delete `backend/app/api/billing/checkout/route.ts` + test
 - [ ] Update `backend/app/api/billing/status/route.ts` to include `has_payment_method`
 - [ ] Update `backend/lib/webhooks/handle-billing-event.ts` to handle `setup_intent.succeeded` and attach default PM

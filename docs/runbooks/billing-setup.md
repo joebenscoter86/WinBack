@@ -61,7 +61,7 @@ in the WinBack platform Stripe sub-account under JB Technology LLC.
 7. **Preflight.** After deploy succeeds:
 
    ```bash
-   curl https://winbackpay.com/api/_preflight
+   curl https://winbackpay.com/api/preflight
    ```
 
    Expect `{"ok":true}`. A 500 here means a Vercel env var is missing — read the error message, fix, redeploy.

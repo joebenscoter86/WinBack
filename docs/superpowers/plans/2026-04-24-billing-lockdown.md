@@ -2986,14 +2986,14 @@ git commit -m "feat(iframe): gate evidence submit on payment-method presence for
 
 ## Phase 9 — Preflight route
 
-### Task 22: Add `GET /api/_preflight`
+### Task 22: Add `GET /api/preflight`
 
 **Files:**
-- Create: `backend/app/api/_preflight/route.ts`
+- Create: `backend/app/api/preflight/route.ts`
 
 - [ ] **Step 1: Implement**
 
-Create `backend/app/api/_preflight/route.ts`:
+Create `backend/app/api/preflight/route.ts`:
 
 ```ts
 import { NextResponse } from "next/server";
@@ -3024,7 +3024,7 @@ export async function GET(): Promise<NextResponse> {
 
 ```bash
 cd backend && npm run dev
-curl http://localhost:3000/api/_preflight
+curl http://localhost:3000/api/preflight
 ```
 
 With a complete `.env.local`, expect `{"ok":true}`. Temporarily unset `STRIPE_PRICE_PRO_MONTHLY` and restart — expect `{"ok":false,"error":"Missing required env vars: STRIPE_PRICE_PRO_MONTHLY"}` and HTTP 500.
@@ -3032,8 +3032,8 @@ With a complete `.env.local`, expect `{"ok":true}`. Temporarily unset `STRIPE_PR
 - [ ] **Step 3: Commit**
 
 ```bash
-git add backend/app/api/_preflight
-git commit -m "feat(backend): /api/_preflight health route validates required env"
+git add backend/app/api/preflight
+git commit -m "feat(backend): /api/preflight health route validates required env"
 ```
 
 ---
@@ -3481,7 +3481,7 @@ in the WinBack platform Stripe sub-account.
 7. **Preflight.** After deploy succeeds:
 
    ```bash
-   curl https://winbackpay.com/api/_preflight
+   curl https://winbackpay.com/api/preflight
    ```
 
    Expect `{"ok":true}`. A 500 here means a Vercel env var is missing — check the error message, fix, redeploy.
@@ -3587,7 +3587,7 @@ Merge the billing-lockdown branch via PR. Watch Vercel deploy complete.
 - [ ] **Step 3: Preflight on prod**
 
 ```bash
-curl https://winbackpay.com/api/_preflight
+curl https://winbackpay.com/api/preflight
 ```
 
 Expect `{"ok":true}`.
