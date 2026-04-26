@@ -3,8 +3,9 @@ import Stripe from "stripe";
 import { withStripeAuth } from "@/lib/stripe-auth";
 import { ensureMerchant } from "@/lib/merchants";
 import { supabase } from "@/lib/supabase";
-import { SUCCESS_FEE_RATE } from "@/lib/billing";
+import { SUCCESS_FEE_RATE, hasDefaultPaymentMethod } from "@/lib/billing";
 import { captureRouteError } from "@/lib/sentry";
+import { env } from "@/lib/env";
 
 /**
  * WIN-24: Return the merchant's current billing state for the Settings view.
@@ -21,9 +22,7 @@ import { captureRouteError } from "@/lib/sentry";
 let _stripe: Stripe | null = null;
 function getStripe(): Stripe {
   if (!_stripe) {
-    const key = process.env.STRIPE_SECRET_KEY;
-    if (!key) throw new Error("Missing STRIPE_SECRET_KEY");
-    _stripe = new Stripe(key);
+    _stripe = new Stripe(env().STRIPE_SECRET_KEY);
   }
   return _stripe;
 }
@@ -37,7 +36,7 @@ export const POST = withStripeAuth(async (_request, { identity }) => {
   const { data: merchant, error } = await supabase
     .from("merchants")
     .select(
-      "id, billing_tier, subscription_status, pro_since_at, upgrade_prompted_at, stripe_subscription_id",
+      "id, billing_tier, subscription_status, pro_since_at, upgrade_prompted_at, stripe_subscription_id, payment_method_prompt_dismissed_at",
     )
     .eq("stripe_account_id", accountId)
     .maybeSingle();
@@ -56,6 +55,7 @@ export const POST = withStripeAuth(async (_request, { identity }) => {
     pro_since_at: string | null;
     upgrade_prompted_at: string | null;
     stripe_subscription_id: string | null;
+    payment_method_prompt_dismissed_at: string | null;
   };
 
   // Next billing date for Pro subscribers — fetched from Stripe rather than
@@ -103,6 +103,13 @@ export const POST = withStripeAuth(async (_request, { identity }) => {
     captureRouteError(err, { route: "billing.status.ytd_fees" });
   }
 
+  let hasPaymentMethod = false;
+  try {
+    hasPaymentMethod = await hasDefaultPaymentMethod(row.id);
+  } catch (err) {
+    captureRouteError(err, { route: "billing.status.has_payment_method" });
+  }
+
   return NextResponse.json({
     tier: row.billing_tier,
     subscription_status: row.subscription_status,
@@ -110,5 +117,7 @@ export const POST = withStripeAuth(async (_request, { identity }) => {
     upgrade_prompted_at: row.upgrade_prompted_at,
     next_billing_at: nextBillingAt,
     ytd_success_fees_cents: ytdFeesCents,
+    has_payment_method: hasPaymentMethod,
+    payment_method_prompt_dismissed_at: row.payment_method_prompt_dismissed_at,
   });
 });

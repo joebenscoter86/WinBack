@@ -1,6 +1,15 @@
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
 import { cancelUsageSubscription } from "@/lib/billing";
+import { env } from "@/lib/env";
+
+let _stripe: Stripe | null = null;
+function getStripe(): Stripe {
+  if (!_stripe) {
+    _stripe = new Stripe(env().STRIPE_SECRET_KEY);
+  }
+  return _stripe;
+}
 
 /**
  * WIN-24: Apply a Stripe Billing subscription webhook event to merchants.
@@ -26,22 +35,31 @@ export async function handleBillingEvent(event: Stripe.Event): Promise<void> {
       // accompanies these handles the tier/status change. We log-only here.
       return;
     }
+    case "setup_intent.succeeded": {
+      await applySetupIntentSucceeded(event.data.object as Stripe.SetupIntent);
+      return;
+    }
     default:
       return;
   }
 }
 
-function proPriceId(): string {
-  const v = process.env.STRIPE_PRICE_PRO_MONTHLY;
-  if (!v) throw new Error("Missing STRIPE_PRICE_PRO_MONTHLY");
-  return v;
+async function applySetupIntentSucceeded(si: Stripe.SetupIntent): Promise<void> {
+  const customerId = typeof si.customer === "string" ? si.customer : si.customer?.id ?? null;
+  const paymentMethodId =
+    typeof si.payment_method === "string" ? si.payment_method : si.payment_method?.id ?? null;
+  if (!customerId || !paymentMethodId) return;
+
+  await getStripe().customers.update(customerId, {
+    invoice_settings: { default_payment_method: paymentMethodId },
+  });
 }
 
 function subscriptionIsPro(sub: Stripe.Subscription): boolean {
   // Prefer metadata tag set at creation time; fall back to matching the Pro
   // price so subscriptions created outside our code path still classify.
   if (sub.metadata?.tier === "pro") return true;
-  const priceId = proPriceId();
+  const priceId = env().STRIPE_PRICE_PRO_MONTHLY;
   return sub.items.data.some((item) => item.price.id === priceId);
 }
 

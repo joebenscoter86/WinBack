@@ -20,6 +20,8 @@ type BillingStatus = {
   upgrade_prompted_at: string | null;
   next_billing_at: string | null;
   ytd_success_fees_cents: number;
+  has_payment_method: boolean;
+  payment_method_prompt_dismissed_at: string | null;
 };
 
 type ViewState = 'loading' | 'ready' | 'error';
@@ -43,6 +45,10 @@ const AppSettings = (context: ExtensionContextValue) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [upgrading, setUpgrading] = useState(false);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
+
+  const [settingUp, setSettingUp] = useState(false);
+  const [settingUpError, setSettingUpError] = useState<string | null>(null);
+  const [dismissing, setDismissing] = useState(false);
 
   const [reopening, setReopening] = useState(false);
   const [reopenDone, setReopenDone] = useState(false);
@@ -90,17 +96,10 @@ const AppSettings = (context: ExtensionContextValue) => {
     setUpgrading(true);
     setUpgradeError(null);
     try {
-      // Dashboard is the natural "return here" destination — the iframe will
-      // refresh when Stripe redirects back, and the billing webhook will have
-      // flipped the tier by then.
-      const returnUrl = 'https://dashboard.stripe.com/settings/apps';
       const result = await fetchBackend<{ url: string }>(
-        '/api/billing/checkout',
+        '/api/billing/upgrade-link',
         contextRef.current,
-        { success_url: returnUrl, cancel_url: returnUrl },
       );
-      // Open Checkout in a new tab — the Stripe Dashboard iframe blocks
-      // Checkout from rendering inside it.
       if (typeof window !== 'undefined') {
         window.open(result.url, '_blank', 'noopener');
       }
@@ -109,6 +108,40 @@ const AppSettings = (context: ExtensionContextValue) => {
       setUpgradeError(msg);
     } finally {
       setUpgrading(false);
+    }
+  };
+
+  const handleAddPaymentMethod = async () => {
+    setSettingUp(true);
+    setSettingUpError(null);
+    try {
+      const result = await fetchBackend<{ url: string }>(
+        '/api/billing/setup-link',
+        contextRef.current,
+      );
+      if (typeof window !== 'undefined') {
+        window.open(result.url, '_blank', 'noopener');
+      }
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Failed to start setup';
+      setSettingUpError(msg);
+    } finally {
+      setSettingUp(false);
+    }
+  };
+
+  const handleDismissPmBanner = async () => {
+    setDismissing(true);
+    try {
+      await fetchBackend('/api/billing/dismiss-payment-method-prompt', contextRef.current, {});
+      if (billing) {
+        setBilling({
+          ...billing,
+          payment_method_prompt_dismissed_at: new Date().toISOString(),
+        });
+      }
+    } finally {
+      setDismissing(false);
     }
   };
 
@@ -149,6 +182,27 @@ const AppSettings = (context: ExtensionContextValue) => {
             title="Payment past due"
             description="Your Pro subscription has a payment issue. Update your payment method in Stripe to avoid interruption. You can still file and submit disputes."
           />
+        )}
+
+        {shouldShowPmBanner(billing) && (
+          <Banner
+            type="default"
+            title="Add a payment method"
+            description="Add a card so WinBack can settle the 15% success fee instantly when you win. You won't be charged today."
+            actions={
+              <Box css={{ stack: 'x', gap: 'small' }}>
+                <Button type="primary" onPress={handleAddPaymentMethod} disabled={settingUp}>
+                  {settingUp ? 'Opening…' : 'Add payment method'}
+                </Button>
+                <Button type="secondary" onPress={handleDismissPmBanner} disabled={dismissing}>
+                  Not now
+                </Button>
+              </Box>
+            }
+          />
+        )}
+        {settingUpError && (
+          <Banner type="critical" title="Could not start setup" description={settingUpError} />
         )}
 
         <Box css={{ stack: 'y', gap: 'small' }}>
@@ -206,7 +260,7 @@ const AppSettings = (context: ExtensionContextValue) => {
                   {upgrading ? 'Opening Checkout…' : 'Upgrade to Pro'}
                 </Button>
                 <Inline css={{ font: 'caption', color: 'secondary' }}>
-                  Opens Stripe Checkout in a new tab
+                  Opens winbackpay.com in a new tab
                 </Inline>
               </Box>
             </Box>
@@ -270,5 +324,16 @@ const AppSettings = (context: ExtensionContextValue) => {
     </SettingsView>
   );
 };
+
+function shouldShowPmBanner(b: BillingStatus | null): boolean {
+  if (!b) return false;
+  if (b.tier === 'pro') return false;
+  if (b.has_payment_method) return false;
+  const dismissed = b.payment_method_prompt_dismissed_at;
+  if (!dismissed) return true;
+  const dismissedAt = new Date(dismissed).getTime();
+  const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+  return Date.now() - dismissedAt > thirtyDaysMs;
+}
 
 export default AppSettings;

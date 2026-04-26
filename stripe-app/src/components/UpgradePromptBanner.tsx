@@ -62,11 +62,9 @@ const UpgradePromptBanner = ({ context }: Props) => {
   const handleUpgrade = async () => {
     setUpgrading(true);
     try {
-      const returnUrl = 'https://dashboard.stripe.com/settings/apps';
       const result = await fetchBackend<{ url: string }>(
-        '/api/billing/checkout',
+        '/api/billing/upgrade-link',
         context,
-        { success_url: returnUrl, cancel_url: returnUrl },
       );
       if (typeof window !== 'undefined') {
         window.open(result.url, '_blank', 'noopener');
