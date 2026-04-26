@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { verifyToken } from "@/lib/upgrade-token";
 import { createProCheckoutSession } from "@/lib/billing";
 import { captureRouteError } from "@/lib/sentry";
+import { checkBillingTokenRateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
  * Public (token-gated) endpoint hit by the /upgrade confirmation page.
@@ -10,6 +11,25 @@ import { captureRouteError } from "@/lib/sentry";
  * Checkout session, and returns the hosted Checkout URL.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  // Rate limit before any work — this route is unauthenticated (token-gated)
+  // and reachable from any IP. Bail at the cheapest possible point.
+  const clientIp = getClientIp(request);
+  const rl = await checkBillingTokenRateLimit(clientIp);
+  if (!rl.success) {
+    return NextResponse.json(
+      { error: "Too many requests. Try again shortly.", code: "rate_limited" },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": Math.max(
+            1,
+            Math.ceil((rl.reset - Date.now()) / 1000),
+          ).toString(),
+        },
+      },
+    );
+  }
+
   let body: { token?: unknown } = {};
   try {
     body = await request.json();

@@ -57,6 +57,77 @@ export async function checkWaitlistRateLimit(
   return { success, limit, remaining, reset };
 }
 
+let billingTokenLimiter: Ratelimit | null = null;
+
+function getBillingTokenLimiter(): Ratelimit | null {
+  if (billingTokenLimiter) return billingTokenLimiter;
+
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+
+  billingTokenLimiter = new Ratelimit({
+    redis: new Redis({ url, token }),
+    // 30 requests per minute per IP. Legitimate users hit these routes
+    // at most a handful of times per session (open page, click Continue).
+    // Scripted abuse gets throttled at 30/min.
+    limiter: Ratelimit.slidingWindow(30, "1 m"),
+    analytics: false,
+    prefix: "ratelimit:billing-token",
+  });
+  return billingTokenLimiter;
+}
+
+/**
+ * Check and consume one token against the billing-token rate limiter.
+ * `identifier` should be the client IP. Fails open if Upstash isn't
+ * configured (dev/test).
+ */
+export async function checkBillingTokenRateLimit(
+  identifier: string,
+): Promise<RateLimitResult> {
+  const limiter = getBillingTokenLimiter();
+  if (!limiter) return ALLOWED_WHEN_UNCONFIGURED;
+
+  const { success, limit, remaining, reset } = await limiter.limit(identifier);
+  return { success, limit, remaining, reset };
+}
+
+let preflightLimiter: Ratelimit | null = null;
+
+function getPreflightLimiter(): Ratelimit | null {
+  if (preflightLimiter) return preflightLimiter;
+
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+
+  preflightLimiter = new Ratelimit({
+    redis: new Redis({ url, token }),
+    // 60 requests per minute per IP. More permissive than billing-token
+    // because uptime monitors may legitimately poll this endpoint.
+    limiter: Ratelimit.slidingWindow(60, "1 m"),
+    analytics: false,
+    prefix: "ratelimit:preflight",
+  });
+  return preflightLimiter;
+}
+
+/**
+ * Check and consume one token against the preflight rate limiter.
+ * `identifier` should be the client IP. Fails open if Upstash isn't
+ * configured (dev/test).
+ */
+export async function checkPreflightRateLimit(
+  identifier: string,
+): Promise<RateLimitResult> {
+  const limiter = getPreflightLimiter();
+  if (!limiter) return ALLOWED_WHEN_UNCONFIGURED;
+
+  const { success, limit, remaining, reset } = await limiter.limit(identifier);
+  return { success, limit, remaining, reset };
+}
+
 /**
  * Extract the client IP from the request. Vercel and most reverse proxies
  * set `x-forwarded-for` with the client IP as the first comma-separated
