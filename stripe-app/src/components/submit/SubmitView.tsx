@@ -6,6 +6,7 @@ import {
   Checkbox,
   FocusView,
   Inline,
+  Link,
   Spinner,
 } from '@stripe/ui-extension-sdk/ui';
 import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
@@ -78,8 +79,12 @@ export default function SubmitView({
     has_payment_method: boolean;
   } | null>(null);
   const [pmGateOpen, setPmGateOpen] = useState(false);
-  const [pmOpening, setPmOpening] = useState(false);
   const [pmGateError, setPmGateError] = useState<string | null>(null);
+  // Pre-fetched signed URL for /setup-billing. Stripe Apps run in a
+  // sandboxed iframe where window.open() is silently blocked, so the
+  // gate modal renders the action as a <Link target="_blank"> instead
+  // of a Button with onPress.
+  const [pmSetupUrl, setPmSetupUrl] = useState<string | null>(null);
   const contextRef = useRef(context);
   contextRef.current = context;
 
@@ -97,6 +102,32 @@ export default function SubmitView({
     };
     load();
   }, []);
+
+  // Pre-fetch the setup-billing link if the merchant qualifies (usage tier
+  // without a PM). Token is minted up front because the gate modal will
+  // need a navigable URL the moment it opens.
+  useEffect(() => {
+    if (!billing || billing.tier !== 'usage' || billing.has_payment_method) {
+      setPmSetupUrl(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await fetchBackend<{ url: string }>(
+          '/api/billing/setup-link',
+          contextRef.current,
+        );
+        if (!cancelled) setPmSetupUrl(result.url);
+      } catch (err) {
+        if (cancelled) return;
+        setPmGateError(err instanceof ApiError ? err.message : 'Failed to prepare setup link');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [billing?.tier, billing?.has_payment_method]);
 
   const { attached, total } = countMandatoryAttached(playbook, evidenceFiles);
   const narrativeWords = narrativeText.trim().split(/\s+/).filter(Boolean).length;
@@ -226,29 +257,15 @@ export default function SubmitView({
           title="Add a payment method before submitting"
           onClose={() => setPmGateOpen(false)}
           primaryAction={
-            <Button
-              type="primary"
-              onPress={async () => {
-                setPmOpening(true);
-                setPmGateError(null);
-                try {
-                  const result = await fetchBackend<{ url: string }>(
-                    '/api/billing/setup-link',
-                    contextRef.current,
-                  );
-                  if (typeof window !== 'undefined') {
-                    window.open(result.url, '_blank', 'noopener');
-                  }
-                } catch (err) {
-                  setPmGateError(err instanceof ApiError ? err.message : 'Failed to open setup');
-                } finally {
-                  setPmOpening(false);
-                }
-              }}
-              disabled={pmOpening}
-            >
-              {pmOpening ? 'Opening…' : 'Add payment method'}
-            </Button>
+            pmSetupUrl ? (
+              <Link href={pmSetupUrl} target="_blank" type="primary">
+                Add payment method
+              </Link>
+            ) : (
+              <Button type="primary" disabled>
+                Preparing setup link…
+              </Button>
+            )
           }
           secondaryAction={
             <Button type="secondary" onPress={() => setPmGateOpen(false)}>

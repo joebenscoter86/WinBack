@@ -43,10 +43,15 @@ const AppSettings = (context: ExtensionContextValue) => {
   const [viewState, setViewState] = useState<ViewState>('loading');
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [upgrading, setUpgrading] = useState(false);
+  // Pre-fetched signed URLs for the /upgrade and /setup-billing handoff
+  // pages. Stripe Apps run in a sandboxed iframe where window.open() is
+  // silently blocked, so we cannot mint these URLs on click and then
+  // navigate. Instead we mint them on mount and render the buttons as
+  // <Link target="_blank"> components, which the parent Stripe Dashboard
+  // is allowed to open as new tabs.
+  const [upgradeUrl, setUpgradeUrl] = useState<string | null>(null);
+  const [setupUrl, setSetupUrl] = useState<string | null>(null);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
-
-  const [settingUp, setSettingUp] = useState(false);
   const [settingUpError, setSettingUpError] = useState<string | null>(null);
   const [dismissing, setDismissing] = useState(false);
 
@@ -92,43 +97,59 @@ const AppSettings = (context: ExtensionContextValue) => {
     loadBilling();
   }, []);
 
-  const handleUpgrade = async () => {
-    setUpgrading(true);
-    setUpgradeError(null);
-    try {
-      const result = await fetchBackend<{ url: string }>(
-        '/api/billing/upgrade-link',
-        contextRef.current,
-      );
-      if (typeof window !== 'undefined') {
-        window.open(result.url, '_blank', 'noopener');
-      }
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Failed to start upgrade';
-      setUpgradeError(msg);
-    } finally {
-      setUpgrading(false);
+  // Pre-fetch the upgrade-link URL once billing data is loaded and we know
+  // the merchant is on Pay-Per-Win. Tokens have a 15-min TTL, more than
+  // enough for the user to read the page and click. If the user lingers
+  // past the TTL, clicking the link will land them on /upgrade with an
+  // expired-token state that links back to the Stripe Dashboard.
+  useEffect(() => {
+    if (!billing || billing.tier !== 'usage') {
+      setUpgradeUrl(null);
+      return;
     }
-  };
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await fetchBackend<{ url: string }>(
+          '/api/billing/upgrade-link',
+          contextRef.current,
+        );
+        if (!cancelled) setUpgradeUrl(result.url);
+      } catch (err) {
+        if (cancelled) return;
+        const msg = err instanceof ApiError ? err.message : 'Failed to prepare upgrade link';
+        setUpgradeError(msg);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [billing?.tier]);
 
-  const handleAddPaymentMethod = async () => {
-    setSettingUp(true);
-    setSettingUpError(null);
-    try {
-      const result = await fetchBackend<{ url: string }>(
-        '/api/billing/setup-link',
-        contextRef.current,
-      );
-      if (typeof window !== 'undefined') {
-        window.open(result.url, '_blank', 'noopener');
-      }
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Failed to start setup';
-      setSettingUpError(msg);
-    } finally {
-      setSettingUp(false);
+  // Same pattern for the setup-billing link, gated on tier=usage AND no PM.
+  useEffect(() => {
+    if (!billing || billing.tier !== 'usage' || billing.has_payment_method) {
+      setSetupUrl(null);
+      return;
     }
-  };
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await fetchBackend<{ url: string }>(
+          '/api/billing/setup-link',
+          contextRef.current,
+        );
+        if (!cancelled) setSetupUrl(result.url);
+      } catch (err) {
+        if (cancelled) return;
+        const msg = err instanceof ApiError ? err.message : 'Failed to prepare setup link';
+        setSettingUpError(msg);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [billing?.tier, billing?.has_payment_method]);
 
   const handleDismissPmBanner = async () => {
     setDismissing(true);
@@ -190,10 +211,16 @@ const AppSettings = (context: ExtensionContextValue) => {
             title="Add a payment method"
             description="Add a card so WinBack can settle the 15% success fee instantly when you win. You won't be charged today."
             actions={
-              <Box css={{ stack: 'x', gap: 'small' }}>
-                <Button type="primary" onPress={handleAddPaymentMethod} disabled={settingUp}>
-                  {settingUp ? 'Opening…' : 'Add payment method'}
-                </Button>
+              <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
+                {setupUrl ? (
+                  <Link href={setupUrl} target="_blank" type="primary">
+                    Add payment method
+                  </Link>
+                ) : (
+                  <Inline css={{ font: 'caption', color: 'secondary' }}>
+                    Preparing setup link…
+                  </Inline>
+                )}
                 <Button type="secondary" onPress={handleDismissPmBanner} disabled={dismissing}>
                   Not now
                 </Button>
@@ -256,9 +283,15 @@ const AppSettings = (context: ExtensionContextValue) => {
                 <Banner type="critical" title="Upgrade failed" description={upgradeError} />
               )}
               <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
-                <Button type="primary" onPress={handleUpgrade} disabled={upgrading}>
-                  {upgrading ? 'Opening Checkout…' : 'Upgrade to Pro'}
-                </Button>
+                {upgradeUrl ? (
+                  <Link href={upgradeUrl} target="_blank" type="primary">
+                    Upgrade to Pro
+                  </Link>
+                ) : (
+                  <Inline css={{ font: 'caption', color: 'secondary' }}>
+                    Preparing upgrade link…
+                  </Inline>
+                )}
                 <Inline css={{ font: 'caption', color: 'secondary' }}>
                   Opens winbackpay.com in a new tab
                 </Inline>
