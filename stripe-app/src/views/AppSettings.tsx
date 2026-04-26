@@ -44,15 +44,18 @@ const AppSettings = (context: ExtensionContextValue) => {
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // Pre-fetched signed URLs for the /upgrade and /setup-billing handoff
-  // pages. Stripe Apps run in a sandboxed iframe where window.open() is
-  // silently blocked, so we cannot mint these URLs on click and then
-  // navigate. Instead we mint them on mount and render the buttons as
-  // <Link target="_blank"> components, which the parent Stripe Dashboard
-  // is allowed to open as new tabs.
+  // pages, plus the Stripe Customer Portal session URL for Pro merchants.
+  // Stripe Apps run in a sandboxed iframe where window.open() is silently
+  // blocked, so we cannot mint these URLs on click and then navigate.
+  // Instead we mint them on mount and render the buttons as <Link
+  // target="_blank"> components, which the parent Stripe Dashboard is
+  // allowed to open as new tabs.
   const [upgradeUrl, setUpgradeUrl] = useState<string | null>(null);
   const [setupUrl, setSetupUrl] = useState<string | null>(null);
+  const [portalUrl, setPortalUrl] = useState<string | null>(null);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
   const [settingUpError, setSettingUpError] = useState<string | null>(null);
+  const [portalError, setPortalError] = useState<string | null>(null);
   const [dismissing, setDismissing] = useState(false);
 
   const [reopening, setReopening] = useState(false);
@@ -150,6 +153,34 @@ const AppSettings = (context: ExtensionContextValue) => {
       cancelled = true;
     };
   }, [billing?.tier, billing?.has_payment_method]);
+
+  // Stripe Customer Portal session for Pro merchants — used for cancel,
+  // payment-method update, invoice history. Session URLs are short-lived
+  // (a few hours) but are signed by Stripe directly, so no extra token
+  // wrapping is needed on our side.
+  useEffect(() => {
+    if (!billing || billing.tier !== 'pro') {
+      setPortalUrl(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await fetchBackend<{ url: string }>(
+          '/api/billing/portal-link',
+          contextRef.current,
+        );
+        if (!cancelled) setPortalUrl(result.url);
+      } catch (err) {
+        if (cancelled) return;
+        const msg = err instanceof ApiError ? err.message : 'Failed to prepare billing portal';
+        setPortalError(msg);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [billing?.tier]);
 
   const handleDismissPmBanner = async () => {
     setDismissing(true);
@@ -303,17 +334,35 @@ const AppSettings = (context: ExtensionContextValue) => {
         {isPro && (
           <>
             <Divider />
-            <Box css={{ stack: 'y', gap: 'xsmall' }}>
+            <Box css={{ stack: 'y', gap: 'small' }}>
               <Inline css={{ font: 'heading', fontWeight: 'semibold' }}>
                 Manage subscription
               </Inline>
               <Inline css={{ font: 'caption' }}>
-                Update your payment method or cancel from the{' '}
-                <Link href="https://dashboard.stripe.com/settings/billing" target="_blank">
-                  Stripe billing portal
-                </Link>
-                . Canceling reverts you to Pay-Per-Win at period end.
+                Update your payment method, view invoices, or cancel.
+                Canceling reverts you to Pay-Per-Win at period end.
               </Inline>
+              {portalError && (
+                <Banner
+                  type="critical"
+                  title="Could not open billing portal"
+                  description={portalError}
+                />
+              )}
+              <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
+                {portalUrl ? (
+                  <Link href={portalUrl} target="_blank" type="primary">
+                    Manage subscription
+                  </Link>
+                ) : (
+                  <Inline css={{ font: 'caption', color: 'secondary' }}>
+                    Preparing billing portal…
+                  </Inline>
+                )}
+                <Inline css={{ font: 'caption', color: 'secondary' }}>
+                  Opens Stripe billing portal in a new tab
+                </Inline>
+              </Box>
             </Box>
           </>
         )}
