@@ -18,6 +18,7 @@ import type {
   SubmissionWarning,
 } from '../../lib/types';
 import { fetchBackend, ApiError } from '../../lib/apiClient';
+import { isInquiry } from '../../lib/utils';
 import SubmissionConfirmation from './SubmissionConfirmation';
 
 interface SubmitViewProps {
@@ -177,13 +178,16 @@ export default function SubmitView({
     return <SubmissionConfirmation response={state.response} />;
   }
 
+  const stageIsInquiry = isInquiry(dispute.status);
   const isSubmitting = state.kind === 'submitting';
   const isTerminalError = state.kind === 'error' && state.terminal;
   const submitDisabled = !acknowledged || isSubmitting || isTerminalError;
 
   return (
     <Box css={{ stack: 'y', gap: 'large', padding: 'large' }}>
-      <Inline css={{ font: 'heading' }}>Submit evidence</Inline>
+      <Inline css={{ font: 'heading' }}>
+        {stageIsInquiry ? 'Respond to prevent a chargeback' : 'Submit evidence'}
+      </Inline>
 
       <Box css={{ stack: 'y', gap: 'xsmall', padding: 'medium', backgroundColor: 'container', borderRadius: 'medium' }}>
         <Box css={{ stack: 'x', gap: 'small', distribute: 'space-between' }}>
@@ -244,10 +248,10 @@ export default function SubmitView({
           {isSubmitting ? (
             <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
               <Spinner />
-              <Inline>Submitting evidence...</Inline>
+              <Inline>{stageIsInquiry ? 'Submitting response...' : 'Submitting evidence...'}</Inline>
             </Box>
           ) : (
-            'Submit to Stripe'
+            stageIsInquiry ? 'Submit response' : 'Submit to Stripe'
           )}
         </Button>
       </Box>
@@ -255,7 +259,7 @@ export default function SubmitView({
       {pmGateOpen && (
         <FocusView
           title="Add a payment method before submitting"
-          onClose={() => setPmGateOpen(false)}
+          setShown={(open) => { if (!open) setPmGateOpen(false); }}
           primaryAction={
             pmSetupUrl ? (
               <Link href={pmSetupUrl} target="_blank" type="primary">
