@@ -5,6 +5,7 @@ import {
   getUrgencyBadge,
   getReasonCodeLabel,
   isDisputeExpired,
+  isInquiry,
 } from '../lib/utils';
 
 interface DisputeCardProps {
@@ -48,6 +49,7 @@ const DisputeCard = ({ dispute, onSelect }: DisputeCardProps) => {
           </Inline>
           <Box css={{ stack: 'x', gap: 'xsmall' }}>
             {dispute.is_new && <Badge type="info">New</Badge>}
+            {isInquiry(dispute.status) && <Badge type="info">Inquiry</Badge>}
             {statusBadge && (
               <Badge type={statusBadge.type}>{statusBadge.label}</Badge>
             )}
