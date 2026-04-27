@@ -249,6 +249,13 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
     >
       <Box css={{ stack: 'y' }}>
         <Box css={{ padding: 'medium', paddingBottom: 'small', stack: 'y', gap: 'small' }}>
+          {dispute.network === 'discover' && dispute.status === 'warning_needs_response' && (
+            <Banner
+              type="caution"
+              title="Discover inquiry -- respond now"
+              description="Discover requires a response to this inquiry. If you don't respond now, you may lose the ability to challenge a future chargeback on this payment."
+            />
+          )}
           {submitted && (
             <Banner
               type="default"
