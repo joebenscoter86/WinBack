@@ -56,14 +56,38 @@ Stripe Dashboard (iframe) → Vercel API Routes → Supabase + Claude API + Stri
 
 - **Primary:** Stripe test mode dispute simulation
 - **Secondary:** Self-filed disputes on Joe's Stripe account
-- **Framework:** Vitest or Jest (TBD based on Stripe App SDK recommendations)
-- **Run tests:** `npm test`
+- **Framework:** Vitest (backend). The `stripe-app/` package has no test runner; verification is `npx tsc --noEmit` plus manual QA in the iframe.
+- **Run tests:** `npm test` (backend unit), `npm run test:integration` (backend integration)
+
+## QA Environment (current)
+
+QA is **no longer driven through `stripe apps start` / a local backend**. The setup is:
+
+- The WinBack Stripe App is **installed in test mode** on WinBack's own Stripe account (`acct_1TIwcOCbmbWLiv6V`). The installed app version is whatever was last published via `stripe apps upload`.
+- The installed app's frontend calls the **Vercel production deployment** of the Next.js backend.
+- Vercel production connects to **Supabase project `Winback Dev`** (id `ssnwzgxvugraswghqsvo`) — currently the only Supabase project. There is no separate prod Supabase yet (planned at marketplace launch per WIN-47).
+- Test disputes are generated on WinBack's account via `stripe trigger charge.dispute.created` — the default Stripe CLI profile is already set to WinBack.
+
+### What this means for landing changes
+
+| Change type | Deploy path |
+|---|---|
+| Backend code (`backend/**`) | `git push origin main` → Vercel auto-deploys in ~1-2 min. |
+| Stripe app frontend (`stripe-app/**`) | bump version in `stripe-app/stripe-app.json`, run `stripe apps upload` from `stripe-app/`, then reinstall in the Stripe test dashboard to pick up the new version. |
+| DB migrations | Apply via the Supabase MCP `apply_migration` tool against `ssnwzgxvugraswghqsvo` (or the Supabase Dashboard SQL editor). The same DB serves both the dev Vercel preview and Vercel prod. |
+
+### Implications for Claude
+
+- **Don't suggest `cd stripe-app && stripe apps start` as the QA path.** That mode is for active source-edit feedback loops, not for the user's QA workflow.
+- **Pushing to `main` is a deploy action.** Treat it as risky/visible per the executing-actions-with-care guidance — confirm before pushing, even for "ready to ship" PRs, unless the user has just explicitly authorized the push for this batch.
+- **`stripe apps upload` requires a version bump first** (the upload fails on duplicate versions). Match the bump style of recent commits (`6d8bc64` bumped to 1.1.1; the next would be 1.1.2 or 1.2.0 depending on whether changes are user-visible).
+- **Migrations apply to the same DB the user is QAing against.** That's currently safe pre-launch, but post-WIN-47 prod cut-over the answer changes — re-read this section then.
 
 ## Development Environment
 
 - Node.js 20+
-- Stripe CLI for local development and webhook testing
-- Vercel CLI for deployment
+- Stripe CLI for local webhook testing and one-off triggers (default profile = WinBack: `acct_1TIwcOCbmbWLiv6V`).
+- Vercel CLI for deployment introspection.
 - Environment variables: `STRIPE_SECRET_KEY`, `STRIPE_APP_SECRET`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `ANTHROPIC_API_KEY`
 
 ---
