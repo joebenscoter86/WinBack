@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
 import { reportDisputeWonFee } from "@/lib/billing";
 import { captureRouteError } from "@/lib/sentry";
+import { isInquiryToChargebackEscalation } from "@/lib/disputes/inquiry";
 
 /**
  * WIN-21: Map a Stripe dispute object to the columns we persist.
@@ -105,10 +106,28 @@ export async function handleDisputeEvent(
   }
 
   // created or updated — preserve existing outcome_at if set
+  // On inquiry → chargeback escalation, also clear evidence_submitted_at so
+  // the merchant sees the re-submission prompt instead of a stale
+  // "already submitted" UI. Stripe requires a separate response for the
+  // chargeback even if the merchant already responded at the inquiry stage.
+  let escalationReset: { evidence_submitted_at: null } | Record<string, never> = {};
+  if (event.type === "charge.dispute.updated") {
+    const { data: existing } = await supabase
+      .from("disputes")
+      .select("status, evidence_submitted_at")
+      .eq("stripe_dispute_id", dispute.id)
+      .maybeSingle();
+
+    const priorStatus = (existing as { status?: string } | null)?.status;
+    if (isInquiryToChargebackEscalation(priorStatus, dispute.status)) {
+      escalationReset = { evidence_submitted_at: null };
+    }
+  }
+
   await supabase
     .from("disputes")
     .upsert(
-      { ...baseRow, merchant_id: merchantId },
+      { ...baseRow, merchant_id: merchantId, ...escalationReset },
       { onConflict: "stripe_dispute_id" },
     );
 }

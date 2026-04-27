@@ -162,4 +162,102 @@ describe("handleDisputeEvent", () => {
     const [row] = upsertSpy.mock.calls[0];
     expect(row.network).toBe("visa");
   });
+
+  describe("inquiry → chargeback escalation", () => {
+    beforeEach(() => {
+      upsertSpy = vi.fn(() => Promise.resolve({ error: null }));
+    });
+
+    function mockMerchantAndDispute(opts: {
+      merchant: { id: string; billing_tier: "usage" | "pro" } | null;
+      existingDispute: { status: string; evidence_submitted_at: string | null } | null;
+    }) {
+      supabaseMock.from.mockImplementation((table: string) => {
+        if (table === "merchants") {
+          return {
+            select: () => ({
+              eq: () => ({ maybeSingle: () => Promise.resolve({ data: opts.merchant, error: null }) }),
+            }),
+          };
+        }
+        if (table === "disputes") {
+          return {
+            select: () => ({
+              eq: () => ({
+                maybeSingle: () => Promise.resolve({ data: opts.existingDispute, error: null }),
+              }),
+            }),
+            upsert: upsertSpy,
+          };
+        }
+        throw new Error(`unexpected table: ${table}`);
+      });
+    }
+
+    it("clears evidence_submitted_at when warning_needs_response escalates to needs_response", async () => {
+      mockMerchantAndDispute({
+        merchant: { id: MERCHANT_ID, billing_tier: "usage" },
+        existingDispute: {
+          status: "warning_needs_response",
+          evidence_submitted_at: "2026-04-25T10:00:00Z",
+        },
+      });
+
+      const dispute = makeDispute({ status: "needs_response" });
+      await handleDisputeEvent(makeEvent("charge.dispute.updated", dispute), ACCOUNT_ID);
+
+      expect(upsertSpy).toHaveBeenCalledTimes(1);
+      const upsertPayload = upsertSpy.mock.calls[0][0];
+      expect(upsertPayload).toMatchObject({
+        stripe_dispute_id: dispute.id,
+        status: "needs_response",
+        evidence_submitted_at: null,
+      });
+    });
+
+    it("does NOT clear evidence_submitted_at on a same-status update", async () => {
+      mockMerchantAndDispute({
+        merchant: { id: MERCHANT_ID, billing_tier: "usage" },
+        existingDispute: {
+          status: "warning_needs_response",
+          evidence_submitted_at: "2026-04-25T10:00:00Z",
+        },
+      });
+
+      const dispute = makeDispute({ status: "warning_needs_response" });
+      await handleDisputeEvent(makeEvent("charge.dispute.updated", dispute), ACCOUNT_ID);
+
+      const upsertPayload = upsertSpy.mock.calls[0][0];
+      expect(upsertPayload).not.toHaveProperty("evidence_submitted_at", null);
+    });
+
+    it("does NOT clear evidence_submitted_at when warning_* transitions to warning_closed", async () => {
+      mockMerchantAndDispute({
+        merchant: { id: MERCHANT_ID, billing_tier: "usage" },
+        existingDispute: {
+          status: "warning_needs_response",
+          evidence_submitted_at: "2026-04-25T10:00:00Z",
+        },
+      });
+
+      const dispute = makeDispute({ status: "warning_closed" });
+      await handleDisputeEvent(makeEvent("charge.dispute.updated", dispute), ACCOUNT_ID);
+
+      const upsertPayload = upsertSpy.mock.calls[0][0];
+      expect(upsertPayload).not.toHaveProperty("evidence_submitted_at", null);
+    });
+
+    it("treats a missing prior row as no-escalation (safe insert)", async () => {
+      mockMerchantAndDispute({
+        merchant: { id: MERCHANT_ID, billing_tier: "usage" },
+        existingDispute: null,
+      });
+
+      const dispute = makeDispute({ status: "needs_response" });
+      await handleDisputeEvent(makeEvent("charge.dispute.updated", dispute), ACCOUNT_ID);
+
+      const upsertPayload = upsertSpy.mock.calls[0][0];
+      expect(upsertPayload).not.toHaveProperty("evidence_submitted_at", null);
+    });
+  });
 });
