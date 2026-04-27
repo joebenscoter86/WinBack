@@ -21,6 +21,16 @@ export function isResolved(status: string): boolean {
 }
 
 /**
+ * Stripe inquiries (status prefixed `warning_`) are pre-dispute warnings.
+ * Funds are not held. Responding can prevent escalation to a chargeback.
+ * The frontend uses this for stage-aware copy and the "Inquiry" pill on
+ * the dispute card.
+ */
+export function isInquiry(status: string): boolean {
+  return status.startsWith('warning_');
+}
+
+/**
  * A dispute is "expired" when the deadline has passed but Stripe still
  * reports it as needs_response. Authoritative source for the backend is
  * stripeDispute.status; the UI uses due_by as a leading indicator before
@@ -47,8 +57,10 @@ export function getStatusBadge(status: string): {
     case 'won':
       return { label: 'Won', type: 'positive' };
     case 'lost':
-    case 'warning_closed':
       return { label: 'Lost', type: 'negative' };
+    case 'warning_closed':
+      // Inquiries close without telling us the outcome. Don't claim "Lost".
+      return { label: 'Inquiry closed', type: 'info' };
     case 'charge_refunded':
       return { label: 'Refunded', type: 'info' };
     default:
