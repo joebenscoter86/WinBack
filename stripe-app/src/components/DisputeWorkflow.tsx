@@ -16,7 +16,7 @@ import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 import type { WizardStep, Dispute, PlaybookData, EvidenceFile } from '../lib/types';
 import { WIZARD_STEPS, WIZARD_STEP_LABELS } from '../lib/types';
 import { fetchBackend, ApiError } from '../lib/apiClient';
-import { getDaysRemaining, isResolved, isDisputeExpired } from '../lib/utils';
+import { getDaysRemaining, isResolved, isDisputeExpired, isInquiry } from '../lib/utils';
 import ErrorBanner from './ErrorBanner';
 import DeadlineTimer from './DeadlineTimer';
 import DisputeOverview from './review/DisputeOverview';
@@ -327,6 +327,7 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
                     dispute_status: 'evidence_submitted',
                     warnings: [],
                   }}
+                  isInquiry={isInquiry(dispute.status)}
                 />
               ) : expired ? (
                 <Box css={{ padding: 'medium' }}>

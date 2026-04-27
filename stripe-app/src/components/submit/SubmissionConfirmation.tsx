@@ -4,6 +4,7 @@ import type { SubmissionResponse, SubmissionWarning } from '../../lib/types';
 interface SubmissionConfirmationProps {
   response: SubmissionResponse;
   onBackToList?: () => void;
+  isInquiry?: boolean;
 }
 
 function describeWarning(w: SubmissionWarning): string {
@@ -21,7 +22,7 @@ function describeWarning(w: SubmissionWarning): string {
   }
 }
 
-export default function SubmissionConfirmation({ response, onBackToList }: SubmissionConfirmationProps) {
+export default function SubmissionConfirmation({ response, onBackToList, isInquiry = false }: SubmissionConfirmationProps) {
   const submittedAt = new Date(response.submitted_at).toLocaleString();
   const hasWarnings = response.warnings && response.warnings.length > 0;
 
@@ -45,15 +46,20 @@ export default function SubmissionConfirmation({ response, onBackToList }: Submi
 
       <Banner
         type="default"
-        title="Evidence submitted"
-        description="Your rebuttal is on its way to the card issuer."
+        title={isInquiry ? 'Response sent' : 'Evidence submitted'}
+        description={
+          isInquiry
+            ? 'Stripe will close the inquiry or notify you if it escalates to a chargeback.'
+            : 'Your rebuttal is on its way to the card issuer.'
+        }
       />
 
       <Box css={{ stack: 'y', gap: 'small' }}>
         <Inline css={{ font: 'heading' }}>What happens next</Inline>
         <Box>
-          The bank typically takes 60-75 days to issue a decision. You will be
-          notified in Stripe when the dispute is resolved.
+          {isInquiry
+            ? 'The card issuer reviews your response. If it satisfies the inquiry, the case closes. If not, it can escalate to a chargeback -- you will be notified in Stripe and asked to submit again.'
+            : 'The bank typically takes 60-75 days to issue a decision. You will be notified in Stripe when the dispute is resolved.'}
         </Box>
         <Box css={{ stack: 'y', gap: 'xxsmall' }}>
           <Inline css={{ font: 'caption', color: 'secondary' }}>Submitted at</Inline>
