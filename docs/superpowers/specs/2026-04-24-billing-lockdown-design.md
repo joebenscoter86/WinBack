@@ -1,7 +1,7 @@
 ---
-status: draft
-linear: TBD (WinBack team, billing-lockdown)
-last-updated: 2026-04-24
+status: shipped
+linear: WIN-70 (icon, closed), WIN-71 (about copy, closed), WIN-72 (follow-ups)
+last-updated: 2026-04-27
 ---
 
 # Billing lockdown for Stripe Marketplace resubmit
@@ -272,27 +272,34 @@ Explicit trace of each requirement in Stripe's rejection to the section(s) that 
 
 ## Deliverables checklist
 
-- [ ] `backend/scripts/provision-billing.ts` + smoke test
-- [ ] `backend/lib/env.ts` + unit tests
-- [ ] `backend/lib/upgrade-token.ts` + unit tests
-- [ ] `backend/app/upgrade/page.tsx`, `/success`, `/cancelled` stubs
-- [ ] `backend/app/setup-billing/page.tsx`, `/success` stub
-- [ ] `backend/app/api/billing/upgrade-link/route.ts`
-- [ ] `backend/app/api/billing/checkout-from-token/route.ts`
-- [ ] `backend/app/api/billing/setup-link/route.ts`
-- [ ] `backend/app/api/billing/setup-session-from-token/route.ts`
-- [ ] `backend/app/api/preflight/route.ts`
-- [ ] Delete `backend/app/api/billing/checkout/route.ts` + test
-- [ ] Update `backend/app/api/billing/status/route.ts` to include `has_payment_method`
-- [ ] Update `backend/lib/webhooks/handle-billing-event.ts` to handle `setup_intent.succeeded` and attach default PM
-- [ ] Update `backend/lib/billing.ts` to read from `env` module instead of inline `requireEnv`
-- [ ] Migration: `merchants.payment_method_prompt_dismissed_at` column
-- [ ] Iframe: Settings view upgrade button swap + PM banner + dismiss wiring
-- [ ] Iframe: Submit view pre-submit PM gate modal
-- [ ] `backend/scripts/verify-billing.ts` + CI wiring
-- [ ] CI: `check:env` step against Vercel production environment
-- [ ] `docs/runbooks/billing-setup.md`
-- [ ] Run through runbook against WinBack test-mode, resubmit marketplace version
+- [x] `backend/scripts/provision-billing.ts` + smoke test
+- [x] `backend/lib/env.ts` + unit tests
+- [x] `backend/lib/upgrade-token.ts` + unit tests
+- [x] `backend/app/upgrade/page.tsx`, `/success`, `/cancelled` stubs
+- [x] `backend/app/setup-billing/page.tsx`, `/success` stub
+- [x] `backend/app/api/billing/upgrade-link/route.ts`
+- [x] `backend/app/api/billing/checkout-from-token/route.ts`
+- [x] `backend/app/api/billing/setup-link/route.ts`
+- [x] `backend/app/api/billing/setup-session-from-token/route.ts`
+- [x] `backend/app/api/preflight/route.ts` (renamed from `_preflight` mid-execution; see Post-implementation notes)
+- [x] Delete `backend/app/api/billing/checkout/route.ts` + test
+- [x] Update `backend/app/api/billing/status/route.ts` to include `has_payment_method`
+- [x] Update `backend/lib/webhooks/handle-billing-event.ts` to handle `setup_intent.succeeded` and attach default PM
+- [x] Update `backend/lib/billing.ts` to read from `env` module instead of inline `requireEnv`
+- [x] Migration: `merchants.payment_method_prompt_dismissed_at` column
+- [x] Iframe: Settings view upgrade button swap + PM banner + dismiss wiring
+- [x] Iframe: Submit view pre-submit PM gate modal
+- [x] `backend/scripts/verify-billing.ts` (5/5 checks pass against deployed prod)
+- [ ] CI: `check:env` step against Vercel production environment (deferred to WIN-72)
+- [x] `docs/runbooks/billing-setup.md`
+- [x] Run through runbook against WinBack test-mode, resubmit marketplace version (in progress as of 2026-04-27)
+
+### Added during execution (not in original deliverables)
+
+- [x] `backend/app/api/billing/portal-link/route.ts` + tests — Stripe Customer Portal integration so Pro merchants can self-serve cancel, update payment method, and view invoices. The original spec did not address this surface; pre-existing AppSettings linked at `dashboard.stripe.com/settings/billing` (platform owner's billing, not customer-facing). Added once QA exposed the gap.
+- [x] Stripe Customer Portal configuration on the WinBack platform account (cancel-at-period-end, payment-method-update, invoice-history, cancellation-reason capture; branded with WinBack headline + privacy/terms URLs).
+- [x] Connect dispute webhook on the WinBack platform (`charge.dispute.*` events). Original runbook said "verify the existing Connect webhook" assuming it carried over from Docket; in practice the platform migration (see Post-implementation notes) required creating one fresh on WinBack.
+- [x] Iframe rewrite: `window.open(url, '_blank', 'noopener')` replaced with pre-fetched `<Link target="_blank">` in three call sites (AppSettings upgrade button, AppSettings PM banner, SubmitView PM gate). The Stripe Apps iframe sandbox silently blocks `window.open`; the original plan's pattern simply did not work.
 
 ---
 
@@ -302,3 +309,112 @@ Explicit trace of each requirement in Stripe's rejection to the section(s) that 
 - **2026-04-24**: Chose WinBack platform sub-account (not Docket) as the billing source of truth, and decided to go straight from WinBack test-mode to WinBack live-mode without a Docket intermediate step.
 - **2026-04-24**: Chose a custom HMAC compact token over introducing a JWT library dependency. Single secret covers both upgrade and setup flows, differentiated by `kind` claim.
 - **2026-04-24**: Chose to delete `/api/billing/checkout` rather than keep a compatibility shim. No external callers; the iframe is the only client and it moves to the token flow in the same release.
+- **2026-04-26**: Migrated the Stripe App from Docket sub-account (`com.jkbtech.winback`) to WinBack sub-account (`com.winbackpay.app`). Forced by receipt-branding constraint (see Post-implementation note 4). The Docket draft is orphaned; could not be deleted via the developer dashboard but has zero installs so harmless.
+- **2026-04-26**: Added Stripe Customer Portal as a first-class surface. Pre-existing AppSettings linked at `dashboard.stripe.com/settings/billing`, which is the platform owner's billing page, not a customer-facing portal. Cancellation, payment-method update, and invoice history were all unreachable for Pro merchants. Configured via `stripe.billingPortal.configurations.create()` (cancel-at-period-end mode), exposed via new `/api/billing/portal-link` route, rendered as `<Link target="_blank">` in the iframe.
+- **2026-04-26**: Replaced `window.open(url, '_blank', 'noopener')` with pre-fetched `<Link target="_blank">` across all iframe-to-external handoffs after discovering Stripe Apps iframes silently block `window.open`. Affected three call sites; pattern is now: pre-fetch signed URL on mount once preconditions are met, render Link only when URL is ready, show "Preparing link…" caption otherwise.
+
+---
+
+## Post-implementation notes (2026-04-27)
+
+These are surprises and corrections discovered during the build and QA cycles. They are not retroactive edits to the original design — the design above stands as the planning artifact. These notes capture what changed and why, so future similar work doesn't repeat the same surprises.
+
+### 1. App-router private directories silently 404
+
+The original plan called for `backend/app/api/_preflight/route.ts`. Next.js App Router treats any directory whose name begins with `_` as a private folder and excludes it from routing. The route returned 404 in production despite the file existing and the build succeeding.
+
+**Fix:** Renamed `_preflight` to `preflight` everywhere. The runbook, plan, and spec were updated to reference the new path.
+
+**Lesson:** When picking route directory names for App Router, avoid `_` and `(group)` prefixes unless you specifically want their behavior (private and route-group-without-segment, respectively). Worth documenting wherever route conventions live.
+
+### 2. Stripe Apps iframe blocks `window.open`
+
+The original plan implemented all "open external URL" interactions as `window.open(url, '_blank', 'noopener')` from button click handlers. Three call sites:
+
+- `AppSettings.tsx` "Upgrade to Pro" button
+- `AppSettings.tsx` "Add payment method" banner action
+- `SubmitView.tsx` PM-gate `FocusView` modal primary action
+
+In production, all three silently failed. Buttons appeared depressed visually, no navigation occurred, no console errors. The Stripe Apps iframe sandbox does not include `allow-popups`, so `window.open` is blocked at the browser level.
+
+**Fix:** Pre-fetch the signed URL on mount (gated on the same preconditions that decide whether to render the action), then render the action as `<Link target="_blank">` from `@stripe/ui-extension-sdk/ui`. This is the only externally-navigable primitive available in the SDK. While the URL is in flight (sub-second usually), a "Preparing link…" caption renders.
+
+**Lesson:** In Stripe Apps, never use `window.open`. The pattern is: signed URL pre-fetched on mount, rendered as a Link. This added a small wrinkle: tokens have a 15-min TTL, so a user who lingers past the TTL on the Settings view would click a stale token. We accept this; the `/upgrade` and `/setup-billing` pages handle expired-token states gracefully and link back to the Stripe Dashboard.
+
+### 3. Webhook endpoint creation is fully scriptable
+
+The original §3 and §6 said webhook endpoint registration must be done by hand in the Stripe Dashboard because "the signing secret is only viewable once at creation." That's true, but the create call returns the secret in the response — so a script can capture it.
+
+**What we actually did:** Used inline `npx tsx -e '...'` to call `stripe.webhookEndpoints.create({ url, enabled_events, connect? })` for both the billing webhook (platform events) and the Connect dispute webhook. Captured the `endpoint.secret` from the response and pasted into Vercel.
+
+**Lesson:** The runbook can be tightened to script webhook creation. For a future spin-off (or live-mode flip), include this in the provisioning script rather than as a manual step.
+
+### 4. Receipt branding is the deciding factor for sub-account choice
+
+The original §1 said "WinBack platform sub-account, not Docket" but did not articulate why. Mid-execution, the user asked the entirely reasonable question "if I go with Docket, will I actually be processing payments through Docket?" — which surfaced the real reason and almost flipped the decision.
+
+**The fact:** Stripe receipt and invoice branding is per-account, not per-customer. Whatever Docket's Stripe Dashboard → Settings → Branding has, every customer of every product on that account sees that branding on their receipts. There's no per-product or per-customer override.
+
+**Implication:** Running WinBack billing on Docket's account would mean every WinBack subscriber receives Docket-branded $79 receipts. This is unfixable without breaking Docket's existing customers, who would then see WinBack-or-neutral branding on their Docket receipts.
+
+**Lesson:** "New product = new sub-account" is the right default for any product spin-off at JB Tech LLC. The argument for shared sub-accounts ("simpler, fewer integrations, single bookkeeping view") is real but loses every time to receipt branding.
+
+### 5. App identity is bound to a specific Stripe account; migration is one-way for v1
+
+The original v1.1.0 was uploaded from Docket's Stripe CLI auth, which registered `com.jkbtech.winback` to Docket. After the receipt-branding decision in note 4 above, we needed to move the app to WinBack's sub-account. There is no "transfer app between accounts" action in the developer dashboard, and no support ticket was raised mid-session because the v1.1.0 draft had zero installs and was abandonable.
+
+**What we did:** Changed the app id in the manifest to `com.winbackpay.app` (better naming anyway, matches the domain). Re-authed the Stripe CLI via `stripe login` to the WinBack sub-account. Re-uploaded as v1.1.1 of the new app on WinBack. The Docket draft sits as an orphan.
+
+**Side-effect:** `STRIPE_APP_SECRET` is per-app-per-account. Re-uploading to WinBack minted a new app secret. Vercel had to be updated and a redeploy triggered before the iframe could authenticate against the backend.
+
+**Lesson:** Treat any app re-registration as a coordinated change of `id` + `STRIPE_APP_SECRET` + Vercel env. Future migrations (e.g., live-mode flip, or splitting WinBack into multiple Stripe sub-accounts) should plan for this explicitly.
+
+### 6. `verify-billing.ts` defects found at first run
+
+Two real defects in the verification script surfaced when run against deployed prod:
+
+**Defect A:** `setup()` inserted a `user_id` column into `merchants` that doesn't exist in the schema. The plan was written from a guess about the schema rather than a query. Fix: removed the field.
+
+**Defect B:** The idempotency assertion expected silent dedup of duplicate meter-event identifiers. Stripe actually rejects with `An event already exists with identifier ...` — which is the desired behavior (the event is recorded once, duplicates are blocked at the API level), but the test's assertion shape was wrong. Fix: now accepts either silent dedup or a duplicate-identifier error as a pass; only fails if a second event somehow lands.
+
+**Lesson:** Verification scripts written from a plan rather than from observed reality will have bugs. Always pencil in time to fix them at first run. Don't treat the plan's verbatim test code as ground truth.
+
+### 7. Stripe MCP catalog is a subset of the SDK
+
+The Stripe MCP exposes only a curated subset of operations. Specifically missing during this work:
+
+- `stripe.billing.meters.{create,list,retrieve}`
+- `stripe.webhookEndpoints.{create,list}`
+- `stripe.subscriptions.cancel` (for test-mode QA cleanup)
+- `stripe.billingPortal.{configurations,sessions}.{create}`
+
+When an MCP tool isn't available for what you need, drop into inline `tsx -e '...'` with the full Stripe Node SDK and a `STRIPE_SECRET_KEY` from env. Reusable operations get a tracked script (`provision-billing.ts`); one-off setup actions stay inline.
+
+### 8. Vercel CLI deploy from `backend/` is a footgun
+
+`vercel deploy --prod --yes` run from `backend/` errors with `The provided path "~/Projects/WinBack/backend/backend" does not exist` because the project's Root Directory is set to `backend/` and the CLI compounds the path. Workaround: trigger the redeploy via empty git commit + push, or run `vercel deploy` from the repo root.
+
+This isn't worth fixing in the project config — git-push deploys are the standard path; we only needed CLI-direct deploys to pick up env-var changes during this lockdown.
+
+### 9. Pre-existing integration test failures (not introduced by this work)
+
+`backend/__tests__/integration/dispute-wizard-flow.test.ts` has 2 of 5 tests failing on both `main` and the billing-lockdown branch. The error is `Missing ANTHROPIC_API_KEY environment variable` from `lib/claude.ts`, despite `.env.local` having the key set and the integration test mocking `@anthropic-ai/sdk`. The test mocks the SDK, but `lib/claude.ts` does its own `process.env.ANTHROPIC_API_KEY` check before instantiating the client; that check is what fails.
+
+These failures predate the billing lockdown and are tracked in **WIN-72 item 9**. Do not gate billing work on them.
+
+---
+
+## Final test posture (as of 2026-04-27)
+
+- **Unit tests:** 436/436 passing (399 baseline + 37 new across env, upgrade-token, billing, webhook handler, and four new route test files including portal-link)
+- **Integration tests:** 3/5 passing; 2 pre-existing failures (note 9 above) tracked separately
+- **End-to-end (`verify-billing.ts` against `https://winbackpay.com`):** 5/5 passing
+  - upgrade-link → checkout-from-token round-trip
+  - setup-session-from-token round-trip
+  - Pro subscription webhook flips tier to pro
+  - Success fee meter event posts (15% of recovered amount)
+  - subscription.deleted reverts tier to usage
+- **Manual QA (in real Stripe Apps iframe on WinBack platform):**
+  - ✅ Pro upgrade end-to-end — clicked Settings → "Upgrade to Pro" → opened `/upgrade` page → Continue → Stripe Checkout → paid `$79` test card → landed on `/upgrade/success` → tier flipped to Pro within ~30s, confirmed $79 charge in WinBack platform's Stripe balance
+  - ✅ Manage subscription / cancel end-to-end — clicked Settings → "Manage subscription" → opened branded Stripe Customer Portal → cancel-at-period-end with reason capture → returned to iframe → forced immediate cancel via CLI to verify webhook → tier reverted to usage, `pro_since_at` cleared, `stripe_subscription_id` cleared
+  - ✅ Add payment method end-to-end — fresh usage-tier merchant, clicked Settings banner "Add payment method" → opened `/setup-billing` page → Continue → Stripe Checkout setup mode → entered card → landed on `/setup-billing/success` → banner disappeared, `has_payment_method: true`
