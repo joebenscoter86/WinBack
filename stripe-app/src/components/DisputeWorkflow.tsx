@@ -137,6 +137,15 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
 
   const submitted = Boolean(dispute.evidence_submitted_at);
   const expired = !submitted && isDisputeExpired(dispute.due_by, dispute.status);
+  // True only when an inquiry has just escalated to a chargeback. The webhook
+  // handler clears evidence_submitted_at on this transition, but Stripe still
+  // reports a non-zero submission_count. needs_response (no warning_ prefix)
+  // means we are now in a chargeback. Together these only co-occur after
+  // escalation -- we cannot reach this state via normal chargeback flows.
+  const justEscalated =
+    dispute.status === 'needs_response' &&
+    (dispute.evidence_submission_count ?? 0) > 0 &&
+    !submitted;
   // Any child component that keys inputs off `submitted` should also be
   // locked down when the dispute is expired. We pass the OR as `submitted`
   // to avoid cascading a new prop through 5+ components; the top-level
@@ -254,6 +263,13 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
               type="caution"
               title="Discover inquiry -- respond now"
               description="Discover requires a response to this inquiry. If you don't respond now, you may lose the ability to challenge a future chargeback on this payment."
+            />
+          )}
+          {justEscalated && (
+            <Banner
+              type="caution"
+              title="Inquiry escalated to chargeback"
+              description="Your prior response was sent to address the inquiry. Stripe requires a fresh submission to address the chargeback. Review your evidence and submit again before the deadline."
             />
           )}
           {submitted && (
