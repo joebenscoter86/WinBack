@@ -32,6 +32,7 @@ import {
   TEST_ACCOUNT_ID,
   TEST_DISPUTE_ID,
 } from "./fixtures";
+import { handleDisputeEvent } from "@/lib/webhooks/handle-dispute-event";
 
 // Real Supabase client — the test asserts on actual dev DB state.
 // Uses service role key to bypass RLS for teardown deletes.
@@ -692,5 +693,102 @@ describe("WIN-43: dispute wizard integration flow", () => {
     expect(receipts![0].input_file_ids).toEqual(
       expect.arrayContaining(["file_concat_in_1", "file_concat_in_2"]),
     );
+  });
+});
+
+describe("Inquiry → chargeback escalation", () => {
+  // Reuses the same TEST_ACCOUNT_ID and TEST_DISPUTE_ID as the main flow
+  // but seeds the dispute row at the inquiry stage to isolate the
+  // escalation behavior.
+
+  it("clears evidence_submitted_at and preserves narrative on escalation", async () => {
+    // Start clean so we do not inherit any state from the main flow's
+    // describe block (e.g. a dispute row already in evidence_submitted status).
+    await cleanupTestData();
+
+    // 1. Seed the disputes row at warning_needs_response with a submission
+    //    timestamp + narrative + checklist state set, so we can assert
+    //    that only evidence_submitted_at is cleared on escalation.
+    const submittedAt = new Date("2026-04-25T10:00:00Z").toISOString();
+    const seedNarrative = "The merchant fulfilled the order on time.";
+    const seedChecklistState = { receipt: true, shipping_proof: true };
+
+    // First ensure the merchant exists:
+    const { data: merchant } = await testDb
+      .from("merchants")
+      .upsert(
+        {
+          stripe_account_id: TEST_ACCOUNT_ID,
+          billing_tier: "usage",
+        },
+        { onConflict: "stripe_account_id" },
+      )
+      .select("id")
+      .single();
+    if (!merchant) throw new Error("merchant seed failed");
+
+    await testDb
+      .from("disputes")
+      .upsert(
+        {
+          stripe_dispute_id: TEST_DISPUTE_ID,
+          merchant_id: merchant.id,
+          stripe_charge_id: "ch_test_inquiry",
+          amount: 100,
+          currency: "usd",
+          reason_code: "fraudulent",
+          status: "warning_needs_response",
+          evidence_submitted_at: submittedAt,
+          narrative_text: seedNarrative,
+          narrative_generations_count: 1,
+          checklist_state: seedChecklistState,
+        },
+        { onConflict: "stripe_dispute_id" },
+      );
+
+    // 2. Synthesize a charge.dispute.updated event with status=needs_response
+    //    (the escalation transition).
+    const escalationEvent = {
+      id: "evt_test_escalation",
+      type: "charge.dispute.updated" as const,
+      created: Math.floor(Date.now() / 1000),
+      data: {
+        object: {
+          id: TEST_DISPUTE_ID,
+          object: "dispute",
+          amount: 100,
+          currency: "usd",
+          charge: "ch_test_inquiry",
+          reason: "fraudulent",
+          status: "needs_response",
+          evidence_details: {
+            due_by: Math.floor(Date.now() / 1000) + 7 * 86_400,
+            has_evidence: true,
+            past_due: false,
+            submission_count: 1,
+          },
+          livemode: false,
+          created: Math.floor(Date.now() / 1000) - 86_400,
+        },
+      },
+    } as unknown as Parameters<typeof handleDisputeEvent>[0];
+
+    await handleDisputeEvent(escalationEvent, TEST_ACCOUNT_ID);
+
+    // 3. Assert: evidence_submitted_at is null, status is needs_response,
+    //    narrative_text and checklist_state are preserved.
+    const { data: postEscalation } = await testDb
+      .from("disputes")
+      .select("status, evidence_submitted_at, narrative_text, narrative_generations_count, checklist_state")
+      .eq("stripe_dispute_id", TEST_DISPUTE_ID)
+      .single();
+
+    expect(postEscalation).toMatchObject({
+      status: "needs_response",
+      evidence_submitted_at: null,
+      narrative_text: seedNarrative,
+      narrative_generations_count: 1,
+      checklist_state: seedChecklistState,
+    });
   });
 });
