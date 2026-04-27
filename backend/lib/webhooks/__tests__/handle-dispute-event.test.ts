@@ -164,13 +164,19 @@ describe("handleDisputeEvent", () => {
   });
 
   describe("inquiry → chargeback escalation", () => {
+    let supersedeSpy: ReturnType<typeof vi.fn>;
+
     beforeEach(() => {
       upsertSpy = vi.fn(() => Promise.resolve({ error: null }));
+      supersedeSpy = vi.fn(() => Promise.resolve({ error: null }));
     });
 
     function mockMerchantAndDispute(opts: {
       merchant: { id: string; billing_tier: "usage" | "pro" } | null;
-      existingDispute: { status: string; evidence_submitted_at: string | null } | null;
+      existingDispute:
+        | { id?: string; status: string; evidence_submitted_at: string | null }
+        | null;
+      selectError?: { message: string } | null;
     }) {
       supabaseMock.from.mockImplementation((table: string) => {
         if (table === "merchants") {
@@ -184,10 +190,32 @@ describe("handleDisputeEvent", () => {
           return {
             select: () => ({
               eq: () => ({
-                maybeSingle: () => Promise.resolve({ data: opts.existingDispute, error: null }),
+                maybeSingle: () =>
+                  Promise.resolve({
+                    data: opts.existingDispute,
+                    error: opts.selectError ?? null,
+                  }),
               }),
             }),
             upsert: upsertSpy,
+          };
+        }
+        if (table === "dispute_submissions") {
+          // The handler invokes:
+          //   .from("dispute_submissions").update({...}).eq("dispute_id", id).eq("status", "succeeded")
+          // We capture the eventual call by returning a chain whose final eq() resolves with the spy's promise.
+          const finalChain = {
+            eq: (..._args: unknown[]) => supersedeSpy(),
+          };
+          const midChain = {
+            eq: (..._args: unknown[]) => finalChain,
+          };
+          return {
+            update: (payload: unknown) => {
+              // Stash the payload on the spy so tests can assert on it.
+              (supersedeSpy as unknown as { lastPayload?: unknown }).lastPayload = payload;
+              return midChain;
+            },
           };
         }
         throw new Error(`unexpected table: ${table}`);
@@ -198,6 +226,7 @@ describe("handleDisputeEvent", () => {
       mockMerchantAndDispute({
         merchant: { id: MERCHANT_ID, billing_tier: "usage" },
         existingDispute: {
+          id: "disp-uuid-1",
           status: "warning_needs_response",
           evidence_submitted_at: "2026-04-25T10:00:00Z",
         },
@@ -213,6 +242,60 @@ describe("handleDisputeEvent", () => {
         status: "needs_response",
         evidence_submitted_at: null,
       });
+    });
+
+    it("supersedes prior succeeded submissions on escalation so the route's replay cache misses", async () => {
+      mockMerchantAndDispute({
+        merchant: { id: MERCHANT_ID, billing_tier: "usage" },
+        existingDispute: {
+          id: "disp-uuid-2",
+          status: "warning_needs_response",
+          evidence_submitted_at: "2026-04-25T10:00:00Z",
+        },
+      });
+
+      const dispute = makeDispute({ status: "needs_response" });
+      await handleDisputeEvent(makeEvent("charge.dispute.updated", dispute), ACCOUNT_ID);
+
+      // dispute_submissions.update({status: "superseded"}).eq("dispute_id", local_id).eq("status", "succeeded")
+      expect(supersedeSpy).toHaveBeenCalledTimes(1);
+      expect(
+        (supersedeSpy as unknown as { lastPayload?: { status?: string } }).lastPayload,
+      ).toMatchObject({ status: "superseded" });
+    });
+
+    it("does NOT supersede submissions when there is no escalation", async () => {
+      mockMerchantAndDispute({
+        merchant: { id: MERCHANT_ID, billing_tier: "usage" },
+        existingDispute: {
+          id: "disp-uuid-3",
+          status: "warning_needs_response",
+          evidence_submitted_at: "2026-04-25T10:00:00Z",
+        },
+      });
+
+      const dispute = makeDispute({ status: "warning_needs_response" });
+      await handleDisputeEvent(makeEvent("charge.dispute.updated", dispute), ACCOUNT_ID);
+
+      expect(supersedeSpy).not.toHaveBeenCalled();
+    });
+
+    it("captures Sentry breadcrumb when the prior-row SELECT errors out", async () => {
+      mockMerchantAndDispute({
+        merchant: { id: MERCHANT_ID, billing_tier: "usage" },
+        existingDispute: null,
+        selectError: { message: "transient db blip" },
+      });
+
+      const dispute = makeDispute({ status: "needs_response" });
+      await handleDisputeEvent(makeEvent("charge.dispute.updated", dispute), ACCOUNT_ID);
+
+      expect(sentryMock.captureRouteError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "transient db blip" }),
+        expect.objectContaining({
+          route: "webhooks.dispute.escalation_select",
+        }),
+      );
     });
 
     it("does NOT clear evidence_submitted_at on a same-status update", async () => {

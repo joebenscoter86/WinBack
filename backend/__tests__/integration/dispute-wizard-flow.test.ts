@@ -791,4 +791,204 @@ describe("Inquiry → chargeback escalation", () => {
       checklist_state: seedChecklistState,
     });
   });
+
+  it("supersedes prior submissions and allows a fresh Stripe call after escalation", async () => {
+    // This test guards against the original critical bug: the submit route's
+    // idempotent replay cache (selecting active dispute_submissions WHERE
+    // status IN (pending, succeeded)) would silently short-circuit the
+    // post-escalation submission and never call Stripe again. The webhook
+    // must mark prior succeeded rows as 'superseded' so the cache misses.
+    await cleanupTestData();
+
+    // 1. Seed merchant + disputes + an inquiry-stage submission row.
+    const { data: merchant } = await testDb
+      .from("merchants")
+      .upsert(
+        { stripe_account_id: TEST_ACCOUNT_ID, billing_tier: "usage" },
+        { onConflict: "stripe_account_id" },
+      )
+      .select("id")
+      .single();
+    if (!merchant) throw new Error("merchant seed failed");
+
+    const { data: dispute } = await testDb
+      .from("disputes")
+      .upsert(
+        {
+          stripe_dispute_id: TEST_DISPUTE_ID,
+          merchant_id: merchant.id,
+          stripe_charge_id: "ch_integration_test",
+          amount: 100,
+          currency: "usd",
+          reason_code: "fraudulent",
+          status: "warning_needs_response",
+          evidence_submitted_at: new Date("2026-04-25T10:00:00Z").toISOString(),
+        },
+        { onConflict: "stripe_dispute_id" },
+      )
+      .select("id")
+      .single();
+    if (!dispute) throw new Error("dispute seed failed");
+
+    const { data: inquirySubmission } = await testDb
+      .from("dispute_submissions")
+      .insert({
+        dispute_id: dispute.id,
+        idempotency_key: "test_inquiry_submission_key",
+        status: "succeeded",
+        evidence_payload: { narrative_text: "inquiry response" },
+        stripe_response: { id: TEST_DISPUTE_ID, status: "warning_under_review" },
+        completed_at: new Date("2026-04-25T10:00:00Z").toISOString(),
+      })
+      .select("id")
+      .single();
+    if (!inquirySubmission) throw new Error("inquiry submission seed failed");
+
+    // 2. Fire the escalation webhook.
+    const escalationEvent = {
+      id: "evt_test_escalation_2",
+      type: "charge.dispute.updated" as const,
+      created: Math.floor(Date.now() / 1000),
+      data: {
+        object: {
+          id: TEST_DISPUTE_ID,
+          object: "dispute",
+          amount: 100,
+          currency: "usd",
+          charge: "ch_integration_test",
+          reason: "fraudulent",
+          status: "needs_response",
+          evidence_details: {
+            due_by: Math.floor(Date.now() / 1000) + 7 * 86_400,
+            has_evidence: true,
+            past_due: false,
+            submission_count: 1,
+          },
+          livemode: false,
+          created: Math.floor(Date.now() / 1000) - 86_400,
+        },
+      },
+    } as unknown as Parameters<typeof handleDisputeEvent>[0];
+
+    await handleDisputeEvent(escalationEvent, TEST_ACCOUNT_ID);
+
+    // 3. Assert the inquiry-stage submission was marked superseded.
+    const { data: postEscalationSubmission } = await testDb
+      .from("dispute_submissions")
+      .select("status")
+      .eq("id", inquirySubmission.id)
+      .single();
+    expect(postEscalationSubmission?.status).toBe("superseded");
+
+    // 3b. The webhook's disputeToRow overwrites reason_code/network with values
+    //     derived from the Stripe event, which doesn't include a network_reason_code
+    //     here, so we land at network=null, reason_code=fraudulent — invalid for
+    //     playbook lookup. Patch back to visa/10.4 (what normalize.ts would have
+    //     set during a real /api/disputes round-trip in test mode). This is test
+    //     plumbing, not validation of the bug fix.
+    await testDb
+      .from("disputes")
+      .update({ network: "visa", reason_code: "10.4" })
+      .eq("stripe_dispute_id", TEST_DISPUTE_ID);
+
+    // Also seed an evidence_files row + checklist_state + narrative so the
+    // submit route's evidence assembly has something to work with.
+    await testDb
+      .from("disputes")
+      .update({
+        narrative_text: "Chargeback response narrative",
+        checklist_state: { receipt: true },
+      })
+      .eq("stripe_dispute_id", TEST_DISPUTE_ID);
+
+    // 4. POST to the submit route, simulating the merchant resubmitting on
+    //    the chargeback. Stripe MUST be called freshly.
+    const { POST: submitRoutePOST } = await import(
+      "@/app/api/disputes/[disputeId]/submit/route"
+    );
+    const { NextRequest } = await import("next/server");
+    const { getDispute, submitDispute } = await import("@/lib/stripe");
+    const mockGetDispute = getDispute as ReturnType<typeof vi.fn>;
+    const mockSubmitDispute = submitDispute as ReturnType<typeof vi.fn>;
+
+    const callsBefore = mockSubmitDispute.mock.calls.length;
+
+    // Pre-submission guard fetch + post-submit refresh both expect the dispute
+    // in needs_response with a charge expanded.
+    mockGetDispute.mockResolvedValue({
+      id: TEST_DISPUTE_ID,
+      status: "needs_response",
+      evidence: {},
+      evidence_details: { due_by: Math.floor(Date.now() / 1000) + 7 * 86_400 },
+      charge: {
+        id: "ch_integration_test",
+        object: "charge",
+        billing_details: {
+          name: "Integration Test",
+          email: "test@example.com",
+          address: {
+            line1: "1 Test St",
+            line2: null,
+            city: "Brooklyn",
+            state: "NY",
+            postal_code: "11201",
+            country: "US",
+          },
+          phone: null,
+        },
+        description: "Test widget",
+        payment_method_details: {
+          card: {
+            brand: "visa",
+            network: "visa",
+            last4: "4242",
+            authorization_code: "AUTH42WIN",
+            checks: {
+              address_line1_check: "pass",
+              address_postal_code_check: "pass",
+              cvc_check: "pass",
+            },
+          },
+          type: "card",
+        },
+        outcome: { network_status: "approved_by_network" },
+        refunds: { data: [] },
+      },
+    } as never);
+
+    mockSubmitDispute.mockResolvedValueOnce({
+      id: TEST_DISPUTE_ID,
+      status: "under_review",
+      evidence: {},
+    } as never);
+
+    const res = await submitRoutePOST(
+      new NextRequest(
+        `http://localhost/api/disputes/${TEST_DISPUTE_ID}/submit`,
+        { method: "POST", headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    if (res.status !== 200) {
+      const errBody = await res.json();
+      throw new Error(`submit route returned ${res.status}: ${JSON.stringify(errBody)}`);
+    }
+
+    // 5. The critical assertion: Stripe got a fresh call. If the cache had
+    //    short-circuited (the bug), this delta would be 0.
+    expect(mockSubmitDispute.mock.calls.length).toBe(callsBefore + 1);
+
+    // 6. A new active submissions row was created.
+    const { data: allSubmissions } = await testDb
+      .from("dispute_submissions")
+      .select("id, status")
+      .eq("dispute_id", dispute.id)
+      .order("created_at", { ascending: true });
+    expect(allSubmissions).toHaveLength(2);
+    expect(allSubmissions!.find((s) => s.id === inquirySubmission.id)?.status).toBe(
+      "superseded",
+    );
+    const newSubmission = allSubmissions!.find((s) => s.id !== inquirySubmission.id);
+    expect(newSubmission?.status).toBe("succeeded");
+  });
 });

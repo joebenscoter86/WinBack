@@ -110,17 +110,34 @@ export async function handleDisputeEvent(
   // the merchant sees the re-submission prompt instead of a stale
   // "already submitted" UI. Stripe requires a separate response for the
   // chargeback even if the merchant already responded at the inquiry stage.
+  // We must ALSO mark any prior succeeded dispute_submissions as superseded so
+  // the submit route's idempotent replay cache (which short-circuits when it
+  // finds a succeeded row) misses on the next submit attempt and a real Stripe
+  // call is made for the chargeback.
   let escalationReset: { evidence_submitted_at: null } | Record<string, never> = {};
+  let escalationDisputeRowId: string | null = null;
   if (event.type === "charge.dispute.updated") {
-    const { data: existing } = await supabase
+    const { data: existing, error: existingErr } = await supabase
       .from("disputes")
-      .select("status, evidence_submitted_at")
+      .select("id, status, evidence_submitted_at")
       .eq("stripe_dispute_id", dispute.id)
       .maybeSingle();
+
+    if (existingErr) {
+      // Fail loud so a transient SELECT failure doesn't silently mask an
+      // escalation event. The upsert below still runs with non-escalation
+      // semantics, which is the worst-case behavior we already had before
+      // this fix.
+      captureRouteError(existingErr, {
+        route: "webhooks.dispute.escalation_select",
+        extra: { dispute_id: dispute.id, severity: "escalation_detection_failed" },
+      });
+    }
 
     const priorStatus = (existing as { status?: string } | null)?.status;
     if (isInquiryToChargebackEscalation(priorStatus, dispute.status)) {
       escalationReset = { evidence_submitted_at: null };
+      escalationDisputeRowId = (existing as { id?: string } | null)?.id ?? null;
     }
   }
 
@@ -130,4 +147,26 @@ export async function handleDisputeEvent(
       { ...baseRow, merchant_id: merchantId, ...escalationReset },
       { onConflict: "stripe_dispute_id" },
     );
+
+  // Step 2 of the escalation reset: invalidate the submit-route cache by
+  // marking any prior succeeded submission rows as superseded. This MUST run
+  // after the disputes upsert so a fresh dispute row exists if needed (escalation
+  // requires an existing row, but defense in depth).
+  if (escalationDisputeRowId) {
+    const { error: supersedeErr } = await supabase
+      .from("dispute_submissions")
+      .update({ status: "superseded" })
+      .eq("dispute_id", escalationDisputeRowId)
+      .eq("status", "succeeded");
+    if (supersedeErr) {
+      captureRouteError(supersedeErr, {
+        route: "webhooks.dispute.supersede_submissions",
+        extra: {
+          dispute_id: dispute.id,
+          local_dispute_id: escalationDisputeRowId,
+          severity: "escalation_cache_invalidation_failed",
+        },
+      });
+    }
+  }
 }

@@ -265,7 +265,7 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
               description="Discover requires a response to this inquiry. If you don't respond now, you may lose the ability to challenge a future chargeback on this payment."
             />
           )}
-          {justEscalated && (
+          {justEscalated && !expired && (
             <Banner
               type="caution"
               title="Inquiry escalated to chargeback"
