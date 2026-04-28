@@ -43,20 +43,18 @@ const DisputeCard = ({ dispute, onSelect }: DisputeCardProps) => {
           padding: 'small',
         }}
       >
-        <Box css={{ stack: 'x', gap: 'small', distribute: 'space-between', alignY: 'center' }}>
-          <Inline css={{ font: 'body', fontWeight: 'semibold' }}>
-            {formatAmount(dispute.amount, dispute.currency)}
-          </Inline>
-          <Box css={{ stack: 'x', gap: 'xsmall' }}>
-            {dispute.is_new && <Badge type="info">New</Badge>}
-            {isInquiry(dispute.status) && <Badge type="info">Inquiry</Badge>}
-            {statusBadge && (
-              <Badge type={statusBadge.type}>{statusBadge.label}</Badge>
-            )}
-            {urgencyBadge && (
-              <Badge type={urgencyBadge.type}>{urgencyBadge.label}</Badge>
-            )}
-          </Box>
+        <Inline css={{ font: 'body', fontWeight: 'semibold' }}>
+          {formatAmount(dispute.amount, dispute.currency)}
+        </Inline>
+        <Box css={{ stack: 'x', gap: 'xsmall', wrap: 'wrap' }}>
+          {dispute.is_new && <Badge type="info">New</Badge>}
+          {isInquiry(dispute.status) && <Badge type="info">Inquiry</Badge>}
+          {statusBadge && (
+            <Badge type={statusBadge.type}>{statusBadge.label}</Badge>
+          )}
+          {urgencyBadge && (
+            <Badge type={urgencyBadge.type}>{urgencyBadge.label}</Badge>
+          )}
         </Box>
         <Inline css={{ font: 'caption' }}>
           {dispute.customer_name || 'Unknown customer'}
