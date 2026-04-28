@@ -10,7 +10,6 @@ import {
   TabList,
   TabPanels,
   TabPanel,
-  Banner,
 } from '@stripe/ui-extension-sdk/ui';
 import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 import DisputeCard from '../components/DisputeCard';
@@ -19,6 +18,7 @@ import EmptyDisputesState from '../components/EmptyDisputesState';
 import OnboardingPanel from '../components/OnboardingPanel';
 import ErrorBanner from '../components/ErrorBanner';
 import UpgradePromptBanner from '../components/UpgradePromptBanner';
+import InsightsPanel from '../components/InsightsPanel';
 import { fetchBackend, ApiError } from '../lib/apiClient';
 import { isResolved, isDisputeExpired } from '../lib/utils';
 import type { Dispute } from '../lib/types';
@@ -266,16 +266,7 @@ const DisputeListView = (context: ExtensionContextValue) => {
               </Box>
             </TabPanel>
             <TabPanel id="insights">
-              <Box css={{ padding: 'medium' }}>
-                <Banner
-                  type="default"
-                  title="Insights"
-                  description="Win rate analytics and dispute patterns will appear here."
-                />
-                <Inline css={{ font: 'caption', color: 'secondary' }}>
-                  Coming in WIN-22 and WIN-23.
-                </Inline>
-              </Box>
+              <InsightsPanel context={contextRef.current} />
             </TabPanel>
           </TabPanels>
         </Tabs>
