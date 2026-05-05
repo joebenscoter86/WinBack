@@ -30,6 +30,7 @@ vi.mock("@/lib/stripe", async (importOriginal) => {
       status: "under_review",
       evidence: {},
     }),
+    listDisputes: vi.fn().mockResolvedValue([]),
     // normalizeDispute, classifyStripeError stay real
   };
 });
