@@ -104,7 +104,7 @@ describe("env module", () => {
       const { readEnv } = await import("../env");
       // All four missing-var names should appear in the single error message.
       expect(() => readEnv()).toThrow(
-        /STRIPE_SECRET_KEY_LIVE.*STRIPE_SECRET_KEY_TEST.*STRIPE_WEBHOOK_SECRET_LIVE.*STRIPE_WEBHOOK_SECRET_TEST/s
+        /STRIPE_SECRET_KEY_LIVE.*STRIPE_SECRET_KEY_TEST.*STRIPE_WEBHOOK_SECRET_LIVE.*STRIPE_WEBHOOK_SECRET_TEST/
       );
     });
 

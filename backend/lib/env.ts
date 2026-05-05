@@ -87,7 +87,7 @@ export function readEnv(): Env {
 }
 
 /**
- * Cached read — call once in module scope to fail fast at boot.
+ * Cached read. Call once in module scope to fail fast at boot.
  * Safe to import anywhere; throws synchronously if env is bad.
  */
 let _cached: Env | null = null;
