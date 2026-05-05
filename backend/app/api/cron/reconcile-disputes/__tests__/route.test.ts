@@ -3,12 +3,22 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 
 vi.mock("@/lib/webhooks/reconcile-disputes", () => ({
-  reconcileDisputes: vi.fn().mockResolvedValue({ processed: 0 }),
+  reconcileDisputes: vi.fn().mockResolvedValue({
+    merchant_count: 1,
+    disputes_seen: 0,
+    disputes_upserted: 0,
+    errors: [],
+  }),
 }));
 
 vi.mock("@/lib/sentry", () => ({
   captureRouteError: vi.fn(),
 }));
+
+const { supabaseMock } = vi.hoisted(() => ({
+  supabaseMock: { from: vi.fn() },
+}));
+vi.mock("@/lib/supabase", () => ({ supabase: supabaseMock }));
 
 import { GET } from "../route";
 
@@ -26,6 +36,14 @@ describe("GET /api/cron/reconcile-disputes", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    supabaseMock.from.mockImplementation((table: string) => {
+      if (table === "merchants") {
+        return {
+          select: () => Promise.resolve({ data: [], error: null }),
+        };
+      }
+      throw new Error(`unexpected table ${table}`);
+    });
   });
 
   afterEach(() => {

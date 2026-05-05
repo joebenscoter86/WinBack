@@ -1,7 +1,6 @@
 import Stripe from "stripe";
 import { listDisputes } from "@/lib/stripe";
 import { handleDisputeEvent } from "./handle-dispute-event";
-import { supabase } from "@/lib/supabase";
 
 export interface ReconciliationResult {
   merchant_count: number;
@@ -18,48 +17,38 @@ export interface ReconciliationResult {
  * Scope: all non-closed disputes + closed in the last 7 days. Closed disputes
  * older than that won't change again.
  */
-export async function reconcileDisputes(): Promise<ReconciliationResult> {
+export async function reconcileDisputes(
+  livemode: boolean,
+  accountId: string,
+): Promise<ReconciliationResult> {
   const result: ReconciliationResult = {
-    merchant_count: 0,
+    merchant_count: 1,
     disputes_seen: 0,
     disputes_upserted: 0,
     errors: [],
   };
 
-  const { data: merchants, error: merchErr } = await supabase
-    .from("merchants")
-    .select("stripe_account_id");
-
-  if (merchErr || !merchants) {
-    throw new Error(`Failed to list merchants: ${merchErr?.message ?? "no data"}`);
-  }
-
   const sevenDaysAgo = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000);
 
-  for (const m of merchants as Array<{ stripe_account_id: string }>) {
-    result.merchant_count += 1;
-    const accountId = m.stripe_account_id;
+  try {
+    const disputes = await listDisputes(livemode, accountId, {
+      limit: 100,
+      created: { gte: sevenDaysAgo },
+    });
+    result.disputes_seen += disputes.length;
 
-    try {
-      const disputes = await listDisputes(accountId, {
-        limit: 100,
-        created: { gte: sevenDaysAgo },
-      });
-      result.disputes_seen += disputes.length;
-
-      for (const d of disputes) {
-        await handleDisputeEvent(
-          synthesizeReconciliationEvent(d, accountId),
-          accountId,
-        );
-        result.disputes_upserted += 1;
-      }
-    } catch (err) {
-      result.errors.push({
-        merchant_id: accountId,
-        message: err instanceof Error ? err.message : String(err),
-      });
+    for (const d of disputes) {
+      await handleDisputeEvent(
+        synthesizeReconciliationEvent(d, accountId),
+        accountId,
+      );
+      result.disputes_upserted += 1;
     }
+  } catch (err) {
+    result.errors.push({
+      merchant_id: accountId,
+      message: err instanceof Error ? err.message : String(err),
+    });
   }
 
   return result;
