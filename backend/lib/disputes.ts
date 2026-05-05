@@ -16,6 +16,7 @@ import { supabase } from "@/lib/supabase";
  * as the caller's generic so routes can retain the narrow shape they use.
  */
 export async function getDisputeForAccount<T>(
+  livemode: boolean,
   stripeDisputeId: string,
   stripeAccountId: string,
   columns: string = "id",
@@ -24,6 +25,7 @@ export async function getDisputeForAccount<T>(
     .from("disputes")
     .select(`${columns}, merchants!inner(stripe_account_id)`)
     .eq("stripe_dispute_id", stripeDisputeId)
+    .eq("livemode", livemode)
     .eq("merchants.stripe_account_id", stripeAccountId)
     .maybeSingle();
 
