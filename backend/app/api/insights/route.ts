@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { computeInsights, type DisputeRow } from "@/lib/insights/aggregate";
 import { captureRouteError } from "@/lib/sentry";
 
-export const POST = withStripeAuth(async (_request, { identity }) => {
+export const POST = withStripeAuth(async (_request, { identity, livemode }) => {
   const { accountId, userId } = identity;
 
   await ensureMerchant(accountId, userId);
@@ -36,7 +36,8 @@ export const POST = withStripeAuth(async (_request, { identity }) => {
   const { data: disputes, error: disputesErr } = await supabase
     .from("disputes")
     .select("status, reason_code, created_at")
-    .eq("merchant_id", merchantId);
+    .eq("merchant_id", merchantId)
+    .eq("livemode", livemode);
 
   if (disputesErr) {
     captureRouteError(disputesErr, { route: "insights.disputes_query" });

@@ -24,6 +24,7 @@ describe("verifyStripeAppSignature", () => {
     const body = JSON.stringify({
       user_id: "usr_123",
       account_id: "acct_456",
+      livemode: false,
     });
     const signature = generateSignature("usr_123", "acct_456");
 
@@ -39,6 +40,7 @@ describe("verifyStripeAppSignature", () => {
     const body = JSON.stringify({
       user_id: "usr_123",
       account_id: "acct_456",
+      livemode: false,
       dispute_id: "dp_789",
     });
     // Signature is over {user_id, account_id} only, not the full body

@@ -6,7 +6,7 @@ import Stripe from "stripe";
 
 export const POST = withStripeAuth(async (
   request: NextRequest,
-  { identity },
+  { identity, livemode },
 ) => {
   const { accountId, userId } = identity;
   const piId = request.nextUrl.pathname.split("/").at(-1);
@@ -21,7 +21,7 @@ export const POST = withStripeAuth(async (
   await ensureMerchant(accountId, userId);
 
   try {
-    const disputes = await listDisputes(accountId, {
+    const disputes = await listDisputes(livemode, accountId, {
       payment_intent: piId,
       limit: 1,
       expand: ["data.charge.customer"],

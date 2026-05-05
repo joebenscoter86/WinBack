@@ -10,17 +10,20 @@ vi.mock("stripe", () => {
   return { default: StripeMock };
 });
 
-import { submitDispute } from "../client";
+import { submitDispute, __resetStripeClientsForTests } from "../client";
 
 describe("submitDispute", () => {
   beforeEach(() => {
     updateMock.mockReset();
-    process.env.STRIPE_SECRET_KEY = "sk_test_123";
+    process.env.STRIPE_SECRET_KEY_TEST = "sk_test_123";
+    process.env.STRIPE_SECRET_KEY_LIVE = "sk_live_123";
+    __resetStripeClientsForTests();
   });
 
   it("calls stripe.disputes.update with submit:true and idempotency key", async () => {
     updateMock.mockResolvedValue({ id: "dp_1", status: "under_review" });
     const result = await submitDispute(
+      false,
       "acct_123",
       "dp_1",
       { uncategorized_text: "defense" },

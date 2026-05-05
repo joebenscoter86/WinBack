@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { reconcileDisputes } from "@/lib/webhooks/reconcile-disputes";
 import { captureRouteError } from "@/lib/sentry";
+import { supabase } from "@/lib/supabase";
 
 /**
  * WIN-21: Daily reconciliation cron. Triggered by Vercel Cron via vercel.json.
@@ -29,9 +30,35 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const result = await reconcileDisputes();
-    console.log("[WIN-21] reconcile-disputes complete", result);
-    return NextResponse.json({ ok: true, ...result });
+    const { data: merchants, error: merchErr } = await supabase
+      .from("merchants")
+      .select("stripe_account_id");
+
+    if (merchErr || !merchants) {
+      throw new Error(
+        `Failed to list merchants: ${merchErr?.message ?? "no data"}`,
+      );
+    }
+
+    const aggregate = {
+      merchant_count: 0,
+      disputes_seen: 0,
+      disputes_upserted: 0,
+      errors: [] as Array<{ merchant_id: string; message: string }>,
+    };
+
+    for (const m of merchants as Array<{ stripe_account_id: string }>) {
+      aggregate.merchant_count += 1;
+      for (const livemode of [true, false]) {
+        const r = await reconcileDisputes(livemode, m.stripe_account_id);
+        aggregate.disputes_seen += r.disputes_seen;
+        aggregate.disputes_upserted += r.disputes_upserted;
+        aggregate.errors.push(...r.errors);
+      }
+    }
+
+    console.log("[WIN-21] reconcile-disputes complete", aggregate);
+    return NextResponse.json({ ok: true, ...aggregate });
   } catch (err) {
     captureRouteError(err, { route: "cron.reconcile_disputes" });
     return NextResponse.json(

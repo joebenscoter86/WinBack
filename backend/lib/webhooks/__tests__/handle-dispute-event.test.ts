@@ -190,11 +190,13 @@ describe("handleDisputeEvent", () => {
           return {
             select: () => ({
               eq: () => ({
-                maybeSingle: () =>
-                  Promise.resolve({
-                    data: opts.existingDispute,
-                    error: opts.selectError ?? null,
-                  }),
+                eq: () => ({
+                  maybeSingle: () =>
+                    Promise.resolve({
+                      data: opts.existingDispute,
+                      error: opts.selectError ?? null,
+                    }),
+                }),
               }),
             }),
             upsert: upsertSpy,
@@ -202,19 +204,22 @@ describe("handleDisputeEvent", () => {
         }
         if (table === "dispute_submissions") {
           // The handler invokes:
-          //   .from("dispute_submissions").update({...}).eq("dispute_id", id).eq("status", "succeeded")
+          //   .from("dispute_submissions").update({...}).eq("dispute_id", id).eq("status", "succeeded").eq("livemode", bool)
           // We capture the eventual call by returning a chain whose final eq() resolves with the spy's promise.
-          const finalChain = {
+          const livemodeChain = {
             eq: (..._args: unknown[]) => supersedeSpy(),
           };
-          const midChain = {
-            eq: (..._args: unknown[]) => finalChain,
+          const statusChain = {
+            eq: (..._args: unknown[]) => livemodeChain,
+          };
+          const disputeIdChain = {
+            eq: (..._args: unknown[]) => statusChain,
           };
           return {
             update: (payload: unknown) => {
               // Stash the payload on the spy so tests can assert on it.
               (supersedeSpy as unknown as { lastPayload?: unknown }).lastPayload = payload;
-              return midChain;
+              return disputeIdChain;
             },
           };
         }

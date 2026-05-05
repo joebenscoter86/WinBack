@@ -26,9 +26,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!webhookSecret) {
-    console.error("[WIN-21] STRIPE_WEBHOOK_SECRET not configured");
+  const liveSecret = process.env.STRIPE_WEBHOOK_SECRET_LIVE;
+  const testSecret = process.env.STRIPE_WEBHOOK_SECRET_TEST;
+  if (!liveSecret || !testSecret) {
+    console.error("[livemode] Webhook secrets not configured");
     return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
   }
 
@@ -36,13 +37,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   let event: Stripe.Event;
   try {
-    event = getStripe().webhooks.constructEvent(rawBody, signature, webhookSecret);
-  } catch (err) {
-    captureRouteError(err, {
-      route: "webhooks.stripe.signature",
-      extra: { signature_prefix: signature.substring(0, 20) },
-    });
-    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    event = getStripe().webhooks.constructEvent(rawBody, signature, liveSecret);
+  } catch {
+    try {
+      event = getStripe().webhooks.constructEvent(rawBody, signature, testSecret);
+    } catch (err) {
+      captureRouteError(err, {
+        route: "webhooks.stripe.signature",
+        extra: { signature_prefix: signature.substring(0, 20) },
+      });
+      return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    }
   }
 
   // Idempotency: insert event id; if conflict, we've seen this event before.
@@ -53,6 +58,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       event_id: event.id,
       event_type: event.type,
       account_id: accountId,
+      livemode: event.livemode,
       status: "pending",
     });
 

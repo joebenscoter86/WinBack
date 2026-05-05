@@ -3,7 +3,10 @@ import { NextRequest } from "next/server";
 import Stripe from "stripe";
 
 const TEST_WEBHOOK_SECRET = "whsec_test_secret_for_unit_tests";
+const LIVE_WEBHOOK_SECRET = "whsec_live_secret_for_unit_tests";
 process.env.STRIPE_WEBHOOK_SECRET = TEST_WEBHOOK_SECRET;
+process.env.STRIPE_WEBHOOK_SECRET_LIVE = LIVE_WEBHOOK_SECRET;
+process.env.STRIPE_WEBHOOK_SECRET_TEST = TEST_WEBHOOK_SECRET;
 process.env.STRIPE_SECRET_KEY = "sk_test_fake";
 
 const { supabaseMock } = vi.hoisted(() => ({
@@ -96,6 +99,26 @@ describe("POST /api/webhooks/stripe", () => {
     const req = signedRequest(disputeEvent(), "whsec_wrong_secret");
     const res = await POST(req);
     expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when forged with neither live nor test secret", async () => {
+    const req = signedRequest(disputeEvent(), "whsec_neither_live_nor_test");
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    expect(handleDisputeEventMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts a livemode event signed with the live secret", async () => {
+    const req = signedRequest(
+      { ...disputeEvent(), livemode: true },
+      LIVE_WEBHOOK_SECRET,
+    );
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(handleDisputeEventMock).toHaveBeenCalledOnce();
+    expect(webhookEventsInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ livemode: true }),
+    );
   });
 
   it("dispatches valid dispute event to handler and marks processed", async () => {

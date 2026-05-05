@@ -32,11 +32,14 @@ vi.mock("@/lib/stripe-auth", () => ({
   withStripeAuth: (
     handler: (
       req: NextRequest,
-      ctx: { identity: { accountId: string; userId: string } },
+      ctx: { identity: { accountId: string; userId: string }; livemode: boolean },
     ) => Promise<Response>,
   ) =>
     (req: NextRequest) =>
-      handler(req, { identity: { accountId: "acct_test", userId: "usr_test" } }),
+      handler(req, {
+        identity: { accountId: "acct_test", userId: "usr_test" },
+        livemode: false,
+      }),
 }));
 
 vi.mock("@/lib/merchants", () => ({
@@ -895,9 +898,9 @@ describe("POST /api/disputes/[disputeId]/submit", () => {
     expect(res.status).toBe(200);
     expect(submitDisputeMock).toHaveBeenCalledTimes(2);
 
-    // Both calls must use the same idempotency key (4th positional argument)
-    const firstCallKey = submitDisputeMock.mock.calls[0][3];
-    const secondCallKey = submitDisputeMock.mock.calls[1][3];
+    // Both calls must use the same idempotency key (5th positional argument)
+    const firstCallKey = submitDisputeMock.mock.calls[0][4];
+    const secondCallKey = submitDisputeMock.mock.calls[1][4];
     expect(firstCallKey).toBe(secondCallKey);
   });
 
@@ -1329,7 +1332,7 @@ describe("POST /api/disputes/[disputeId]/submit", () => {
     // The crux: Stripe was called with the reclaimed key, not a new UUID.
     expect(submitDisputeMock).toHaveBeenCalledTimes(1);
     const call = submitDisputeMock.mock.calls[0];
-    expect(call[3]).toBe(RECLAIMED_KEY);
+    expect(call[4]).toBe(RECLAIMED_KEY);
   });
 });
 

@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { captureRouteError } from "@/lib/sentry";
 import Stripe from "stripe";
 
-export const POST = withStripeAuth(async (_request, { identity }) => {
+export const POST = withStripeAuth(async (_request, { identity, livemode }) => {
   const { accountId, userId } = identity;
 
   // Dev-only escape hatch for previewing the empty-disputes onboarding state
@@ -22,7 +22,7 @@ export const POST = withStripeAuth(async (_request, { identity }) => {
   await ensureMerchant(accountId, userId);
 
   try {
-    const disputes = await listDisputes(accountId, {
+    const disputes = await listDisputes(livemode, accountId, {
       limit: 100,
       expand: ["data.charge.customer"],
     });
@@ -47,6 +47,7 @@ export const POST = withStripeAuth(async (_request, { identity }) => {
             .from("disputes")
             .select("stripe_dispute_id, viewed_at")
             .eq("merchant_id", merchantId)
+            .eq("livemode", livemode)
             .in(
               "stripe_dispute_id",
               normalized.map((d) => d.id),

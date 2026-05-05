@@ -6,13 +6,18 @@ vi.mock("@/lib/stripe-auth", () => ({
     (
       handler: (
         req: NextRequest,
-        ctx: { identity: { userId: string; accountId: string }; body: unknown },
+        ctx: {
+          identity: { userId: string; accountId: string };
+          body: unknown;
+          livemode: boolean;
+        },
       ) => Promise<Response>,
     ) =>
     async (req: NextRequest) =>
       handler(req, {
         identity: { userId: "usr_test", accountId: "acct_test" },
         body: {},
+        livemode: false,
       }),
 }));
 
@@ -44,7 +49,12 @@ vi.mock("@/lib/supabase", () => ({
           select: () => ({
             eq: (column: string, value: unknown) => {
               disputesEqCalls.push([column, value]);
-              return Promise.resolve(mockDisputesResult);
+              return {
+                eq: (column2: string, value2: unknown) => {
+                  disputesEqCalls.push([column2, value2]);
+                  return Promise.resolve(mockDisputesResult);
+                },
+              };
             },
           }),
         };
@@ -115,13 +125,18 @@ describe("POST /api/insights", () => {
     expect(json.by_reason).toHaveLength(2);
   });
 
-  it("scopes the disputes query to the authenticated merchant only", async () => {
+  it("scopes the disputes query to the authenticated merchant and livemode", async () => {
     const { POST } = await import("../route");
 
     await POST(makeRequest());
 
     expect(disputesEqCalls).toContainEqual(["merchant_id", "merchant-uuid-1"]);
-    expect(disputesEqCalls.every(([col]) => col === "merchant_id")).toBe(true);
+    expect(disputesEqCalls).toContainEqual(["livemode", false]);
+    expect(
+      disputesEqCalls.every(
+        ([col]) => col === "merchant_id" || col === "livemode",
+      ),
+    ).toBe(true);
   });
 
   it("returns 500 when the disputes query fails", async () => {

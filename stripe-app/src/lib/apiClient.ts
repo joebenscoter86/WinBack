@@ -36,6 +36,7 @@ export async function fetchBackend<T = unknown>(
     ...data,
     user_id: context.userContext?.id,
     account_id: context.userContext?.account.id,
+    livemode: context.environment?.mode === 'live',
   });
 
   const response = await fetch(`${BACKEND_URL}${path}`, {
@@ -73,6 +74,7 @@ export async function patchBackend<T = unknown>(
     ...data,
     user_id: context.userContext?.id,
     account_id: context.userContext?.account.id,
+    livemode: context.environment?.mode === 'live',
   });
 
   const response = await fetch(`${BACKEND_URL}${path}`, {
@@ -110,6 +112,7 @@ export async function deleteBackend<T = unknown>(
   const body = JSON.stringify({
     user_id: context.userContext?.id,
     account_id: context.userContext?.account.id,
+    livemode: context.environment?.mode === 'live',
   });
 
   const response = await fetch(`${BACKEND_URL}${path}`, {

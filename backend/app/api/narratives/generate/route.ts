@@ -24,7 +24,7 @@ const MAX_GENERATIONS = 5;
 
 export const POST = withStripeAuth(async (
   _request: NextRequest,
-  { identity, body },
+  { identity, body, livemode },
 ) => {
   const { accountId, userId } = identity;
   const {
@@ -59,7 +59,7 @@ export const POST = withStripeAuth(async (
   const { data: dispute, error: disputeError } = await getDisputeForAccount<{
     id: string;
     narrative_generations_count: number;
-  }>(dispute_id, accountId, "id, narrative_generations_count");
+  }>(livemode, dispute_id, accountId, "id, narrative_generations_count");
 
   if (disputeError || !dispute) {
     return NextResponse.json(
@@ -71,7 +71,7 @@ export const POST = withStripeAuth(async (
   // Expired/closed guard (WIN-48) -- don't burn a generation count on a
   // dispute Stripe will no longer accept evidence for.
   try {
-    const stripeDispute = await getDispute(accountId, dispute_id);
+    const stripeDispute = await getDispute(livemode, accountId, dispute_id);
     if (!isDisputeSubmittable(stripeDispute)) {
       return disputeExpiredResponse(stripeDispute);
     }
@@ -125,6 +125,7 @@ export const POST = withStripeAuth(async (
       generation_number: newCount,
       merchant_feedback: composedFeedback ?? null,
       merchant_feedback_tags: tags ?? null,
+      livemode,
     })
     .select("id")
     .single();
@@ -160,6 +161,7 @@ export const POST = withStripeAuth(async (
   await after(() =>
     runBackgroundGeneration({
       generationId,
+      livemode,
       accountId,
       disputeId: dispute.id,
       stripeDisputeId: dispute_id,

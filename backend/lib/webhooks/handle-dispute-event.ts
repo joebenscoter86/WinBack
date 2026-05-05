@@ -74,7 +74,12 @@ export async function handleDisputeEvent(
     await supabase
       .from("disputes")
       .upsert(
-        { ...baseRow, merchant_id: merchantId, outcome_at: outcomeAt },
+        {
+          ...baseRow,
+          merchant_id: merchantId,
+          livemode: event.livemode,
+          outcome_at: outcomeAt,
+        },
         { onConflict: "stripe_dispute_id" },
       );
 
@@ -121,6 +126,7 @@ export async function handleDisputeEvent(
       .from("disputes")
       .select("id, status, evidence_submitted_at")
       .eq("stripe_dispute_id", dispute.id)
+      .eq("livemode", event.livemode)
       .maybeSingle();
 
     if (existingErr) {
@@ -144,7 +150,12 @@ export async function handleDisputeEvent(
   await supabase
     .from("disputes")
     .upsert(
-      { ...baseRow, merchant_id: merchantId, ...escalationReset },
+      {
+        ...baseRow,
+        merchant_id: merchantId,
+        livemode: event.livemode,
+        ...escalationReset,
+      },
       { onConflict: "stripe_dispute_id" },
     );
 
@@ -157,7 +168,8 @@ export async function handleDisputeEvent(
       .from("dispute_submissions")
       .update({ status: "superseded" })
       .eq("dispute_id", escalationDisputeRowId)
-      .eq("status", "succeeded");
+      .eq("status", "succeeded")
+      .eq("livemode", event.livemode);
     if (supersedeErr) {
       captureRouteError(supersedeErr, {
         route: "webhooks.dispute.supersede_submissions",

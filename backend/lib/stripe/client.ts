@@ -1,23 +1,34 @@
 import Stripe from "stripe";
 
-let _stripe: Stripe | null = null;
+const _clients: { live: Stripe | null; test: Stripe | null } = {
+  live: null,
+  test: null,
+};
 
-function getStripe(): Stripe {
-  if (!_stripe) {
-    const key = process.env.STRIPE_SECRET_KEY;
-    if (!key) {
-      throw new Error("Missing STRIPE_SECRET_KEY");
-    }
-    _stripe = new Stripe(key);
+function getStripe(livemode: boolean): Stripe {
+  const slot = livemode ? "live" : "test";
+  const cached = _clients[slot];
+  if (cached) return cached;
+
+  const key = livemode
+    ? process.env.STRIPE_SECRET_KEY_LIVE
+    : process.env.STRIPE_SECRET_KEY_TEST;
+  if (!key) {
+    throw new Error(
+      `Missing ${livemode ? "STRIPE_SECRET_KEY_LIVE" : "STRIPE_SECRET_KEY_TEST"}`,
+    );
   }
-  return _stripe;
+  const fresh = new Stripe(key);
+  _clients[slot] = fresh;
+  return fresh;
 }
 
 export async function listDisputes(
+  livemode: boolean,
   accountId: string,
   params?: Stripe.DisputeListParams,
 ): Promise<Stripe.Dispute[]> {
-  const resp = await getStripe().disputes.list(
+  const resp = await getStripe(livemode).disputes.list(
     { limit: 100, ...params },
     { stripeAccount: accountId },
   );
@@ -25,11 +36,12 @@ export async function listDisputes(
 }
 
 export async function getDispute(
+  livemode: boolean,
   accountId: string,
   disputeId: string,
   expand?: string[],
 ): Promise<Stripe.Dispute> {
-  return getStripe().disputes.retrieve(
+  return getStripe(livemode).disputes.retrieve(
     disputeId,
     { expand },
     { stripeAccount: accountId },
@@ -37,10 +49,11 @@ export async function getDispute(
 }
 
 export async function getCharge(
+  livemode: boolean,
   accountId: string,
   chargeId: string,
 ): Promise<Stripe.Charge> {
-  return getStripe().charges.retrieve(
+  return getStripe(livemode).charges.retrieve(
     chargeId,
     undefined,
     { stripeAccount: accountId },
@@ -48,10 +61,11 @@ export async function getCharge(
 }
 
 export async function getCustomer(
+  livemode: boolean,
   accountId: string,
   customerId: string,
 ): Promise<Stripe.Customer | Stripe.DeletedCustomer> {
-  return getStripe().customers.retrieve(
+  return getStripe(livemode).customers.retrieve(
     customerId,
     undefined,
     { stripeAccount: accountId },
@@ -59,10 +73,11 @@ export async function getCustomer(
 }
 
 export async function getPaymentIntent(
+  livemode: boolean,
   accountId: string,
   piId: string,
 ): Promise<Stripe.PaymentIntent> {
-  return getStripe().paymentIntents.retrieve(
+  return getStripe(livemode).paymentIntents.retrieve(
     piId,
     undefined,
     { stripeAccount: accountId },
@@ -70,29 +85,25 @@ export async function getPaymentIntent(
 }
 
 export async function submitDispute(
+  livemode: boolean,
   accountId: string,
   disputeId: string,
   evidence: Stripe.DisputeUpdateParams.Evidence,
   idempotencyKey: string,
 ): Promise<Stripe.Dispute> {
-  return getStripe().disputes.update(
+  return getStripe(livemode).disputes.update(
     disputeId,
     { evidence, submit: true },
     { idempotencyKey, stripeAccount: accountId },
   );
 }
 
-/**
- * Download an existing Stripe File by ID as a Buffer. Uses the file's short-lived
- * URL from files.retrieve(). The file lives on the installing merchant's
- * account, so both the retrieve call and the URL fetch must be scoped via
- * Stripe-Account.
- */
 export async function downloadStripeFile(
+  livemode: boolean,
   accountId: string,
   fileId: string,
 ): Promise<Buffer> {
-  const file = await getStripe().files.retrieve(
+  const file = await getStripe(livemode).files.retrieve(
     fileId,
     undefined,
     { stripeAccount: accountId },
@@ -100,9 +111,12 @@ export async function downloadStripeFile(
   if (!file.url) {
     throw new Error(`Stripe file ${fileId} has no URL`);
   }
+  const key = livemode
+    ? process.env.STRIPE_SECRET_KEY_LIVE
+    : process.env.STRIPE_SECRET_KEY_TEST;
   const res = await fetch(file.url, {
     headers: {
-      Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`,
+      Authorization: `Bearer ${key}`,
       "Stripe-Account": accountId,
     },
   });
@@ -115,16 +129,13 @@ export async function downloadStripeFile(
   return Buffer.from(arrayBuffer);
 }
 
-/**
- * Upload a combined PDF to Stripe Files as dispute evidence on the installing
- * merchant's account. Returns the new file_id.
- */
 export async function uploadCombinedEvidence(
+  livemode: boolean,
   accountId: string,
   pdf: Buffer,
   filename: string,
 ): Promise<string> {
-  const file = await getStripe().files.create(
+  const file = await getStripe(livemode).files.create(
     {
       purpose: "dispute_evidence",
       file: {
@@ -136,4 +147,13 @@ export async function uploadCombinedEvidence(
     { stripeAccount: accountId },
   );
   return file.id;
+}
+
+/**
+ * Test-only: drop the cached Stripe instances. Lets unit tests swap env
+ * values between cases without seeing a stale client.
+ */
+export function __resetStripeClientsForTests(): void {
+  _clients.live = null;
+  _clients.test = null;
 }

@@ -12,7 +12,7 @@ import {
 
 export const GET = withStripeAuth(async (
   request: NextRequest,
-  { identity },
+  { identity, livemode },
 ) => {
   const { accountId, userId } = identity;
   const segments = request.nextUrl.pathname.split("/");
@@ -28,6 +28,7 @@ export const GET = withStripeAuth(async (
   await ensureMerchant(accountId, userId);
 
   const { data: dispute } = await getDisputeForAccount<{ id: string }>(
+    livemode,
     disputeId,
     accountId,
     "id",
@@ -55,7 +56,7 @@ export const GET = withStripeAuth(async (
 
 export const POST = withStripeAuth(async (
   request: NextRequest,
-  { identity, body },
+  { identity, body, livemode },
 ) => {
   const { accountId, userId } = identity;
   const segments = request.nextUrl.pathname.split("/");
@@ -81,6 +82,7 @@ export const POST = withStripeAuth(async (
   // If no file fields provided, treat as a list request
   if (!checklist_item_key && !stripe_file_id && !file_name) {
     const { data: dispute } = await getDisputeForAccount<{ id: string }>(
+      livemode,
       disputeId,
       accountId,
       "id",
@@ -120,6 +122,7 @@ export const POST = withStripeAuth(async (
   // If it doesn't exist yet, fail loudly instead of inserting a zombie
   // row with zero values (WIN-41).
   const { data: existing } = await getDisputeForAccount<{ id: string }>(
+    livemode,
     disputeId,
     accountId,
     "id",
@@ -138,7 +141,7 @@ export const POST = withStripeAuth(async (
 
   // Expired/closed guard (WIN-48)
   try {
-    const stripeDispute = await getDispute(accountId, disputeId);
+    const stripeDispute = await getDispute(livemode, accountId, disputeId);
     if (!isDisputeSubmittable(stripeDispute)) {
       return disputeExpiredResponse(stripeDispute);
     }
@@ -168,6 +171,7 @@ export const POST = withStripeAuth(async (
         file_size: file_size ?? null,
         mime_type: mime_type ?? null,
         file_path: stripe_file_id,
+        livemode,
       },
       { onConflict: "dispute_id,checklist_item_key" },
     )

@@ -9,7 +9,7 @@ type NarrativeOutput = {
 
 export const POST = withStripeAuth(async (
   request: NextRequest,
-  { identity },
+  { identity, livemode },
 ) => {
   const { accountId } = identity;
 
@@ -36,6 +36,7 @@ export const POST = withStripeAuth(async (
       "id, status, dispute_id, narrative_output, error, disputes!inner(merchants!inner(stripe_account_id))",
     )
     .eq("id", generationId)
+    .eq("livemode", livemode)
     .eq("disputes.merchants.stripe_account_id", accountId)
     .maybeSingle();
 

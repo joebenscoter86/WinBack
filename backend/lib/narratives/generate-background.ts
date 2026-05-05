@@ -9,6 +9,7 @@ import type { PromptContext, EvidenceFileRef } from "@/lib/prompts/types";
 
 export interface BackgroundGenerationParams {
   generationId: string;
+  livemode: boolean;
   accountId: string;       // Stripe account id (for Connect-scoped fetches)
   disputeId: string;       // internal UUID from disputes table
   stripeDisputeId: string; // dp_xxx
@@ -66,6 +67,7 @@ export async function runBackgroundGeneration(
 ): Promise<void> {
   const {
     generationId,
+    livemode,
     accountId,
     disputeId,
     stripeDisputeId,
@@ -99,7 +101,7 @@ export async function runBackgroundGeneration(
     // AVS/CVC/3DS/authorization/refund data the merchant sees in the Review
     // tab. Same code path the Review tab uses (normalizeDispute), so the two
     // surfaces can't drift. See WIN-44.
-    const stripeDispute = await getDispute(accountId, stripeDisputeId, [
+    const stripeDispute = await getDispute(livemode, accountId, stripeDisputeId, [
       "charge.customer",
       "payment_intent",
     ]);

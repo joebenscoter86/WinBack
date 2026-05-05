@@ -125,7 +125,7 @@ async function failSubmission(
 }
 
 export const POST = withStripeAuth(
-  async (request: NextRequest, { identity }) => {
+  async (request: NextRequest, { identity, livemode }) => {
     const { accountId, userId } = identity;
 
     // Extract disputeId from path: /api/disputes/[disputeId]/submit
@@ -146,6 +146,7 @@ export const POST = withStripeAuth(
       reason_code: string;
       narrative_text: string | null;
     }>(
+      livemode,
       stripeDisputeId,
       accountId,
       "id, stripe_dispute_id, network, reason_code, narrative_text",
@@ -193,7 +194,7 @@ export const POST = withStripeAuth(
     let stripeDispute: Stripe.Dispute;
     let stripeCharge: Stripe.Charge;
     try {
-      stripeDispute = await getDispute(accountId, stripeDisputeId, ["charge"]);
+      stripeDispute = await getDispute(livemode, accountId, stripeDisputeId, ["charge"]);
 
       const chargeOrId = stripeDispute.charge;
       const chargeId =
@@ -209,7 +210,7 @@ export const POST = withStripeAuth(
 
       stripeCharge =
         typeof chargeOrId === "string"
-          ? await getCharge(accountId, chargeId)
+          ? await getCharge(livemode, accountId, chargeId)
           : (chargeOrId as Stripe.Charge);
     } catch (err) {
       if (err instanceof Stripe.errors.StripeError) {
@@ -388,9 +389,9 @@ export const POST = withStripeAuth(
         evidenceFiles,
         narrativeText,
         stripeClient: {
-          downloadStripeFile: (fileId) => downloadStripeFile(accountId, fileId),
+          downloadStripeFile: (fileId) => downloadStripeFile(livemode, accountId, fileId),
           uploadCombinedEvidence: (pdf, filename) =>
-            uploadCombinedEvidence(accountId, pdf, filename),
+            uploadCombinedEvidence(livemode, accountId, pdf, filename),
         },
       });
     } catch (err) {
@@ -439,6 +440,7 @@ export const POST = withStripeAuth(
         status: "pending",
         evidence_payload: evidence as unknown as Record<string, unknown>,
         warnings: allWarnings,
+        livemode,
       })
       .select("id")
       .single();
@@ -472,6 +474,7 @@ export const POST = withStripeAuth(
     let result: Stripe.Dispute;
     try {
       result = await submitDispute(
+        livemode,
         accountId,
         stripeDisputeId,
         evidence,
@@ -486,6 +489,7 @@ export const POST = withStripeAuth(
         try {
           // Retry once with the same idempotency key — Stripe will deduplicate
           result = await submitDispute(
+            livemode,
             accountId,
             stripeDisputeId,
             evidence,

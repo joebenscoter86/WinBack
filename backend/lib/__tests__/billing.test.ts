@@ -51,8 +51,12 @@ const MERCHANT_ID = "m-1";
 
 function setRequiredEnvVars() {
   process.env.STRIPE_SECRET_KEY = "sk_test_x";
+  process.env.STRIPE_SECRET_KEY_LIVE = "sk_live_test_placeholder";
+  process.env.STRIPE_SECRET_KEY_TEST = "sk_test_placeholder";
   process.env.STRIPE_APP_SECRET = "absec_x";
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_x";
+  process.env.STRIPE_WEBHOOK_SECRET_LIVE = "whsec_live_placeholder";
+  process.env.STRIPE_WEBHOOK_SECRET_TEST = "whsec_test_placeholder";
   process.env.STRIPE_BILLING_WEBHOOK_SECRET = "whsec_b";
   process.env.STRIPE_PRICE_PRO_MONTHLY = "price_pro";
   process.env.STRIPE_PRICE_USAGE_FEE = "price_usage";
