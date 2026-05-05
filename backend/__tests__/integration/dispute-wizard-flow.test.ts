@@ -443,9 +443,9 @@ describe("WIN-43: dispute wizard integration flow", () => {
     expect(submissions![0].status).toBe("succeeded");
 
     // Verify submitDispute was called correctly.
-    // submitDispute(accountId, disputeId, evidence, idempotencyKey)
+    // submitDispute(livemode, accountId, disputeId, evidence, idempotencyKey)
     expect(mockSubmitDispute).toHaveBeenCalledOnce();
-    const [, calledDisputeId, calledEvidence, calledIdempotencyKey] =
+    const [, , calledDisputeId, calledEvidence, calledIdempotencyKey] =
       mockSubmitDispute.mock.calls[0];
     expect(calledDisputeId).toBe(TEST_DISPUTE_ID);
     expect(calledEvidence).toEqual(
@@ -662,10 +662,10 @@ describe("WIN-43: dispute wizard integration flow", () => {
     // Both source files were downloaded prior to concat.
     expect(mockDownload).toHaveBeenCalledTimes(2);
 
-    // submitDispute(accountId, disputeId, evidence, idempotencyKey) — assert
+    // submitDispute(livemode, accountId, disputeId, evidence, idempotencyKey) — assert
     // the combined file id lands in customer_communication.
     expect(mockSubmitDispute).toHaveBeenCalledOnce();
-    const [, calledDisputeId, calledEvidence] =
+    const [, , calledDisputeId, calledEvidence] =
       mockSubmitDispute.mock.calls[0];
     expect(calledDisputeId).toBe(CONCAT_DISPUTE_ID);
     expect(calledEvidence).toEqual(
@@ -752,6 +752,7 @@ describe("Inquiry → chargeback escalation", () => {
       id: "evt_test_escalation",
       type: "charge.dispute.updated" as const,
       created: Math.floor(Date.now() / 1000),
+      livemode: false,
       data: {
         object: {
           id: TEST_DISPUTE_ID,
@@ -849,6 +850,7 @@ describe("Inquiry → chargeback escalation", () => {
       id: "evt_test_escalation_2",
       type: "charge.dispute.updated" as const,
       created: Math.floor(Date.now() / 1000),
+      livemode: false,
       data: {
         object: {
           id: TEST_DISPUTE_ID,
