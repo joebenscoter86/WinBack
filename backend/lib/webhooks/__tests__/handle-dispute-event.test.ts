@@ -190,11 +190,13 @@ describe("handleDisputeEvent", () => {
           return {
             select: () => ({
               eq: () => ({
-                maybeSingle: () =>
-                  Promise.resolve({
-                    data: opts.existingDispute,
-                    error: opts.selectError ?? null,
-                  }),
+                eq: () => ({
+                  maybeSingle: () =>
+                    Promise.resolve({
+                      data: opts.existingDispute,
+                      error: opts.selectError ?? null,
+                    }),
+                }),
               }),
             }),
             upsert: upsertSpy,

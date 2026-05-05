@@ -126,6 +126,7 @@ export async function handleDisputeEvent(
       .from("disputes")
       .select("id, status, evidence_submitted_at")
       .eq("stripe_dispute_id", dispute.id)
+      .eq("livemode", event.livemode)
       .maybeSingle();
 
     if (existingErr) {
