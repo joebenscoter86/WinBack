@@ -11,12 +11,18 @@ vi.mock("stripe", () => {
   return { default: StripeMock };
 });
 
-import { downloadStripeFile, uploadCombinedEvidence } from "../client";
+import {
+  downloadStripeFile,
+  uploadCombinedEvidence,
+  __resetStripeClientsForTests,
+} from "../client";
 
 describe("downloadStripeFile", () => {
   beforeEach(() => {
     retrieveMock.mockReset();
-    process.env.STRIPE_SECRET_KEY = "sk_test_123";
+    process.env.STRIPE_SECRET_KEY_TEST = "sk_test_123";
+    process.env.STRIPE_SECRET_KEY_LIVE = "sk_live_123";
+    __resetStripeClientsForTests();
   });
 
   it("scopes retrieve and fetch to the merchant's account and returns bytes", async () => {
@@ -30,7 +36,7 @@ describe("downloadStripeFile", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await downloadStripeFile("acct_merchant_1", "file_abc");
+    const result = await downloadStripeFile(false, "acct_merchant_1", "file_abc");
 
     expect(retrieveMock).toHaveBeenCalledWith(
       "file_abc",
@@ -54,7 +60,7 @@ describe("downloadStripeFile", () => {
 
   it("throws when the file has no URL", async () => {
     retrieveMock.mockResolvedValue({ id: "file_abc", url: null });
-    await expect(downloadStripeFile("acct_merchant_1", "file_abc")).rejects.toThrow(/no URL/);
+    await expect(downloadStripeFile(false, "acct_merchant_1", "file_abc")).rejects.toThrow(/no URL/);
   });
 
   it("throws when the download fails", async () => {
@@ -67,7 +73,7 @@ describe("downloadStripeFile", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(downloadStripeFile("acct_merchant_1", "file_abc")).rejects.toThrow(/403/);
+    await expect(downloadStripeFile(false, "acct_merchant_1", "file_abc")).rejects.toThrow(/403/);
 
     vi.unstubAllGlobals();
   });
@@ -76,14 +82,16 @@ describe("downloadStripeFile", () => {
 describe("uploadCombinedEvidence", () => {
   beforeEach(() => {
     createMock.mockReset();
-    process.env.STRIPE_SECRET_KEY = "sk_test_123";
+    process.env.STRIPE_SECRET_KEY_TEST = "sk_test_123";
+    process.env.STRIPE_SECRET_KEY_LIVE = "sk_live_123";
+    __resetStripeClientsForTests();
   });
 
   it("uploads a PDF buffer scoped to the merchant's account and returns the new file_id", async () => {
     createMock.mockResolvedValue({ id: "file_new" });
     const pdf = Buffer.from("%PDF-1.4 fake");
 
-    const id = await uploadCombinedEvidence("acct_merchant_1", pdf, "combined-evidence.pdf");
+    const id = await uploadCombinedEvidence(false, "acct_merchant_1", pdf, "combined-evidence.pdf");
 
     expect(id).toBe("file_new");
     expect(createMock).toHaveBeenCalledTimes(1);
