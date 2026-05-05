@@ -78,9 +78,15 @@ describe("withStripeAuth", () => {
     const body = JSON.stringify({
       user_id: "usr_123",
       account_id: "acct_456",
+      livemode: false,
+    });
+    // Signature covers {user_id, account_id} only, in that exact order.
+    const signedPayload = JSON.stringify({
+      user_id: "usr_123",
+      account_id: "acct_456",
     });
     const sig = stripe.webhooks.generateTestHeaderString({
-      payload: body,
+      payload: signedPayload,
       secret: TEST_APP_SECRET,
     });
     const request = makeRequest(body, sig);
