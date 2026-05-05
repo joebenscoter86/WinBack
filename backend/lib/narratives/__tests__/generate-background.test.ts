@@ -90,6 +90,7 @@ import type { BackgroundGenerationParams } from "../generate-background";
 
 const PARAMS: BackgroundGenerationParams = {
   generationId: "gen-uuid-001",
+  livemode: false,
   accountId: "acct_test_001",
   disputeId: "dispute-uuid-001",
   stripeDisputeId: "dp_test_001",
@@ -251,6 +252,7 @@ describe("runBackgroundGeneration", () => {
     await runBackgroundGeneration(PARAMS);
 
     expect(mockGetDispute).toHaveBeenCalledWith(
+      false,
       "acct_test_001",
       "dp_test_001",
       ["charge.customer", "payment_intent"],
