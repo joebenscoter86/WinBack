@@ -6,7 +6,7 @@ import { getDisputeForAccount } from "@/lib/disputes";
 
 export const POST = withStripeAuth(async (
   request: NextRequest,
-  { identity },
+  { identity, livemode },
 ) => {
   const { accountId, userId } = identity;
   const segments = request.nextUrl.pathname.split("/");
@@ -24,6 +24,7 @@ export const POST = withStripeAuth(async (
 
   // Merchant-scoped dispute lookup (WIN-42)
   const { data: dispute } = await getDisputeForAccount<{ id: string }>(
+    livemode,
     disputeId,
     accountId,
     "id",
