@@ -87,6 +87,7 @@ describe("env module", () => {
   });
 
   describe("livemode env vars", () => {
+    // Override with distinguishable values so the assertion proves we're returning the right slot
     function setModeScopedVars() {
       process.env.STRIPE_SECRET_KEY_LIVE = "sk_live_a";
       process.env.STRIPE_SECRET_KEY_TEST = "sk_test_a";
@@ -103,7 +104,7 @@ describe("env module", () => {
       const { readEnv } = await import("../env");
       // All four missing-var names should appear in the single error message.
       expect(() => readEnv()).toThrow(
-        /STRIPE_SECRET_KEY_LIVE.*STRIPE_SECRET_KEY_TEST.*STRIPE_WEBHOOK_SECRET_LIVE.*STRIPE_WEBHOOK_SECRET_TEST/
+        /STRIPE_SECRET_KEY_LIVE.*STRIPE_SECRET_KEY_TEST.*STRIPE_WEBHOOK_SECRET_LIVE.*STRIPE_WEBHOOK_SECRET_TEST/s
       );
     });
 

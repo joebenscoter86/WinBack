@@ -86,6 +86,10 @@ export function readEnv(): Env {
   };
 }
 
+/**
+ * Cached read — call once in module scope to fail fast at boot.
+ * Safe to import anywhere; throws synchronously if env is bad.
+ */
 let _cached: Env | null = null;
 export function env(): Env {
   if (_cached) return _cached;
@@ -93,6 +97,7 @@ export function env(): Env {
   return _cached;
 }
 
+/** Test-only: reset the cache so tests can mutate env between cases. */
 export function __resetEnvCacheForTests(): void {
   _cached = null;
 }
