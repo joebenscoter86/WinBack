@@ -9,8 +9,12 @@
 
 export type Env = {
   STRIPE_SECRET_KEY: string;
+  STRIPE_SECRET_KEY_LIVE: string;
+  STRIPE_SECRET_KEY_TEST: string;
   STRIPE_APP_SECRET: string;
   STRIPE_WEBHOOK_SECRET: string;
+  STRIPE_WEBHOOK_SECRET_LIVE: string;
+  STRIPE_WEBHOOK_SECRET_TEST: string;
   STRIPE_BILLING_WEBHOOK_SECRET: string;
   STRIPE_PRICE_PRO_MONTHLY: string;
   STRIPE_PRICE_USAGE_FEE: string;
@@ -23,8 +27,12 @@ export type Env = {
 
 const REQUIRED_KEYS = [
   "STRIPE_SECRET_KEY",
+  "STRIPE_SECRET_KEY_LIVE",
+  "STRIPE_SECRET_KEY_TEST",
   "STRIPE_APP_SECRET",
   "STRIPE_WEBHOOK_SECRET",
+  "STRIPE_WEBHOOK_SECRET_LIVE",
+  "STRIPE_WEBHOOK_SECRET_TEST",
   "STRIPE_BILLING_WEBHOOK_SECRET",
   "STRIPE_PRICE_PRO_MONTHLY",
   "STRIPE_PRICE_USAGE_FEE",
@@ -61,8 +69,12 @@ export function readEnv(): Env {
 
   return {
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY!,
+    STRIPE_SECRET_KEY_LIVE: process.env.STRIPE_SECRET_KEY_LIVE!,
+    STRIPE_SECRET_KEY_TEST: process.env.STRIPE_SECRET_KEY_TEST!,
     STRIPE_APP_SECRET: process.env.STRIPE_APP_SECRET!,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET!,
+    STRIPE_WEBHOOK_SECRET_LIVE: process.env.STRIPE_WEBHOOK_SECRET_LIVE!,
+    STRIPE_WEBHOOK_SECRET_TEST: process.env.STRIPE_WEBHOOK_SECRET_TEST!,
     STRIPE_BILLING_WEBHOOK_SECRET: process.env.STRIPE_BILLING_WEBHOOK_SECRET!,
     STRIPE_PRICE_PRO_MONTHLY: process.env.STRIPE_PRICE_PRO_MONTHLY!,
     STRIPE_PRICE_USAGE_FEE: process.env.STRIPE_PRICE_USAGE_FEE!,
@@ -74,10 +86,6 @@ export function readEnv(): Env {
   };
 }
 
-/**
- * Cached read — call once in module scope to fail fast at boot.
- * Safe to import anywhere; throws synchronously if env is bad.
- */
 let _cached: Env | null = null;
 export function env(): Env {
   if (_cached) return _cached;
@@ -85,7 +93,6 @@ export function env(): Env {
   return _cached;
 }
 
-/** Test-only: reset the cache so tests can mutate env between cases. */
 export function __resetEnvCacheForTests(): void {
   _cached = null;
 }

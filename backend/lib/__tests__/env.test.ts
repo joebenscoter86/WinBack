@@ -19,8 +19,12 @@ describe("env module", () => {
 
   function setRequiredVars() {
     process.env.STRIPE_SECRET_KEY = "sk_test_x";
+    process.env.STRIPE_SECRET_KEY_LIVE = "sk_live_x";
+    process.env.STRIPE_SECRET_KEY_TEST = "sk_test_x";
     process.env.STRIPE_APP_SECRET = "absec_x";
     process.env.STRIPE_WEBHOOK_SECRET = "whsec_x";
+    process.env.STRIPE_WEBHOOK_SECRET_LIVE = "whsec_live_x";
+    process.env.STRIPE_WEBHOOK_SECRET_TEST = "whsec_test_x";
     process.env.STRIPE_BILLING_WEBHOOK_SECRET = "whsec_b";
     process.env.STRIPE_PRICE_PRO_MONTHLY = "price_pro";
     process.env.STRIPE_PRICE_USAGE_FEE = "price_usage";
@@ -80,5 +84,38 @@ describe("env module", () => {
     process.env.UPGRADE_LINK_SECRET = "tooshort";
     const { readEnv } = await import("../env");
     expect(() => readEnv()).toThrow(/UPGRADE_LINK_SECRET.*32/);
+  });
+
+  describe("livemode env vars", () => {
+    function setModeScopedVars() {
+      process.env.STRIPE_SECRET_KEY_LIVE = "sk_live_a";
+      process.env.STRIPE_SECRET_KEY_TEST = "sk_test_a";
+      process.env.STRIPE_WEBHOOK_SECRET_LIVE = "whsec_live_a";
+      process.env.STRIPE_WEBHOOK_SECRET_TEST = "whsec_test_a";
+    }
+
+    it("requires STRIPE_SECRET_KEY_LIVE/_TEST and STRIPE_WEBHOOK_SECRET_LIVE/_TEST", async () => {
+      setRequiredVars();
+      delete process.env.STRIPE_SECRET_KEY_LIVE;
+      delete process.env.STRIPE_SECRET_KEY_TEST;
+      delete process.env.STRIPE_WEBHOOK_SECRET_LIVE;
+      delete process.env.STRIPE_WEBHOOK_SECRET_TEST;
+      const { readEnv } = await import("../env");
+      // All four missing-var names should appear in the single error message.
+      expect(() => readEnv()).toThrow(
+        /STRIPE_SECRET_KEY_LIVE.*STRIPE_SECRET_KEY_TEST.*STRIPE_WEBHOOK_SECRET_LIVE.*STRIPE_WEBHOOK_SECRET_TEST/
+      );
+    });
+
+    it("returns the mode-scoped values when present", async () => {
+      setRequiredVars();
+      setModeScopedVars();
+      const { readEnv } = await import("../env");
+      const e = readEnv();
+      expect(e.STRIPE_SECRET_KEY_LIVE).toBe("sk_live_a");
+      expect(e.STRIPE_SECRET_KEY_TEST).toBe("sk_test_a");
+      expect(e.STRIPE_WEBHOOK_SECRET_LIVE).toBe("whsec_live_a");
+      expect(e.STRIPE_WEBHOOK_SECRET_TEST).toBe("whsec_test_a");
+    });
   });
 });
