@@ -8,7 +8,7 @@ import Stripe from "stripe";
 
 export const POST = withStripeAuth(async (
   request: NextRequest,
-  { identity },
+  { identity, livemode },
 ) => {
   const { accountId, userId } = identity;
   const disputeId = request.nextUrl.pathname.split("/").at(-1);
@@ -26,7 +26,7 @@ export const POST = withStripeAuth(async (
   await ensureMerchant(accountId, userId);
 
   try {
-    const dispute = await getDispute(accountId, disputeId, [
+    const dispute = await getDispute(livemode, accountId, disputeId, [
       "charge.customer",
       "payment_intent",
     ]);
@@ -76,6 +76,7 @@ export const POST = withStripeAuth(async (
             customer_name: normalized.customer_name ?? null,
             transaction_date: transactionDate,
             response_deadline: responseDeadline,
+            livemode,
             updated_at: new Date().toISOString(),
           },
           { onConflict: "stripe_dispute_id" },
@@ -93,6 +94,7 @@ export const POST = withStripeAuth(async (
           .from("disputes")
           .update({ viewed_at: new Date().toISOString() })
           .eq("stripe_dispute_id", normalized.id)
+          .eq("livemode", livemode)
           .is("viewed_at", null);
 
         // Hydrate persisted narrative + submission + checklist state so the
@@ -104,6 +106,7 @@ export const POST = withStripeAuth(async (
           checklist_state: Record<string, boolean> | null;
           checklist_notes: Record<string, string> | null;
         }>(
+          livemode,
           normalized.id,
           accountId,
           "narrative_text, evidence_submitted_at, checklist_state, checklist_notes",
@@ -142,7 +145,7 @@ export const POST = withStripeAuth(async (
 
 export const PATCH = withStripeAuth(async (
   request: NextRequest,
-  { identity, body },
+  { identity, body, livemode },
 ) => {
   const { accountId, userId } = identity;
   const disputeId = request.nextUrl.pathname.split("/").at(-1);
@@ -184,6 +187,7 @@ export const PATCH = withStripeAuth(async (
 
   // Verify the dispute belongs to this merchant before updating (WIN-42).
   const { data: scoped } = await getDisputeForAccount<{ id: string }>(
+    livemode,
     disputeId,
     accountId,
     "id",
@@ -225,6 +229,7 @@ export const PATCH = withStripeAuth(async (
         merchant_id: (merchant as { id: string } | null)?.id,
         amount: 0,
         reason_code: "",
+        livemode,
         ...updatePayload,
       },
       { onConflict: "stripe_dispute_id" },
