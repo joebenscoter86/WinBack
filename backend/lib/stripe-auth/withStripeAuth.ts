@@ -67,6 +67,7 @@ export function withStripeAuth<
       scope.setUser({ id: verified.identity.userId });
       scope.setTag("merchant_id", verified.identity.accountId);
       scope.setTag("stripe_user_id", verified.identity.userId);
+      scope.setTag("livemode", String(verified.livemode));
       return handler(request, verified);
     });
   };
