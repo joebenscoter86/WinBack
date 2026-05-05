@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 vi.mock("@/lib/stripe-auth", () => ({
-  withStripeAuth: (handler: (req: NextRequest, ctx: { identity: { userId: string; accountId: string }; body: unknown }) => Promise<Response>) => async (req: NextRequest) => {
+  withStripeAuth: (handler: (req: NextRequest, ctx: { identity: { userId: string; accountId: string }; body: unknown; livemode: boolean }) => Promise<Response>) => async (req: NextRequest) => {
     let body = {};
     try {
       body = await req.clone().json();
@@ -10,6 +10,7 @@ vi.mock("@/lib/stripe-auth", () => ({
     return handler(req, {
       identity: { userId: "usr_test", accountId: "acct_test" },
       body,
+      livemode: false,
     });
   },
 }));
@@ -34,7 +35,9 @@ function makeMockFrom(table: string) {
       select: () => ({
         eq: () => ({
           eq: () => ({
-            maybeSingle: () => Promise.resolve(mockGenerationResult),
+            eq: () => ({
+              maybeSingle: () => Promise.resolve(mockGenerationResult),
+            }),
           }),
         }),
       }),
