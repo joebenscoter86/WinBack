@@ -1,5 +1,7 @@
 # Live/Test Mode Data Isolation Implementation Plan
 
+> **🛑 EXECUTION IN PROGRESS.** Read [`2026-05-04-livemode-isolation-CARRYOVER.md`](./2026-05-04-livemode-isolation-CARRYOVER.md) first for current state. Tasks 1-7 are done on branch `feat/livemode-isolation` in worktree `/Users/joeb/Projects/WinBack-livemode/`. Migration 022 SQL is committed but NOT applied to dev Supabase. Resume at Task 8.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make every connect-account-scoped Stripe API call mode-aware so that requests from a Live mode dashboard see only Live data and requests from Test mode see only Test data, eliminating the bug Stripe's marketplace review found in v1.1.6 (Test mode disputes appearing in a Live mode app drawer).
