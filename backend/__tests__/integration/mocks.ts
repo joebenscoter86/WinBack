@@ -83,6 +83,10 @@ vi.mock("@/lib/stripe-auth", () => ({
       return handler(req, {
         identity: { userId: TEST_USER_ID, accountId: TEST_ACCOUNT_ID },
         body,
+        livemode:
+          typeof (body as { livemode?: unknown }).livemode === "boolean"
+            ? (body as { livemode: boolean }).livemode
+            : false,
       });
     },
   fetchStripeSignature: vi.fn(),
