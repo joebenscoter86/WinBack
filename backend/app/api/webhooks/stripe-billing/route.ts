@@ -55,6 +55,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       event_id: event.id,
       event_type: event.type,
       account_id: null,
+      livemode: event.livemode,
       status: "pending",
     });
 
