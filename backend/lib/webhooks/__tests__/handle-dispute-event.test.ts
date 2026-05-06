@@ -32,12 +32,18 @@ function makeDispute(overrides: Partial<Stripe.Dispute> = {}): Stripe.Dispute {
   } as unknown as Stripe.Dispute;
 }
 
-function makeEvent(type: Stripe.Event.Type, dispute: Stripe.Dispute): Stripe.Event {
+function makeEvent(
+  type: Stripe.Event.Type,
+  dispute: Stripe.Dispute,
+  overrides: Partial<Stripe.Event> = {},
+): Stripe.Event {
   return {
     id: "evt_test",
     type,
     created: 1690000100,
+    livemode: true,
     data: { object: dispute },
+    ...overrides,
   } as unknown as Stripe.Event;
 }
 
@@ -138,6 +144,23 @@ describe("handleDisputeEvent", () => {
       makeEvent("charge.dispute.closed", makeDispute({ status: "lost" })),
       ACCOUNT_ID,
     );
+    expect(billingMock.reportDisputeWonFee).not.toHaveBeenCalled();
+  });
+
+  // WIN-76: a test-mode dispute that closes as won must NOT post a meter event.
+  // Without this guard, a merchant who flips their dashboard to test mode and
+  // wins a fake dispute would charge real money against their live success-fee
+  // subscription.
+  it("does NOT report success fee for test-mode wins", async () => {
+    await handleDisputeEvent(
+      makeEvent(
+        "charge.dispute.closed",
+        makeDispute({ status: "won", amount: 10000 }),
+        { livemode: false },
+      ),
+      ACCOUNT_ID,
+    );
+    expect(upsertSpy).toHaveBeenCalledOnce();
     expect(billingMock.reportDisputeWonFee).not.toHaveBeenCalled();
   });
 

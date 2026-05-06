@@ -87,7 +87,14 @@ export async function handleDisputeEvent(
     // Meter events are idempotent via `identifier` (keyed by dispute_id), so
     // webhook retries or reconciliation replays never double-charge. Pro
     // merchants (post pro_since_at) skip metering entirely.
+    //
+    // WIN-76: skip metering for test-mode wins. v1.1.7 made WinBack serve both
+    // test- and live-mode disputes for the same merchant, so a merchant who
+    // flips their dashboard to test mode and "wins" a fake dispute would
+    // otherwise post a real Stripe Billing meter event against their live
+    // success-fee subscription.
     if (dispute.status === "won" && merchantRow.billing_tier === "usage") {
+      if (!event.livemode) return;
       try {
         await reportDisputeWonFee({
           merchantId,
