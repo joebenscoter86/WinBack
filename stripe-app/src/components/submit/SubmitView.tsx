@@ -262,7 +262,7 @@ export default function SubmitView({
           setShown={(open) => { if (!open) setPmGateOpen(false); }}
           primaryAction={
             pmSetupUrl ? (
-              <Link href={pmSetupUrl} target="_blank" type="primary">
+              <Link href={pmSetupUrl} target="_blank" external type="primary">
                 Add payment method
               </Link>
             ) : (

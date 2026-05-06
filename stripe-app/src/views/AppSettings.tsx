@@ -244,7 +244,7 @@ const AppSettings = (context: ExtensionContextValue) => {
             actions={
               <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
                 {setupUrl ? (
-                  <Link href={setupUrl} target="_blank" type="primary">
+                  <Link href={setupUrl} target="_blank" external type="primary">
                     Add payment method
                   </Link>
                 ) : (
@@ -315,7 +315,7 @@ const AppSettings = (context: ExtensionContextValue) => {
               )}
               <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
                 {upgradeUrl ? (
-                  <Link href={upgradeUrl} target="_blank" type="primary">
+                  <Link href={upgradeUrl} target="_blank" external type="primary">
                     Upgrade to Pro
                   </Link>
                 ) : (
@@ -351,7 +351,7 @@ const AppSettings = (context: ExtensionContextValue) => {
               )}
               <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
                 {portalUrl ? (
-                  <Link href={portalUrl} target="_blank" type="primary">
+                  <Link href={portalUrl} target="_blank" external type="primary">
                     Manage subscription
                   </Link>
                 ) : (
@@ -397,7 +397,8 @@ const AppSettings = (context: ExtensionContextValue) => {
           <Inline css={{ font: 'heading', fontWeight: 'semibold' }}>
             About WinBack
           </Inline>
-          <Inline css={{ font: 'body' }}>Version 0.0.1</Inline>
+          {/* Keep in sync with version in stripe-app/stripe-app.json on every release. */}
+          <Inline css={{ font: 'body' }}>Version 1.1.7</Inline>
           <Inline css={{ font: 'caption', color: 'secondary' }}>
             Guided dispute resolution for Stripe merchants. Built by JKB Tech.
           </Inline>

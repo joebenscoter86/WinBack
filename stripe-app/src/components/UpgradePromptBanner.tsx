@@ -109,7 +109,7 @@ const UpgradePromptBanner = ({ context }: Props) => {
         actions={
           <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
             {upgradeUrl ? (
-              <Link href={upgradeUrl} target="_blank" type="primary">
+              <Link href={upgradeUrl} target="_blank" external type="primary">
                 Upgrade to Pro
               </Link>
             ) : (

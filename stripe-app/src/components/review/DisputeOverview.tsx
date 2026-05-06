@@ -88,7 +88,7 @@ const DisputeOverview = ({ dispute, loading }: DisputeOverviewProps) => {
           {dispute.receipt_url && (
             <InfoRow
               label="Receipt"
-              value={<Link href={dispute.receipt_url} target="_blank">View receipt</Link>}
+              value={<Link href={dispute.receipt_url} target="_blank" external>View receipt</Link>}
             />
           )}
           {dispute.metadata && Object.keys(dispute.metadata).length > 0 && (
