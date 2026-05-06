@@ -63,13 +63,39 @@ async function getMerchant(merchantId: string): Promise<MerchantBillingRow> {
 /**
  * Ensure the merchant has a Stripe Customer on OUR platform account. Idempotent.
  * Returns the customer ID. Writes it back to merchants on first create.
+ *
+ * Resilience: if a cached `stripe_billing_customer_id` no longer exists in the
+ * current Stripe account (e.g. after a platform account migration, or if the
+ * customer was deleted out-of-band), we transparently clear the stale id and
+ * create a fresh customer. Without this guard, every downstream API call
+ * (`subscriptions.create`, `meterEvents.create`, etc.) would hard-fail with
+ * "No such customer" and surface to merchants as broken billing.
  */
 export async function getOrCreateBillingCustomer(
   merchantId: string,
 ): Promise<string> {
   const merchant = await getMerchant(merchantId);
   if (merchant.stripe_billing_customer_id) {
-    return merchant.stripe_billing_customer_id;
+    try {
+      const existing = await getStripe().customers.retrieve(
+        merchant.stripe_billing_customer_id,
+      );
+      if (typeof existing !== "string" && !existing.deleted) {
+        return existing.id;
+      }
+    } catch (err) {
+      const code = (err as { code?: string })?.code;
+      if (code !== "resource_missing") throw err;
+    }
+    await supabase
+      .from("merchants")
+      .update({
+        stripe_billing_customer_id: null,
+        stripe_usage_subscription_id: null,
+        stripe_subscription_id: null,
+        subscription_status: null,
+      })
+      .eq("id", merchantId);
   }
 
   const customer = await getStripe().customers.create({
@@ -91,15 +117,42 @@ export async function getOrCreateBillingCustomer(
 }
 
 /**
- * Ensure the merchant has an active usage-tier subscription so meter events
- * are billable. Idempotent. Only call for usage-tier merchants.
+ * Ensure the merchant has a usage-tier subscription so meter events are
+ * billable. Idempotent. Only call for usage-tier merchants.
+ *
+ * Resilience: validates the cached subscription still exists. If missing
+ * (e.g. after a platform account migration) or terminal (canceled,
+ * incomplete_expired), clears the stale id and creates a fresh one.
+ *
+ * Non-terminal recoverable statuses (past_due, unpaid, incomplete, paused) are
+ * preserved -- these still represent the merchant's existing billing
+ * relationship and can recover after payment or admin action. Replacing them
+ * would create duplicate subscriptions and route future metered usage to the
+ * wrong one.
  */
 export async function getOrCreateUsageSubscription(
   merchantId: string,
 ): Promise<string> {
   const merchant = await getMerchant(merchantId);
   if (merchant.stripe_usage_subscription_id) {
-    return merchant.stripe_usage_subscription_id;
+    try {
+      const existing = await getStripe().subscriptions.retrieve(
+        merchant.stripe_usage_subscription_id,
+      );
+      if (
+        existing.status !== "canceled" &&
+        existing.status !== "incomplete_expired"
+      ) {
+        return existing.id;
+      }
+    } catch (err) {
+      const code = (err as { code?: string })?.code;
+      if (code !== "resource_missing") throw err;
+    }
+    await supabase
+      .from("merchants")
+      .update({ stripe_usage_subscription_id: null })
+      .eq("id", merchantId);
   }
 
   const customerId = await getOrCreateBillingCustomer(merchantId);
