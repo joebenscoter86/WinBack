@@ -5,6 +5,7 @@ const { supabaseMock, stripeMock } = vi.hoisted(() => {
   const customersRetrieve = vi.fn();
   const customersUpdate = vi.fn();
   const subscriptionsCreate = vi.fn();
+  const subscriptionsRetrieve = vi.fn();
   const subscriptionsUpdate = vi.fn();
   const meterEventsCreate = vi.fn();
   const checkoutSessionsCreate = vi.fn();
@@ -15,7 +16,11 @@ const { supabaseMock, stripeMock } = vi.hoisted(() => {
       retrieve: customersRetrieve,
       update: customersUpdate,
     };
-    subscriptions = { create: subscriptionsCreate, update: subscriptionsUpdate };
+    subscriptions = {
+      create: subscriptionsCreate,
+      retrieve: subscriptionsRetrieve,
+      update: subscriptionsUpdate,
+    };
     billing = { meterEvents: { create: meterEventsCreate } };
     checkout = { sessions: { create: checkoutSessionsCreate } };
   }
@@ -28,6 +33,7 @@ const { supabaseMock, stripeMock } = vi.hoisted(() => {
       customersRetrieve,
       customersUpdate,
       subscriptionsCreate,
+      subscriptionsRetrieve,
       subscriptionsUpdate,
       meterEventsCreate,
       checkoutSessionsCreate,
@@ -41,6 +47,7 @@ vi.mock("stripe", () => ({ default: stripeMock.default }));
 import {
   calculateSuccessFeeCents,
   getOrCreateBillingCustomer,
+  getOrCreateUsageSubscription,
   reportDisputeWonFee,
   createProCheckoutSession,
   cancelUsageSubscription,
@@ -104,6 +111,7 @@ describe("getOrCreateBillingCustomer", () => {
       business_name: "Biz",
       stripe_billing_customer_id: "cus_123",
     });
+    stripeMock.customersRetrieve.mockResolvedValue({ id: "cus_123" });
     const id = await getOrCreateBillingCustomer(MERCHANT_ID);
     expect(id).toBe("cus_123");
     expect(stripeMock.customersCreate).not.toHaveBeenCalled();
@@ -127,6 +135,98 @@ describe("getOrCreateBillingCustomer", () => {
       metadata: { merchant_id: MERCHANT_ID, stripe_account_id: "acct_1" },
     });
   });
+
+  it("recovers when cached customer id no longer exists in Stripe (account migration)", async () => {
+    mockMerchantLookup({
+      id: MERCHANT_ID,
+      stripe_account_id: "acct_1",
+      email: "a@b.co",
+      business_name: "Biz",
+      stripe_billing_customer_id: "cus_stale_from_old_account",
+    });
+    stripeMock.customersRetrieve.mockRejectedValue(
+      Object.assign(new Error("No such customer"), { code: "resource_missing" }),
+    );
+    stripeMock.customersCreate.mockResolvedValue({ id: "cus_fresh" });
+
+    const id = await getOrCreateBillingCustomer(MERCHANT_ID);
+    expect(id).toBe("cus_fresh");
+    expect(stripeMock.customersCreate).toHaveBeenCalledOnce();
+  });
+
+  it("recovers when cached customer was deleted in Stripe", async () => {
+    mockMerchantLookup({
+      id: MERCHANT_ID,
+      stripe_account_id: "acct_1",
+      email: "a@b.co",
+      business_name: "Biz",
+      stripe_billing_customer_id: "cus_deleted",
+    });
+    stripeMock.customersRetrieve.mockResolvedValue({
+      id: "cus_deleted",
+      deleted: true,
+    });
+    stripeMock.customersCreate.mockResolvedValue({ id: "cus_replacement" });
+
+    const id = await getOrCreateBillingCustomer(MERCHANT_ID);
+    expect(id).toBe("cus_replacement");
+    expect(stripeMock.customersCreate).toHaveBeenCalledOnce();
+  });
+});
+
+describe("getOrCreateUsageSubscription", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setRequiredEnvVars();
+    __resetEnvCacheForTests();
+  });
+
+  it("recovers when cached subscription no longer exists in Stripe (account migration)", async () => {
+    mockMerchantLookup({
+      id: MERCHANT_ID,
+      stripe_account_id: "acct_1",
+      email: "a@b.co",
+      business_name: "Biz",
+      stripe_billing_customer_id: "cus_1",
+      stripe_usage_subscription_id: "sub_stale_from_old_account",
+    });
+    stripeMock.customersRetrieve.mockResolvedValue({ id: "cus_1" });
+    stripeMock.subscriptionsRetrieve.mockRejectedValue(
+      Object.assign(new Error("No such subscription"), {
+        code: "resource_missing",
+      }),
+    );
+    stripeMock.subscriptionsCreate.mockResolvedValue({ id: "sub_fresh" });
+
+    const id = await getOrCreateUsageSubscription(MERCHANT_ID);
+    expect(id).toBe("sub_fresh");
+    expect(stripeMock.subscriptionsCreate).toHaveBeenCalledWith({
+      customer: "cus_1",
+      items: [{ price: "price_usage" }],
+      metadata: { merchant_id: MERCHANT_ID, tier: "usage" },
+    });
+  });
+
+  it("recovers when cached subscription is in a non-billable status", async () => {
+    mockMerchantLookup({
+      id: MERCHANT_ID,
+      stripe_account_id: "acct_1",
+      email: "a@b.co",
+      business_name: "Biz",
+      stripe_billing_customer_id: "cus_1",
+      stripe_usage_subscription_id: "sub_canceled",
+    });
+    stripeMock.customersRetrieve.mockResolvedValue({ id: "cus_1" });
+    stripeMock.subscriptionsRetrieve.mockResolvedValue({
+      id: "sub_canceled",
+      status: "canceled",
+    });
+    stripeMock.subscriptionsCreate.mockResolvedValue({ id: "sub_replacement" });
+
+    const id = await getOrCreateUsageSubscription(MERCHANT_ID);
+    expect(id).toBe("sub_replacement");
+    expect(stripeMock.subscriptionsCreate).toHaveBeenCalledOnce();
+  });
 });
 
 describe("reportDisputeWonFee", () => {
@@ -144,6 +244,11 @@ describe("reportDisputeWonFee", () => {
       business_name: null,
       stripe_billing_customer_id: "cus_1",
       stripe_usage_subscription_id: "sub_1",
+    });
+    stripeMock.customersRetrieve.mockResolvedValue({ id: "cus_1" });
+    stripeMock.subscriptionsRetrieve.mockResolvedValue({
+      id: "sub_1",
+      status: "active",
     });
 
     await reportDisputeWonFee({
@@ -168,6 +273,7 @@ describe("reportDisputeWonFee", () => {
       stripe_billing_customer_id: "cus_1",
       stripe_usage_subscription_id: null,
     });
+    stripeMock.customersRetrieve.mockResolvedValue({ id: "cus_1" });
     stripeMock.subscriptionsCreate.mockResolvedValue({ id: "sub_new" });
 
     await reportDisputeWonFee({
@@ -200,6 +306,7 @@ describe("createProCheckoutSession", () => {
       business_name: null,
       stripe_billing_customer_id: "cus_1",
     });
+    stripeMock.customersRetrieve.mockResolvedValue({ id: "cus_1" });
     stripeMock.checkoutSessionsCreate.mockResolvedValue({
       id: "cs_1",
       url: "https://checkout.stripe.com/c/pay/cs_1",
@@ -322,6 +429,7 @@ describe("createSetupCheckoutSession", () => {
       business_name: "Biz",
       stripe_billing_customer_id: "cus_123",
     });
+    stripeMock.customersRetrieve.mockResolvedValue({ id: "cus_123" });
     stripeMock.checkoutSessionsCreate.mockResolvedValue({
       id: "cs_2",
       url: "https://checkout.stripe.com/setup",
