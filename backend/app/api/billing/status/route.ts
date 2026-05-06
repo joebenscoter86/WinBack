@@ -84,6 +84,10 @@ export const POST = withStripeAuth(async (_request, { identity }) => {
   // pro_since_at if the merchant upgraded mid-year. Meter events aren't easily
   // aggregated via the Stripe API, so we reconstruct from our own records —
   // close enough for an informational display.
+  //
+  // WIN-76: only count live-mode wins. Test-mode wins never produce a meter
+  // event (see handle-dispute-event.ts) so including them here would inflate
+  // the YTD figure on the merchant's settings page.
   const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString();
   let ytdFeesCents = 0;
   try {
@@ -93,6 +97,7 @@ export const POST = withStripeAuth(async (_request, { identity }) => {
       .select("amount, outcome_at")
       .eq("merchant_id", row.id)
       .eq("status", "won")
+      .eq("livemode", true)
       .gte("outcome_at", yearStart)
       .lte("outcome_at", cutoff);
 
