@@ -17,10 +17,14 @@ out/
 .env.production.local
 
 # Supabase
-supabase/.temp/
+**/supabase/.temp/
 
 # Stripe
 .stripe/
+
+# Stripe App build scratch (the build tool copies sources here during compile;
+# ext.js/ext.min.js/manifest.js outputs at .build/ root are committed)
+stripe-app/.build/src/
 
 # Sentry
 .sentryclirc
