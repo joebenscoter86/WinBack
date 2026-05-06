@@ -117,14 +117,18 @@ export async function getOrCreateBillingCustomer(
 }
 
 /**
- * Ensure the merchant has an active usage-tier subscription so meter events
- * are billable. Idempotent. Only call for usage-tier merchants.
+ * Ensure the merchant has a usage-tier subscription so meter events are
+ * billable. Idempotent. Only call for usage-tier merchants.
  *
- * Resilience: validates the cached subscription still exists and is in a
- * billable state. If missing (e.g. after a platform account migration) or
- * canceled, clears the stale id and creates a fresh one. Without this, meter
- * events would still post against the customer but have no active subscription
- * to bill against, causing silent revenue leaks.
+ * Resilience: validates the cached subscription still exists. If missing
+ * (e.g. after a platform account migration) or terminal (canceled,
+ * incomplete_expired), clears the stale id and creates a fresh one.
+ *
+ * Non-terminal recoverable statuses (past_due, unpaid, incomplete, paused) are
+ * preserved -- these still represent the merchant's existing billing
+ * relationship and can recover after payment or admin action. Replacing them
+ * would create duplicate subscriptions and route future metered usage to the
+ * wrong one.
  */
 export async function getOrCreateUsageSubscription(
   merchantId: string,
@@ -135,7 +139,10 @@ export async function getOrCreateUsageSubscription(
       const existing = await getStripe().subscriptions.retrieve(
         merchant.stripe_usage_subscription_id,
       );
-      if (existing.status === "active" || existing.status === "trialing") {
+      if (
+        existing.status !== "canceled" &&
+        existing.status !== "incomplete_expired"
+      ) {
         return existing.id;
       }
     } catch (err) {

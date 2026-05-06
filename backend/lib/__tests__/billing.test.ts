@@ -207,7 +207,7 @@ describe("getOrCreateUsageSubscription", () => {
     });
   });
 
-  it("recovers when cached subscription is in a non-billable status", async () => {
+  it("recovers when cached subscription is in a terminal status (canceled)", async () => {
     mockMerchantLookup({
       id: MERCHANT_ID,
       stripe_account_id: "acct_1",
@@ -226,6 +226,26 @@ describe("getOrCreateUsageSubscription", () => {
     const id = await getOrCreateUsageSubscription(MERCHANT_ID);
     expect(id).toBe("sub_replacement");
     expect(stripeMock.subscriptionsCreate).toHaveBeenCalledOnce();
+  });
+
+  it("preserves cached subscription during dunning (past_due) instead of replacing", async () => {
+    mockMerchantLookup({
+      id: MERCHANT_ID,
+      stripe_account_id: "acct_1",
+      email: "a@b.co",
+      business_name: "Biz",
+      stripe_billing_customer_id: "cus_1",
+      stripe_usage_subscription_id: "sub_past_due",
+    });
+    stripeMock.customersRetrieve.mockResolvedValue({ id: "cus_1" });
+    stripeMock.subscriptionsRetrieve.mockResolvedValue({
+      id: "sub_past_due",
+      status: "past_due",
+    });
+
+    const id = await getOrCreateUsageSubscription(MERCHANT_ID);
+    expect(id).toBe("sub_past_due");
+    expect(stripeMock.subscriptionsCreate).not.toHaveBeenCalled();
   });
 });
 
