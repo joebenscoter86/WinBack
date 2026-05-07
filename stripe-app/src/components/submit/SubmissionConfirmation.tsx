@@ -22,8 +22,23 @@ function describeWarning(w: SubmissionWarning): string {
   }
 }
 
+function formatSubmittedAt(iso: string): string {
+  const d = new Date(iso);
+  const datePart = d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  const timePart = d.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+  return `${datePart} at ${timePart}`;
+}
+
 export default function SubmissionConfirmation({ response, onBackToList, isInquiry = false }: SubmissionConfirmationProps) {
-  const submittedAt = new Date(response.submitted_at).toLocaleString();
+  const submittedAt = formatSubmittedAt(response.submitted_at);
   const hasWarnings = response.warnings && response.warnings.length > 0;
 
   return (

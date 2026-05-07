@@ -63,7 +63,7 @@ Stripe Dashboard (iframe) → Vercel API Routes → Supabase + Claude API + Stri
 
 QA is **no longer driven through `stripe apps start` / a local backend**. The setup is:
 
-- The WinBack Stripe App is **installed in test mode** on WinBack's own Stripe account (`acct_1TIwcOCbmbWLiv6V`). The installed app version is whatever was last published via `stripe apps upload`.
+- The WinBack Stripe App is **installed in test mode** on WinBack's own Stripe account (`acct_1TIwcOCbmbWLiv6V`). The installed app version is whatever was last published via `stripe apps upload`. Current installed test-mode build: **v1.1.8** (uploaded 2026-05-06 for a pre-submission QA pass; not yet submitted to Stripe marketplace review).
 - The installed app's frontend calls the **Vercel production deployment** of the Next.js backend.
 - Vercel production connects to **Supabase project `Winback Dev`** (id `ssnwzgxvugraswghqsvo`) — currently the only Supabase project. There is no separate prod Supabase yet (planned at marketplace launch per WIN-47).
 - Test disputes are generated on WinBack's account via `stripe trigger charge.dispute.created` — the default Stripe CLI profile is already set to WinBack.
@@ -80,7 +80,8 @@ QA is **no longer driven through `stripe apps start` / a local backend**. The se
 
 - **Don't suggest `cd stripe-app && stripe apps start` as the QA path.** That mode is for active source-edit feedback loops, not for the user's QA workflow.
 - **Pushing to `main` is a deploy action.** Treat it as risky/visible per the executing-actions-with-care guidance — confirm before pushing, even for "ready to ship" PRs, unless the user has just explicitly authorized the push for this batch.
-- **`stripe apps upload` requires a version bump first** (the upload fails on duplicate versions). Match the bump style of recent commits (`6d8bc64` bumped to 1.1.1; the next would be 1.1.2 or 1.2.0 depending on whether changes are user-visible).
+- **`stripe apps upload` requires a version bump first** (the upload fails on duplicate versions, including versions that were uploaded but never published — that's how 1.1.7 got skipped on the way to 1.1.8). Match the bump style of recent commits (`6d8bc64` bumped to 1.1.1; the next would be 1.1.9 or 1.2.0 depending on whether changes are user-visible).
+- **Bump `Version X.Y.Z` in [stripe-app/src/views/AppSettings.tsx:401] in lockstep with the manifest version.** v1.1.6 was rejected by Stripe specifically for hardcoded "Version 0.0.1" drift from the manifest. The string is hardcoded (no SDK helper to read manifest version at runtime), so a manifest bump that misses the AppSettings string will reproduce the same rejection.
 - **Migrations apply to the same DB the user is QAing against.** That's currently safe pre-launch, but post-WIN-47 prod cut-over the answer changes — re-read this section then.
 
 ## Development Environment

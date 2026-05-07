@@ -54,9 +54,8 @@ export default function TermsOfService() {
           using the Service.
         </li>
         <li>
-          <strong>Pro.</strong> A flat monthly fee of $79 per month (or $59
-          per month billed annually) for unlimited disputes and no success
-          fee.
+          <strong>Pro.</strong> A flat monthly fee of $79 per month for
+          unlimited disputes and no success fee.
         </li>
       </ul>
       <p>

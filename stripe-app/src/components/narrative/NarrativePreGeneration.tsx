@@ -219,7 +219,7 @@ const NarrativePreGeneration = ({
         </Inline>
         <TextArea
           label=""
-          placeholder="e.g. Customer confirmed receipt by phone on March 20th"
+          placeholder="e.g. Customer confirmed receipt by phone on Mar 20, 2026"
           value={feedback}
           onChange={(e) => setFeedback(e.target.value)}
           rows={3}

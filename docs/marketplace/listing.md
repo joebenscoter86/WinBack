@@ -142,7 +142,6 @@ WinBack is billed through Stripe. Two plans:
 ### Pro — $79/month flat
 
 - Flat monthly subscription. No per-recovery fees.
-- Annual option: $59/month billed annually ($708/year).
 
 Merchants start on Pay-Per-Win. After the first dispute is resolved in your favor, the app surfaces a comparison of fees under each plan so you can choose what fits your dispute volume. Switching plans takes effect on the next billing cycle.
 

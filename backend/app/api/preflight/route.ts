@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readEnv } from "@/lib/env";
 import { checkPreflightRateLimit, getClientIp } from "@/lib/rate-limit";
+import { captureRouteError } from "@/lib/sentry";
 
 /**
  * Health probe that also confirms all required env vars are present.
@@ -31,11 +32,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     readEnv();
     return NextResponse.json({ ok: true });
   } catch (err) {
+    captureRouteError(err, { route: "preflight" });
     return NextResponse.json(
-      {
-        ok: false,
-        error: err instanceof Error ? err.message : "env error",
-      },
+      { ok: false, error: "Configuration error" },
       { status: 500 },
     );
   }

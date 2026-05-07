@@ -72,6 +72,8 @@ const FileUploadSection = ({
 }: FileUploadSectionProps) => {
   const [error, setError] = useState<string | null>(null);
   const [showReplace, setShowReplace] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const handleUploadComplete = async (fileObject: {
@@ -120,15 +122,19 @@ const FileUploadSection = ({
   const handleRemove = async () => {
     if (!existingFile) return;
     setError(null);
+    setRemoving(true);
 
     try {
       await deleteBackend(
         `/api/disputes/${disputeId}/evidence-files/${existingFile.id}`,
         context,
       );
+      setConfirmRemove(false);
       onFileChange(null);
     } catch (err) {
       setError('Failed to remove file. Try again.');
+    } finally {
+      setRemoving(false);
     }
   };
 
@@ -178,14 +184,32 @@ const FileUploadSection = ({
               {formatFileSize(existingFile.file_size)}
             </Inline>
           </Box>
-          <Box css={{ stack: 'x', gap: 'small' }}>
-            <Link onPress={() => setShowReplace(true)}>
-              <Inline css={{ font: 'caption', color: 'info' }}>Replace</Inline>
-            </Link>
-            <Link onPress={handleRemove}>
-              <Inline css={{ font: 'caption', color: 'critical' }}>Remove</Inline>
-            </Link>
-          </Box>
+          {confirmRemove ? (
+            <Box css={{ stack: 'y', gap: 'xsmall' }}>
+              <Inline css={{ font: 'caption', color: 'critical' }}>
+                Remove this file? You'll need to upload it again to attach it.
+              </Inline>
+              <Box css={{ stack: 'x', gap: 'small' }}>
+                <Link onPress={handleRemove}>
+                  <Inline css={{ font: 'caption', color: 'critical' }}>
+                    {removing ? 'Removing…' : 'Yes, remove'}
+                  </Inline>
+                </Link>
+                <Link onPress={() => setConfirmRemove(false)}>
+                  <Inline css={{ font: 'caption', color: 'secondary' }}>Cancel</Inline>
+                </Link>
+              </Box>
+            </Box>
+          ) : (
+            <Box css={{ stack: 'x', gap: 'small' }}>
+              <Link onPress={() => setShowReplace(true)}>
+                <Inline css={{ font: 'caption', color: 'info' }}>Replace</Inline>
+              </Link>
+              <Link onPress={() => setConfirmRemove(true)}>
+                <Inline css={{ font: 'caption', color: 'critical' }}>Remove</Inline>
+              </Link>
+            </Box>
+          )}
         </Box>
       ) : (
         <Box css={{ stack: 'y', gap: 'xsmall' }}>
