@@ -10,24 +10,19 @@ import Stripe from "stripe";
 
 type SupportedObject = "charge" | "payment_intent";
 
-interface ForPaymentObjectBody {
-  id?: unknown;
-  object?: unknown;
-}
-
 function isSupportedObject(value: unknown): value is SupportedObject {
   return value === "charge" || value === "payment_intent";
 }
 
-export const POST = withStripeAuth<ForPaymentObjectBody & {
-  user_id: string;
-  account_id: string;
-  livemode: boolean;
-}>(async (_request, { identity, body, livemode }) => {
+export const POST = withStripeAuth(async (_request, { identity, body, livemode }) => {
   const { accountId, userId } = identity;
 
-  const id = typeof body.id === "string" ? body.id : null;
-  const object = isSupportedObject(body.object) ? body.object : null;
+  const { id: rawId, object: rawObject } = body as {
+    id?: unknown;
+    object?: unknown;
+  };
+  const id = typeof rawId === "string" ? rawId : null;
+  const object = isSupportedObject(rawObject) ? rawObject : null;
 
   if (!id || !object) {
     return NextResponse.json(
