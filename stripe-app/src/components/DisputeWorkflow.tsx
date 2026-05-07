@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -15,7 +15,7 @@ import {
 import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 import type { WizardStep, Dispute, PlaybookData, EvidenceFile } from '../lib/types';
 import { WIZARD_STEPS, WIZARD_STEP_LABELS } from '../lib/types';
-import { fetchBackend, ApiError } from '../lib/apiClient';
+import { fetchBackend, patchBackend, ApiError } from '../lib/apiClient';
 import { getDaysRemaining, isResolved, isDisputeExpired, isInquiry } from '../lib/utils';
 import ErrorBanner from './ErrorBanner';
 import DeadlineTimer from './DeadlineTimer';
@@ -54,6 +54,17 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
   const contextRef = useRef(context);
   contextRef.current = context;
 
+  // Narrative autosave plumbing. Mirrors the WIN-49 pattern from
+  // EvidenceChecklist: a debounced PATCH on every keystroke, plus an
+  // unmount-time flush to catch the case where the user closes the
+  // FocusView before the debounce fires. Narratives are long enough that
+  // saving on every keystroke would generate hundreds of PATCH requests
+  // per dispute, so a small debounce is worth the slight risk window --
+  // the unmount flush covers normal close paths anyway.
+  const editedNarrativeRef = useRef('');
+  const narrativeSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const NARRATIVE_DEBOUNCE_MS = 500;
+
   useEffect(() => {
     if (!shown) return;
 
@@ -79,6 +90,9 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
         setDispute(fetched);
         if (fetched.narrative_text) {
           setEditedNarrative(fetched.narrative_text);
+          // Seed the autosave ref so the unmount flush does not overwrite
+          // the freshly-loaded value with the empty initial state.
+          editedNarrativeRef.current = fetched.narrative_text;
         }
       } else {
         const err = disputeResult.reason;
@@ -119,6 +133,43 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
 
     fetchData();
   }, [shown, initialDispute.id, initialDispute.network, initialDispute.reason_code]);
+
+  const persistNarrative = useCallback(
+    (text: string) => {
+      editedNarrativeRef.current = text;
+      setEditedNarrative(text);
+      if (narrativeSaveTimeoutRef.current) {
+        clearTimeout(narrativeSaveTimeoutRef.current);
+      }
+      narrativeSaveTimeoutRef.current = setTimeout(() => {
+        patchBackend(`/api/disputes/${initialDispute.id}`, contextRef.current, {
+          narrative_text: editedNarrativeRef.current,
+        }).catch((err) => {
+          console.error('Failed to save narrative draft:', err);
+        });
+        narrativeSaveTimeoutRef.current = null;
+      }, NARRATIVE_DEBOUNCE_MS);
+    },
+    [initialDispute.id],
+  );
+
+  // Safety net: if the FocusView closes (or the dispute changes) before the
+  // debounced save fires, flush the latest value immediately. Without this,
+  // the user could close the wizard between keystrokes and lose the trailing
+  // edit window. (Same pattern as EvidenceChecklist's WIN-49 cleanup.)
+  useEffect(() => {
+    return () => {
+      if (narrativeSaveTimeoutRef.current) {
+        clearTimeout(narrativeSaveTimeoutRef.current);
+        narrativeSaveTimeoutRef.current = null;
+        patchBackend(`/api/disputes/${initialDispute.id}`, contextRef.current, {
+          narrative_text: editedNarrativeRef.current,
+        }).catch((err) => {
+          console.error('Failed to flush narrative on unmount:', err);
+        });
+      }
+    };
+  }, [initialDispute.id]);
 
   // Re-fetch evidence files whenever the user enters the narrative step.
   // The Evidence tab owns its own upload state, so DisputeWorkflow's copy
@@ -231,7 +282,7 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
       setShown={setShown}
       confirmCloseMessages={{
         title: 'Leave dispute workflow?',
-        description: 'Your progress on this step will not be saved.',
+        description: 'Your progress is saved. You can return to this dispute any time.',
         cancelAction: 'Stay',
         exitAction: 'Leave',
       }}
@@ -331,9 +382,9 @@ const DisputeWorkflow = ({ dispute: initialDispute, context, shown, setShown }: 
                 evidenceFiles={evidenceFiles}
                 context={contextRef.current}
                 editedNarrative={editedNarrative}
-                onEditedNarrativeChange={setEditedNarrative}
+                onEditedNarrativeChange={persistNarrative}
                 onApprove={(text) => {
-                  setEditedNarrative(text);
+                  persistNarrative(text);
                   setCurrentStep('submit');
                 }}
                 onNavigateBack={() => setCurrentStep('evidence')}

@@ -165,9 +165,10 @@ export const PATCH = withStripeAuth(async (
   // consumed during signature verification and cannot be re-read here.
   // (WIN-49: discovered during QA when checklist notes were silently failing
   // to persist with TypeError: unusable.)
-  const { checklist_state, checklist_notes } = body as {
+  const { checklist_state, checklist_notes, narrative_text } = body as {
     checklist_state?: Record<string, boolean>;
     checklist_notes?: Record<string, string>;
+    narrative_text?: string | null;
   };
 
   const updatePayload: Record<string, unknown> = {};
@@ -176,6 +177,12 @@ export const PATCH = withStripeAuth(async (
   }
   if (checklist_notes && typeof checklist_notes === "object") {
     updatePayload.checklist_notes = checklist_notes;
+  }
+  // Mirrors the WIN-49 lesson: persist user-edited narrative drafts on every
+  // keystroke so closing the FocusView mid-edit does not silently discard
+  // text. Only string and explicit null are honored; anything else is ignored.
+  if (typeof narrative_text === "string" || narrative_text === null) {
+    updatePayload.narrative_text = narrative_text;
   }
 
   if (Object.keys(updatePayload).length === 0) {
