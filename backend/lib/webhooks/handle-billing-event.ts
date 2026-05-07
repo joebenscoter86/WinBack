@@ -90,9 +90,16 @@ async function applySubscriptionState(sub: Stripe.Subscription): Promise<void> {
   // on Pro until period end — cancellation is handled by the `deleted` event.
   const isActive = sub.status === "active" || sub.status === "trialing";
 
+  // The Stripe portal's "Cancel subscription" action sets cancel_at_period_end
+  // and cancel_at on the subscription, leaving status = "active" until the
+  // period actually ends. We always reflect those fields so the Settings view
+  // can render "Pro - cancels on YYYY-MM-DD" for users who have cancelled but
+  // are still inside the paid period. Reactivation flips them back to false/null.
   const update: Record<string, unknown> = {
     stripe_subscription_id: sub.id,
     subscription_status: sub.status,
+    cancel_at_period_end: Boolean(sub.cancel_at_period_end),
+    cancel_at: sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null,
   };
 
   if (isActive) {
@@ -134,7 +141,9 @@ async function applySubscriptionDeletion(sub: Stripe.Subscription): Promise<void
   if (!merchant) return;
 
   // Pro canceled → revert to usage tier. A new usage subscription will be
-  // lazily created on the next win (see reportDisputeWonFee).
+  // lazily created on the next win (see reportDisputeWonFee). Clear the
+  // pending-cancellation flags too — the cancellation has actually happened
+  // now, no need to keep "cancels on" around.
   const { error } = await supabase
     .from("merchants")
     .update({
@@ -142,6 +151,8 @@ async function applySubscriptionDeletion(sub: Stripe.Subscription): Promise<void
       subscription_status: "canceled",
       stripe_subscription_id: null,
       pro_since_at: null,
+      cancel_at_period_end: false,
+      cancel_at: null,
     })
     .eq("id", merchant.id);
   if (error) throw new Error(`Revert merchant to usage: ${error.message}`);

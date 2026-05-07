@@ -157,6 +157,82 @@ describe("handleBillingEvent", () => {
     expect(billingMock.cancelUsageSubscription).not.toHaveBeenCalled();
   });
 
+  it("captures pending cancellation (cancel_at_period_end + cancel_at) on subscription.updated", async () => {
+    // Stripe portal "Cancel subscription" defaults to cancel-at-period-end:
+    // the subscription stays `active` until cancel_at, then a deleted event
+    // fires. The merchant is still Pro for now, but the app needs to surface
+    // the pending end so the Settings view doesn't look like cancellation
+    // didn't take.
+    const { update } = mockMerchantLookup({
+      id: MERCHANT_ID,
+      pro_since_at: "2026-04-01T00:00:00Z",
+    });
+    const sub = {
+      id: "sub_pro_1",
+      customer: "cus_1",
+      status: "active",
+      cancel_at_period_end: true,
+      cancel_at: 1779935602,
+      metadata: { tier: "pro" },
+      items: { data: [{ price: { id: "price_pro" } }] },
+    } as unknown as Stripe.Subscription;
+
+    await handleBillingEvent(makeEvent("customer.subscription.updated", sub));
+
+    const payload = firstUpdateArg(update);
+    expect(payload.cancel_at_period_end).toBe(true);
+    expect(payload.cancel_at).toBe(new Date(1779935602 * 1000).toISOString());
+    // Still Pro through the period end.
+    expect(payload.billing_tier).toBe("pro");
+  });
+
+  it("clears cancel_at fields when a pending cancellation is reverted", async () => {
+    // User clicks "Cancel subscription" then immediately "Renew subscription"
+    // in the Stripe portal. Stripe fires another subscription.updated with
+    // cancel_at_period_end=false and cancel_at=null; we should reflect that.
+    const { update } = mockMerchantLookup({
+      id: MERCHANT_ID,
+      pro_since_at: "2026-04-01T00:00:00Z",
+    });
+    const sub = {
+      id: "sub_pro_1",
+      customer: "cus_1",
+      status: "active",
+      cancel_at_period_end: false,
+      cancel_at: null,
+      metadata: { tier: "pro" },
+      items: { data: [{ price: { id: "price_pro" } }] },
+    } as unknown as Stripe.Subscription;
+
+    await handleBillingEvent(makeEvent("customer.subscription.updated", sub));
+
+    const payload = firstUpdateArg(update);
+    expect(payload.cancel_at_period_end).toBe(false);
+    expect(payload.cancel_at).toBeNull();
+  });
+
+  it("clears cancel_at fields on Pro subscription.deleted", async () => {
+    const { update } = mockMerchantLookup({
+      id: MERCHANT_ID,
+      pro_since_at: "2026-04-01T00:00:00Z",
+    });
+    const sub = {
+      id: "sub_pro_1",
+      customer: "cus_1",
+      status: "canceled",
+      cancel_at_period_end: true,
+      cancel_at: 1779935602,
+      metadata: { tier: "pro" },
+      items: { data: [{ price: { id: "price_pro" } }] },
+    } as unknown as Stripe.Subscription;
+
+    await handleBillingEvent(makeEvent("customer.subscription.deleted", sub));
+
+    const payload = firstUpdateArg(update);
+    expect(payload.cancel_at_period_end).toBe(false);
+    expect(payload.cancel_at).toBeNull();
+  });
+
   it("preserves existing pro_since_at when subscription.updated fires while already Pro", async () => {
     const existing = "2026-04-01T00:00:00Z";
     const { update } = mockMerchantLookup({ id: MERCHANT_ID, pro_since_at: existing });

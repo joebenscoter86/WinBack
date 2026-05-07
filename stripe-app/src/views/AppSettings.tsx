@@ -22,6 +22,8 @@ type BillingStatus = {
   ytd_success_fees_cents: number;
   has_payment_method: boolean;
   payment_method_prompt_dismissed_at: string | null;
+  cancel_at_period_end: boolean;
+  cancel_at: string | null;
 };
 
 type ViewState = 'loading' | 'ready' | 'error';
@@ -271,7 +273,11 @@ const AppSettings = (context: ExtensionContextValue) => {
           <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
             <Inline css={{ font: 'body' }}>Plan:</Inline>
             {isPro ? (
-              <Badge type="positive">Pro · $79/mo</Badge>
+              billing.cancel_at_period_end ? (
+                <Badge type="warning">Pro · cancels {formatDate(billing.cancel_at)}</Badge>
+              ) : (
+                <Badge type="positive">Pro · $79/mo</Badge>
+              )
             ) : (
               <Badge type="info">Pay-Per-Win · 15% of recovered amount</Badge>
             )}
@@ -282,10 +288,18 @@ const AppSettings = (context: ExtensionContextValue) => {
               <Inline css={{ font: 'caption', color: 'secondary' }}>
                 Unlimited disputes. Zero success fee.
               </Inline>
-              <Inline css={{ font: 'caption' }}>
-                Pro since {formatDate(billing.pro_since_at)} · Next billing{' '}
-                {formatDate(billing.next_billing_at)}
-              </Inline>
+              {billing.cancel_at_period_end ? (
+                <Inline css={{ font: 'caption' }}>
+                  Pro since {formatDate(billing.pro_since_at)} · Active through{' '}
+                  {formatDate(billing.cancel_at)}, then drops to Pay-Per-Win.
+                  Renew anytime before then in Stripe.
+                </Inline>
+              ) : (
+                <Inline css={{ font: 'caption' }}>
+                  Pro since {formatDate(billing.pro_since_at)} · Next billing{' '}
+                  {formatDate(billing.next_billing_at)}
+                </Inline>
+              )}
             </>
           ) : (
             <>

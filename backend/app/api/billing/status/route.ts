@@ -36,7 +36,7 @@ export const POST = withStripeAuth(async (_request, { identity }) => {
   const { data: merchant, error } = await supabase
     .from("merchants")
     .select(
-      "id, billing_tier, subscription_status, pro_since_at, upgrade_prompted_at, stripe_subscription_id, payment_method_prompt_dismissed_at",
+      "id, billing_tier, subscription_status, pro_since_at, upgrade_prompted_at, stripe_subscription_id, payment_method_prompt_dismissed_at, cancel_at_period_end, cancel_at",
     )
     .eq("stripe_account_id", accountId)
     .maybeSingle();
@@ -56,6 +56,8 @@ export const POST = withStripeAuth(async (_request, { identity }) => {
     upgrade_prompted_at: string | null;
     stripe_subscription_id: string | null;
     payment_method_prompt_dismissed_at: string | null;
+    cancel_at_period_end: boolean;
+    cancel_at: string | null;
   };
 
   // Next billing date for Pro subscribers — fetched from Stripe rather than
@@ -124,5 +126,7 @@ export const POST = withStripeAuth(async (_request, { identity }) => {
     ytd_success_fees_cents: ytdFeesCents,
     has_payment_method: hasPaymentMethod,
     payment_method_prompt_dismissed_at: row.payment_method_prompt_dismissed_at,
+    cancel_at_period_end: row.cancel_at_period_end,
+    cancel_at: row.cancel_at,
   });
 });
