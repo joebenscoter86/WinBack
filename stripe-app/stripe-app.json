@@ -2,7 +2,7 @@
   "$schema": "https://stripe.com/stripe-app.schema.json",
   "id": "com.winbackpay.app",
   "name": "WinBack",
-  "version": "1.1.7",
+  "version": "1.1.9",
   "icon": "./src/assets/winback_logo_300.png",
   "ui_extension": {
     "views": [
@@ -60,5 +60,6 @@
   "post_install_action": {
     "type": "settings"
   },
-  "distribution_type": "PUBLIC"
+  "distribution_type": "PUBLIC",
+  "sandbox_install_compatible": true
 }

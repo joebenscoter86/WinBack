@@ -398,7 +398,7 @@ const AppSettings = (context: ExtensionContextValue) => {
             About WinBack
           </Inline>
           {/* Keep in sync with version in stripe-app/stripe-app.json on every release. */}
-          <Inline css={{ font: 'body' }}>Version 1.1.8</Inline>
+          <Inline css={{ font: 'body' }}>Version 1.1.9</Inline>
           <Inline css={{ font: 'caption', color: 'secondary' }}>
             Guided dispute resolution for Stripe merchants. Built by JB Technology LLC.
           </Inline>

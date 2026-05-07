@@ -9,18 +9,21 @@ import {
 } from '@stripe/ui-extension-sdk/ui';
 import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 import DisputeWorkflow from '../components/DisputeWorkflow';
+import ErrorBanner from '../components/ErrorBanner';
 import { fetchBackend, ApiError } from '../lib/apiClient';
 import type { Dispute } from '../lib/types';
 import { getStatusBadge, getReasonCodeLabel } from '../lib/utils';
 
-type ViewState = 'loading' | 'no_dispute' | 'error' | 'ready';
+type ViewState = 'loading' | 'no_dispute' | 'unsupported' | 'error' | 'ready';
 
 const PaymentDisputeView = (context: ExtensionContextValue) => {
   const { environment } = context;
-  const paymentIntentId = environment?.objectContext?.id;
+  const objectId = environment?.objectContext?.id ?? null;
+  const objectType = environment?.objectContext?.object ?? null;
 
   const [viewState, setViewState] = useState<ViewState>('loading');
   const [dispute, setDispute] = useState<Dispute | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const [showWorkflow, setShowWorkflow] = useState(false);
 
   // Ref to avoid context reference identity changes triggering re-fetches
@@ -28,16 +31,27 @@ const PaymentDisputeView = (context: ExtensionContextValue) => {
   contextRef.current = context;
 
   const loadDispute = useCallback(async () => {
-    if (!paymentIntentId) {
+    if (!objectId || !objectType) {
       setViewState('no_dispute');
+      return;
+    }
+
+    // The payment.detail viewport surfaces both charges and payment intents,
+    // depending on which Stripe URL the merchant is on. The disputes.list
+    // filter is different for each: filtering by `payment_intent` won't match
+    // a charge ID, and disputes from `stripe trigger charge.dispute.created`
+    // (and other PI-less flows) only have a charge.
+    if (objectType !== 'charge' && objectType !== 'payment_intent') {
+      setViewState('unsupported');
       return;
     }
 
     setViewState('loading');
     try {
       const result = await fetchBackend<{ data: Dispute }>(
-        `/api/disputes/by-payment-intent/${paymentIntentId}`,
+        '/api/disputes/for-payment-object',
         contextRef.current,
+        { id: objectId, object: objectType },
       );
       setDispute(result.data);
       setViewState('ready');
@@ -45,10 +59,15 @@ const PaymentDisputeView = (context: ExtensionContextValue) => {
       if (err instanceof ApiError && err.status === 404) {
         setViewState('no_dispute');
       } else {
+        setErrorMessage(
+          err instanceof Error
+            ? err.message
+            : 'Could not load dispute information.',
+        );
         setViewState('error');
       }
     }
-  }, [paymentIntentId]);
+  }, [objectId, objectType]);
 
   useEffect(() => {
     loadDispute();
@@ -64,7 +83,15 @@ const PaymentDisputeView = (context: ExtensionContextValue) => {
     );
   }
 
-  if (viewState === 'no_dispute' || viewState === 'error' || !dispute) {
+  if (viewState === 'error') {
+    return (
+      <ContextView title="WinBack">
+        <ErrorBanner message={errorMessage} onRetry={loadDispute} />
+      </ContextView>
+    );
+  }
+
+  if (viewState === 'no_dispute' || viewState === 'unsupported' || !dispute) {
     return (
       <ContextView title="WinBack">
         <Box css={{ padding: 'medium', alignX: 'center' }}>
