@@ -65,14 +65,20 @@ export function readEnv(): Env {
     throw new Error(parts.join(". "));
   }
 
+  // Trim secret-shaped values at the boundary. Vercel env-var pastes
+  // sometimes pick up a trailing newline; the Stripe SDK explicitly
+  // diagnoses whitespace in webhook signing secrets ("The provided signing
+  // secret contains whitespace") and constructEvent then 400s every event.
+  // Normalizing here protects every consumer of env() without each route
+  // having to remember the workaround.
   return {
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY!,
     STRIPE_SECRET_KEY_LIVE: process.env.STRIPE_SECRET_KEY_LIVE!,
     STRIPE_SECRET_KEY_TEST: process.env.STRIPE_SECRET_KEY_TEST!,
     STRIPE_APP_SECRET: process.env.STRIPE_APP_SECRET!,
-    STRIPE_WEBHOOK_SECRET_LIVE: process.env.STRIPE_WEBHOOK_SECRET_LIVE!,
-    STRIPE_WEBHOOK_SECRET_TEST: process.env.STRIPE_WEBHOOK_SECRET_TEST!,
-    STRIPE_BILLING_WEBHOOK_SECRET: process.env.STRIPE_BILLING_WEBHOOK_SECRET!,
+    STRIPE_WEBHOOK_SECRET_LIVE: process.env.STRIPE_WEBHOOK_SECRET_LIVE!.trim(),
+    STRIPE_WEBHOOK_SECRET_TEST: process.env.STRIPE_WEBHOOK_SECRET_TEST!.trim(),
+    STRIPE_BILLING_WEBHOOK_SECRET: process.env.STRIPE_BILLING_WEBHOOK_SECRET!.trim(),
     STRIPE_PRICE_PRO_MONTHLY: process.env.STRIPE_PRICE_PRO_MONTHLY!,
     STRIPE_PRICE_USAGE_FEE: process.env.STRIPE_PRICE_USAGE_FEE!,
     UPGRADE_LINK_SECRET: process.env.UPGRADE_LINK_SECRET!,

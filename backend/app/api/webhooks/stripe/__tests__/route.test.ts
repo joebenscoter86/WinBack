@@ -150,6 +150,37 @@ describe("POST /api/webhooks/stripe", () => {
     expect(handleDisputeEventMock).not.toHaveBeenCalled();
   });
 
+  it("trims whitespace from STRIPE_WEBHOOK_SECRET_TEST before verification", async () => {
+    // Vercel env-var pastes occasionally include a trailing newline. Stripe's
+    // SDK explicitly calls this out: "The provided signing secret contains
+    // whitespace." Defense-in-depth: the route trims the secret before
+    // constructEvent so a misconfigured env doesn't 400 every test webhook.
+    process.env.STRIPE_WEBHOOK_SECRET_TEST = `\n${TEST_WEBHOOK_SECRET}\n`;
+    try {
+      const req = signedRequest(disputeEvent());
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+      expect(handleDisputeEventMock).toHaveBeenCalledOnce();
+    } finally {
+      process.env.STRIPE_WEBHOOK_SECRET_TEST = TEST_WEBHOOK_SECRET;
+    }
+  });
+
+  it("trims whitespace from STRIPE_WEBHOOK_SECRET_LIVE before verification", async () => {
+    process.env.STRIPE_WEBHOOK_SECRET_LIVE = ` ${LIVE_WEBHOOK_SECRET}\n`;
+    try {
+      const req = signedRequest(
+        { ...disputeEvent(), livemode: true },
+        LIVE_WEBHOOK_SECRET,
+      );
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+      expect(handleDisputeEventMock).toHaveBeenCalledOnce();
+    } finally {
+      process.env.STRIPE_WEBHOOK_SECRET_LIVE = LIVE_WEBHOOK_SECRET;
+    }
+  });
+
   it("returns 500 and marks failed when handler throws", async () => {
     handleDisputeEventMock.mockRejectedValueOnce(new Error("boom"));
     const req = signedRequest(disputeEvent());

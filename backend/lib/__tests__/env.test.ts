@@ -85,6 +85,20 @@ describe("env module", () => {
     expect(() => readEnv()).toThrow(/UPGRADE_LINK_SECRET.*32/);
   });
 
+  it("trims whitespace from webhook secrets so a Vercel-paste newline doesn't break verification", async () => {
+    // Stripe's SDK explicitly diagnoses whitespace in signing secrets; we
+    // normalize at the env boundary so every consumer is safe.
+    setRequiredVars();
+    process.env.STRIPE_WEBHOOK_SECRET_LIVE = "  whsec_live_x\n";
+    process.env.STRIPE_WEBHOOK_SECRET_TEST = "\nwhsec_test_x  ";
+    process.env.STRIPE_BILLING_WEBHOOK_SECRET = "whsec_b\n";
+    const { readEnv } = await import("../env");
+    const e = readEnv();
+    expect(e.STRIPE_WEBHOOK_SECRET_LIVE).toBe("whsec_live_x");
+    expect(e.STRIPE_WEBHOOK_SECRET_TEST).toBe("whsec_test_x");
+    expect(e.STRIPE_BILLING_WEBHOOK_SECRET).toBe("whsec_b");
+  });
+
   describe("livemode env vars", () => {
     // Override with distinguishable values so the assertion proves we're returning the right slot
     function setModeScopedVars() {

@@ -26,8 +26,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
-  const liveSecret = process.env.STRIPE_WEBHOOK_SECRET_LIVE;
-  const testSecret = process.env.STRIPE_WEBHOOK_SECRET_TEST;
+  // Vercel env-var pastes occasionally include a trailing newline -- the
+  // Stripe SDK explicitly diagnoses "The provided signing secret contains
+  // whitespace" when this happens, and constructEvent then 400s every event.
+  // Trim defensively so a one-character paste error doesn't silently break
+  // every test-mode webhook delivery.
+  const liveSecret = process.env.STRIPE_WEBHOOK_SECRET_LIVE?.trim();
+  const testSecret = process.env.STRIPE_WEBHOOK_SECRET_TEST?.trim();
   if (!liveSecret || !testSecret) {
     console.error("[livemode] Webhook secrets not configured");
     return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
