@@ -226,6 +226,11 @@ const AppSettings = (context: ExtensionContextValue) => {
 
   const isPastDue = billing.subscription_status === 'past_due';
   const isPro = billing.tier === 'pro';
+  // Stripe's flexible billing mode expresses "cancel at period end" by setting
+  // sub.cancel_at to current_period_end rather than flipping
+  // cancel_at_period_end=true. Functionally identical, but two different fields
+  // on the wire. Treat either signal as a pending cancellation.
+  const isCanceling = billing.cancel_at_period_end || billing.cancel_at !== null;
 
   return (
     <SettingsView>
@@ -273,7 +278,7 @@ const AppSettings = (context: ExtensionContextValue) => {
           <Box css={{ stack: 'x', gap: 'small', alignY: 'center' }}>
             <Inline css={{ font: 'body' }}>Plan:</Inline>
             {isPro ? (
-              billing.cancel_at_period_end ? (
+              isCanceling ? (
                 <Badge type="warning">Pro · cancels {formatDate(billing.cancel_at)}</Badge>
               ) : (
                 <Badge type="positive">Pro · $79/mo</Badge>
@@ -288,7 +293,7 @@ const AppSettings = (context: ExtensionContextValue) => {
               <Inline css={{ font: 'caption', color: 'secondary' }}>
                 Unlimited disputes. Zero success fee.
               </Inline>
-              {billing.cancel_at_period_end ? (
+              {isCanceling ? (
                 <Inline css={{ font: 'caption' }}>
                   Pro since {formatDate(billing.pro_since_at)} · Active through{' '}
                   {formatDate(billing.cancel_at)}, then drops to Pay-Per-Win.
