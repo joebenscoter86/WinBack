@@ -68,22 +68,31 @@ export const POST = withStripeAuth(async (
         // counts on, and any drift here would miscount.
         const baseRow = disputeToRow(dispute);
 
-        // `reason_code` and `network` are intentionally overridden with
-        // the richer values from normalizeDispute, NOT the raw
-        // disputeToRow versions. This is a wart: the `reason_code`
-        // column is overloaded between two semantic spaces -- Stripe's
-        // coarse reason (`fraudulent`) which is what insights/aggregate
-        // labels expect, and the network reason code (`10.4`) which is
-        // what submit→getPlaybook needs to look up the playbook. Today
-        // the webhook writes the former and this route writes the
-        // latter; whichever ran most recently wins. See follow-up below
-        // about splitting the column. Until then: keep the existing
-        // behavior so submission still works post-view.
+        // disputeToRow writes the canonical reason_code (Stripe coarse) and
+        // network_reason_code (preferring top-level d.network_reason_code,
+        // else nested payment_method_details.card.network_reason_code, else
+        // null). For webhook-only payloads where Stripe hasn't yet populated
+        // either field, those land as null in baseRow. We must NOT spread
+        // those nulls into the upsert -- that would clobber a previously-good
+        // DB value (e.g. one written by an earlier view-backfill or by the
+        // submit self-heal path). Strip nulls first, then layer on the
+        // normalize-derived overrides only when normalize produced a usable
+        // value. (WIN-78)
+        const { network: baseNetwork, network_reason_code: baseNetworkCode, ...baseRest } =
+          baseRow;
+        const cleanRow: Record<string, unknown> = { ...baseRest };
+        if (baseNetwork) cleanRow.network = baseNetwork;
+        if (baseNetworkCode) cleanRow.network_reason_code = baseNetworkCode;
+        if (normalized.network && normalized.network !== "unknown") {
+          cleanRow.network = normalized.network;
+        }
+        if (normalized.reason_code) {
+          cleanRow.network_reason_code = normalized.reason_code;
+        }
+
         const { error: upsertError } = await supabase.from("disputes").upsert(
           {
-            ...baseRow,
-            reason_code: normalized.reason_code,
-            network: normalized.network,
+            ...cleanRow,
             merchant_id: (merchant as { id: string }).id,
             customer_name: normalized.customer_name ?? null,
             transaction_date: transactionDate,
