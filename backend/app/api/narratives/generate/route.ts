@@ -8,6 +8,10 @@ import {
   getDisputeForAccount,
   incrementNarrativeGenerations,
 } from "@/lib/disputes";
+import {
+  extractNetworkReasonCode,
+  extractNetwork,
+} from "@/lib/disputes/to-row";
 import { runBackgroundGeneration } from "@/lib/narratives/generate-background";
 import { getDispute } from "@/lib/stripe";
 import { captureRouteError } from "@/lib/sentry";
@@ -46,9 +50,9 @@ export const POST = withStripeAuth(async (
   const tags = sanitizeFeedbackTags(merchant_feedback_tags);
   const composedFeedback = composeFeedback(tags, merchant_feedback);
 
-  if (!dispute_id || !reason_code || !network) {
+  if (!dispute_id) {
     return NextResponse.json(
-      { error: "Missing dispute_id, reason_code, or network", code: "invalid_request" },
+      { error: "Missing dispute_id", code: "invalid_request" },
       { status: 400 },
     );
   }
@@ -56,10 +60,21 @@ export const POST = withStripeAuth(async (
   await ensureMerchant(accountId, userId);
 
   // Merchant-scoped dispute lookup in a single query (WIN-42).
+  // WIN-78: also pull network + network_reason_code + reason_code so we can
+  // resolve the network code server-side instead of trusting client-supplied
+  // values (which may be stale or wrong post-WIN-78 for old iframe builds).
   const { data: dispute, error: disputeError } = await getDisputeForAccount<{
     id: string;
     narrative_generations_count: number;
-  }>(livemode, dispute_id, accountId, "id, narrative_generations_count");
+    network: string | null;
+    network_reason_code: string | null;
+    reason_code: string;
+  }>(
+    livemode,
+    dispute_id,
+    accountId,
+    "id, narrative_generations_count, network, network_reason_code, reason_code",
+  );
 
   if (disputeError || !dispute) {
     return NextResponse.json(
@@ -69,9 +84,11 @@ export const POST = withStripeAuth(async (
   }
 
   // Expired/closed guard (WIN-48) -- don't burn a generation count on a
-  // dispute Stripe will no longer accept evidence for.
+  // dispute Stripe will no longer accept evidence for. We also reuse the
+  // fetched dispute for WIN-78 self-heal below.
+  let stripeDispute: Stripe.Dispute;
   try {
-    const stripeDispute = await getDispute(livemode, accountId, dispute_id);
+    stripeDispute = await getDispute(livemode, accountId, dispute_id);
     if (!isDisputeSubmittable(stripeDispute)) {
       return disputeExpiredResponse(stripeDispute);
     }
@@ -89,6 +106,73 @@ export const POST = withStripeAuth(async (
       { status: 500 },
     );
   }
+
+  // WIN-78: resolve network + network_reason_code server-side. Self-heal
+  // from the live Stripe dispute when DB has nulls (webhook-only rows,
+  // pre-migration legacy rows). Mirrors the submit route's self-heal.
+  let resolvedNetwork = dispute.network;
+  let resolvedCode = dispute.network_reason_code;
+  if (!resolvedNetwork || !resolvedCode) {
+    const healedNetwork = resolvedNetwork ?? extractNetwork(stripeDispute);
+    const healedCode = resolvedCode ?? extractNetworkReasonCode(stripeDispute);
+
+    const persistPayload: Record<string, string> = {};
+    if (!resolvedNetwork && healedNetwork) persistPayload.network = healedNetwork;
+    if (!resolvedCode && healedCode) persistPayload.network_reason_code = healedCode;
+
+    if (Object.keys(persistPayload).length > 0) {
+      let q = supabase
+        .from("disputes")
+        .update(persistPayload)
+        .eq("id", dispute.id)
+        .eq("livemode", livemode);
+      if (persistPayload.network !== undefined) q = q.is("network", null);
+      if (persistPayload.network_reason_code !== undefined) {
+        q = q.is("network_reason_code", null);
+      }
+      const { error: persistErr } = await q;
+      if (persistErr) {
+        captureRouteError(persistErr, {
+          route: "narratives.generate.self_heal_persist",
+          disputeId: dispute_id,
+          extra: { fields: Object.keys(persistPayload) },
+        });
+      }
+    }
+
+    resolvedNetwork = healedNetwork ?? null;
+    resolvedCode = healedCode ?? null;
+  }
+
+  if (!resolvedNetwork || !resolvedCode) {
+    captureRouteError(
+      new Error(
+        `Cannot resolve network/network_reason_code for narrative generation on dispute ${dispute_id}: missing on both DB and live Stripe dispute (network=${resolvedNetwork ?? "null"}, network_reason_code=${resolvedCode ?? "null"}, reason=${dispute.reason_code})`,
+      ),
+      {
+        route: "narratives.generate.network_reason_code_unresolved",
+        disputeId: dispute_id,
+        extra: {
+          network: dispute.network,
+          reason_code: dispute.reason_code,
+          stripe_dispute_status: stripeDispute.status,
+        },
+      },
+    );
+    return NextResponse.json(
+      {
+        error:
+          "We can't generate a response for this dispute. This usually means it's an unsupported card network or dispute type. Contact support and we'll help you respond manually.",
+        code: "unsupported_dispute",
+      },
+      { status: 422 },
+    );
+  }
+
+  // Body-supplied reason_code/network are silently ignored when we have DB
+  // values; if the iframe ever sends stale values, server-side wins.
+  void reason_code;
+  void network;
 
   // Atomic increment via RPC (WIN-42). null means already at limit.
   const { newCount, error: incError } = await incrementNarrativeGenerations(
@@ -165,8 +249,8 @@ export const POST = withStripeAuth(async (
       accountId,
       disputeId: dispute.id,
       stripeDisputeId: dispute_id,
-      reasonCode: reason_code,
-      network,
+      reasonCode: resolvedCode,
+      network: resolvedNetwork,
       merchantFeedback: composedFeedback,
     }),
   );
