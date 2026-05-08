@@ -81,6 +81,14 @@ vi.mock("@/lib/stripe/client", () => ({
   uploadCombinedEvidence: vi.fn(),
 }));
 
+// Sentry mock — used by self-heal and unresolved-code error paths (WIN-78)
+const { captureRouteErrorMock } = vi.hoisted(() => ({
+  captureRouteErrorMock: vi.fn(),
+}));
+vi.mock("@/lib/sentry", () => ({
+  captureRouteError: captureRouteErrorMock,
+}));
+
 // ---------------------------------------------------------------------------
 // Import the route AFTER all mocks are registered, and pull in the mocked fns
 // ---------------------------------------------------------------------------
@@ -244,12 +252,15 @@ describe("POST /api/disputes/[disputeId]/submit", () => {
     });
     // Default: getDisputeForAccount returns a valid local dispute row.
     // Tests that need a different behavior (e.g. 404) override per-test.
+    // Post-WIN-78: reason_code is Stripe coarse, network_reason_code is the
+    // network code. Both populated in the default fixture.
     getDisputeForAccountMock.mockResolvedValue({
       data: {
         id: LOCAL_DISPUTE_ID,
         stripe_dispute_id: DISPUTE_ID,
         network: "visa",
-        reason_code: "10.4",
+        reason_code: "fraudulent",
+        network_reason_code: "10.4",
         narrative_text: "Merchant narrative text",
       },
       error: null,
@@ -459,7 +470,8 @@ describe("POST /api/disputes/[disputeId]/submit", () => {
         id: LOCAL_DISPUTE_ID,
         stripe_dispute_id: DISPUTE_ID,
         network: "visa",
-        reason_code: "10.4",
+        reason_code: "fraudulent",
+        network_reason_code: "10.4",
         narrative_text: null,
       },
       error: null,
@@ -1333,6 +1345,220 @@ describe("POST /api/disputes/[disputeId]/submit", () => {
     expect(submitDisputeMock).toHaveBeenCalledTimes(1);
     const call = submitDisputeMock.mock.calls[0];
     expect(call[4]).toBe(RECLAIMED_KEY);
+  });
+
+  // ---------------------------------------------------------------------------
+  // WIN-78: split reason_code, self-heal both fields, replay-first
+  // ---------------------------------------------------------------------------
+  describe("WIN-78", () => {
+    /**
+     * Build a "happy" supabase mock that:
+     *   - returns no prior submission (replay check sees nothing)
+     *   - swallows all .update() and .insert() calls
+     *   - returns a row id from .insert(...).select().single()
+     */
+    function happySupabaseMock(opts: { priorSubmission?: unknown } = {}) {
+      const updateCalls: Array<Record<string, unknown>> = [];
+      supabaseMock.from.mockImplementation((table: string) => {
+        if (table === "merchants") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: { id: "m1" }, error: null }),
+          };
+        }
+        if (table === "dispute_submissions") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            in: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({
+              data: opts.priorSubmission ? [opts.priorSubmission] : [],
+              error: null,
+            }),
+            insert: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { id: "sub_new" },
+                  error: null,
+                }),
+              }),
+            }),
+            update: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }),
+          };
+        }
+        if (table === "disputes") {
+          return {
+            update: vi.fn((payload: Record<string, unknown>) => {
+              updateCalls.push(payload);
+              return {
+                eq: vi.fn().mockReturnValue({
+                  eq: vi.fn().mockReturnValue({
+                    is: vi.fn().mockReturnValue({
+                      is: vi.fn().mockResolvedValue({ data: null, error: null }),
+                    }),
+                  }),
+                }),
+              };
+            }),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+          };
+        }
+        if (table === "evidence_files") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        };
+      });
+      return { updateCalls };
+    }
+
+    it("looks up playbook using network_reason_code, not reason_code", async () => {
+      // Default fixture has reason_code="fraudulent", network_reason_code="10.4".
+      // Submit MUST call getPlaybook("visa", "10.4"), not ("visa", "fraudulent").
+      getPlaybookMock.mockResolvedValue(makePlaybook());
+      submitDisputeMock.mockResolvedValueOnce(
+        makeStripeDispute({ status: "under_review" }),
+      );
+      getDisputeMock.mockResolvedValueOnce({
+        ...makeStripeDispute(),
+        charge: makeStripeCharge(),
+      });
+      happySupabaseMock();
+
+      await POST(mkRequest());
+
+      expect(getPlaybookMock).toHaveBeenCalledWith("visa", "10.4");
+      expect(getPlaybookMock).not.toHaveBeenCalledWith("visa", "fraudulent");
+    });
+
+    it("self-heals BOTH network and network_reason_code from live Stripe dispute when local row has both null", async () => {
+      // Webhook-only row: network AND network_reason_code are both null in DB.
+      // Submit must pull both from the live Stripe dispute, persist them,
+      // then look up the playbook.
+      getDisputeForAccountMock.mockResolvedValueOnce({
+        data: {
+          id: LOCAL_DISPUTE_ID,
+          stripe_dispute_id: DISPUTE_ID,
+          network: null,
+          reason_code: "fraudulent",
+          network_reason_code: null,
+          narrative_text: "Merchant narrative text",
+        },
+        error: null,
+      });
+      getPlaybookMock.mockResolvedValue(makePlaybook());
+      submitDisputeMock.mockResolvedValueOnce(
+        makeStripeDispute({ status: "under_review" }),
+      );
+      // Live Stripe dispute has the code at the nested location and the
+      // network on the charge.
+      getDisputeMock.mockResolvedValueOnce({
+        ...makeStripeDispute({ network_reason_code: null }),
+        charge: {
+          ...makeStripeCharge(),
+          payment_method_details: {
+            card: { brand: "visa", network: "visa", network_reason_code: "10.4" },
+          },
+        },
+        payment_method_details: {
+          card: { brand: "visa", network: "visa", network_reason_code: "10.4" },
+        },
+      });
+      const { updateCalls } = happySupabaseMock();
+
+      await POST(mkRequest());
+
+      expect(getPlaybookMock).toHaveBeenCalledWith("visa", "10.4");
+      expect(
+        updateCalls.some(
+          (c) => c.network_reason_code === "10.4" && c.network === "visa",
+        ),
+      ).toBe(true);
+    });
+
+    it("replay returns cached succeeded submission BEFORE attempting self-heal", async () => {
+      // Even on a row where self-heal would 500 (no resolvable network code),
+      // a previously-succeeded submission must replay its cached response.
+      getDisputeForAccountMock.mockResolvedValueOnce({
+        data: {
+          id: LOCAL_DISPUTE_ID,
+          stripe_dispute_id: DISPUTE_ID,
+          network: null,
+          reason_code: "fraudulent",
+          network_reason_code: null,
+          narrative_text: "Merchant narrative text",
+        },
+        error: null,
+      });
+      // Stripe dispute also has nothing.
+      getDisputeMock.mockResolvedValueOnce({
+        ...makeStripeDispute({ network_reason_code: null }),
+        charge: { id: "ch_test", payment_method_details: null },
+      });
+
+      const priorSubmissionRow = {
+        id: "sub_prior",
+        status: "succeeded" as const,
+        idempotency_key: "k_prior",
+        stripe_response: { id: DISPUTE_ID, status: "under_review" },
+        created_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+        warnings: [],
+      };
+      happySupabaseMock({ priorSubmission: priorSubmissionRow });
+
+      const res = await POST(mkRequest());
+
+      expect(res.status).toBe(200);
+      expect(captureRouteErrorMock).not.toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({
+          route: "disputes.submit.network_reason_code_unresolved",
+        }),
+      );
+      expect(getPlaybookMock).not.toHaveBeenCalled();
+    });
+
+    it("500s with Sentry capture when no replay AND both fields are unresolvable", async () => {
+      getDisputeForAccountMock.mockResolvedValueOnce({
+        data: {
+          id: LOCAL_DISPUTE_ID,
+          stripe_dispute_id: DISPUTE_ID,
+          network: null,
+          reason_code: "fraudulent",
+          network_reason_code: null,
+          narrative_text: "Merchant narrative text",
+        },
+        error: null,
+      });
+      getDisputeMock.mockResolvedValueOnce({
+        ...makeStripeDispute({ network_reason_code: null }),
+        charge: { id: "ch_test", payment_method_details: null },
+      });
+      happySupabaseMock();
+
+      const res = await POST(mkRequest());
+
+      expect(res.status).toBe(500);
+      expect(captureRouteErrorMock).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({
+          route: "disputes.submit.network_reason_code_unresolved",
+        }),
+      );
+      expect(getPlaybookMock).not.toHaveBeenCalled();
+    });
   });
 });
 

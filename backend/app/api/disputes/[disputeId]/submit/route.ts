@@ -11,6 +11,10 @@ import { downloadStripeFile, uploadCombinedEvidence } from "@/lib/stripe/client"
 import { ensureMerchant } from "@/lib/merchants";
 import { supabase } from "@/lib/supabase";
 import { getDisputeForAccount } from "@/lib/disputes";
+import {
+  extractNetworkReasonCode,
+  extractNetwork,
+} from "@/lib/disputes/to-row";
 import { getPlaybook } from "@/lib/playbooks";
 import { evaluateSubmissionGuard } from "@/lib/disputes/submission-guard";
 import { assembleEvidence } from "@/lib/disputes/assemble-evidence";
@@ -142,14 +146,15 @@ export const POST = withStripeAuth(
     const { data: localDispute } = await getDisputeForAccount<{
       id: string;
       stripe_dispute_id: string;
-      network: string;
+      network: string | null;
       reason_code: string;
+      network_reason_code: string | null;
       narrative_text: string | null;
     }>(
       livemode,
       stripeDisputeId,
       accountId,
-      "id, stripe_dispute_id, network, reason_code, narrative_text",
+      "id, stripe_dispute_id, network, reason_code, network_reason_code, narrative_text",
     );
 
     if (!localDispute) {
@@ -226,16 +231,9 @@ export const POST = withStripeAuth(
       );
     }
 
-    // Step 6: Load playbook
-    const playbook = await getPlaybook(
-      localDispute.network,
-      localDispute.reason_code,
-    );
-    if (!playbook) {
-      return errorResponse(500, "internal_error", "Playbook not found");
-    }
-
-    // Step 7: Idempotent replay / in-flight lock check
+    // Step 7 (was Step 6): Idempotent replay / in-flight lock check
+    // WIN-78: moved BEFORE playbook resolution so a previously-succeeded
+    // submission can return its cached response without forcing self-heal.
     // Must run BEFORE the pre-submission guard so that a replay of a
     // successfully-submitted dispute returns the cached 200 even though
     // Stripe now reports a non-submittable status (e.g. under_review).
@@ -351,6 +349,104 @@ export const POST = withStripeAuth(
           completed_at: new Date().toISOString(),
         })
         .eq("id", prior.id);
+    }
+
+    // Step 7.5 (post-replay): Resolve network + network_reason_code, then
+    // load the playbook. If the local row has either as null (legacy/migration
+    // gap, webhook-only row, charge-not-expanded webhook payload), self-heal
+    // from the live Stripe dispute we already fetched. The replay-cache
+    // check above runs FIRST so a previously-succeeded submission can return
+    // its cached response without forcing self-heal.
+    //
+    // Persist-back uses .is(..., null) filters so we never overwrite a
+    // concurrent writer's value (e.g. another submit attempt or a
+    // view-backfill that landed between our SELECT and this UPDATE).
+    // (WIN-78)
+    let networkReasonCode = localDispute.network_reason_code;
+    let network = localDispute.network;
+
+    if (!networkReasonCode || !network) {
+      const healedCode = networkReasonCode ?? extractNetworkReasonCode(stripeDispute);
+      const healedNetwork = network ?? extractNetwork(stripeDispute);
+
+      const persistPayload: Record<string, string> = {};
+      if (!networkReasonCode && healedCode) {
+        persistPayload.network_reason_code = healedCode;
+      }
+      if (!network && healedNetwork) {
+        persistPayload.network = healedNetwork;
+      }
+
+      if (Object.keys(persistPayload).length > 0) {
+        let q = supabase
+          .from("disputes")
+          .update(persistPayload)
+          .eq("id", localDispute.id)
+          .eq("livemode", livemode);
+        if (persistPayload.network_reason_code !== undefined) {
+          q = q.is("network_reason_code", null);
+        }
+        if (persistPayload.network !== undefined) {
+          q = q.is("network", null);
+        }
+        const { error: persistErr } = await q;
+        if (persistErr) {
+          captureRouteError(persistErr, {
+            route: "disputes.submit.self_heal_persist",
+            disputeId: stripeDisputeId,
+            extra: { fields: Object.keys(persistPayload) },
+          });
+          // Non-fatal: the playbook lookup below uses the in-memory values.
+        }
+      }
+
+      networkReasonCode = healedCode ?? null;
+      network = healedNetwork ?? null;
+    }
+
+    if (!networkReasonCode || !network) {
+      captureRouteError(
+        new Error(
+          `Cannot resolve network/network_reason_code for dispute ${stripeDisputeId}: missing on both local row and live Stripe dispute (network=${network ?? "null"}, network_reason_code=${networkReasonCode ?? "null"}, reason=${localDispute.reason_code})`,
+        ),
+        {
+          route: "disputes.submit.network_reason_code_unresolved",
+          disputeId: stripeDisputeId,
+          extra: {
+            network: localDispute.network,
+            reason_code: localDispute.reason_code,
+            stripe_dispute_status: stripeDispute.status,
+          },
+        },
+      );
+      return errorResponse(
+        500,
+        "internal_error",
+        "We can't generate a response strategy for this dispute. This usually means it's an unsupported card network or dispute type. Contact support and we'll help you respond manually.",
+      );
+    }
+
+    const playbook = await getPlaybook(network, networkReasonCode);
+    if (!playbook) {
+      captureRouteError(
+        new Error(
+          `Playbook not found for network=${network} code=${networkReasonCode}`,
+        ),
+        {
+          route: "disputes.submit.playbook_missing",
+          disputeId: stripeDisputeId,
+          extra: {
+            network,
+            reason_code: localDispute.reason_code,
+            network_reason_code: networkReasonCode,
+          },
+        },
+      );
+      return errorResponse(
+        500,
+        "internal_error",
+        "We don't have a playbook for this dispute type yet. Contact support and we'll help you respond manually.",
+      );
     }
 
     // Step 8: Pre-submission guard
