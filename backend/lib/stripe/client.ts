@@ -35,6 +35,41 @@ export async function listDisputes(
   return resp.data;
 }
 
+/**
+ * Paginated list. Walks Stripe's `has_more` cursor up to `maxPages` (default
+ * 10 → 1000 disputes) so reconciliation can't silently truncate at the first
+ * 100 results. Used by the daily reconcile cron and the first-install
+ * backfill, both of which need to see every dispute in their window.
+ *
+ * The cap is intentional: a runaway pagination loop on a misbehaving Stripe
+ * response would otherwise burn rate-limit quota indefinitely. 1000 disputes
+ * in a 90-day window is well past anything a real merchant on this product
+ * would hit; if we ever do, the explicit cap surfaces it instead of hiding it.
+ */
+export async function listDisputesAllPages(
+  livemode: boolean,
+  accountId: string,
+  params: Stripe.DisputeListParams = {},
+  maxPages = 10,
+): Promise<{ disputes: Stripe.Dispute[]; truncated: boolean }> {
+  const out: Stripe.Dispute[] = [];
+  let starting_after: string | undefined;
+  let page = 0;
+  while (page < maxPages) {
+    const resp = await getStripe(livemode).disputes.list(
+      { limit: 100, ...params, starting_after },
+      { stripeAccount: accountId },
+    );
+    out.push(...resp.data);
+    if (!resp.has_more || resp.data.length === 0) {
+      return { disputes: out, truncated: false };
+    }
+    starting_after = resp.data[resp.data.length - 1].id;
+    page++;
+  }
+  return { disputes: out, truncated: true };
+}
+
 export async function getDispute(
   livemode: boolean,
   accountId: string,

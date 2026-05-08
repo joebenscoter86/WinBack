@@ -4,6 +4,7 @@ import { getDispute, normalizeDispute, classifyStripeError } from "@/lib/stripe"
 import { ensureMerchant } from "@/lib/merchants";
 import { supabase } from "@/lib/supabase";
 import { getDisputeForAccount } from "@/lib/disputes";
+import { disputeToRow } from "@/lib/disputes/to-row";
 import Stripe from "stripe";
 
 export const POST = withStripeAuth(async (
@@ -56,26 +57,36 @@ export const POST = withStripeAuth(async (
         .single();
 
       if (merchant) {
-        const responseDeadline = normalized.evidence_due_by
-          ? new Date(normalized.evidence_due_by * 1000).toISOString()
-          : null;
         const transactionDate = normalized.transaction_date
           ? new Date(normalized.transaction_date * 1000).toISOString()
           : null;
 
+        // Base fields (status, response_deadline, charge_id, amount,
+        // currency) come from the shared disputeToRow so the webhook and
+        // on-view backfill paths can't silently disagree on `status` --
+        // that's what the Insights aggregator buckets resolved/won/lost
+        // counts on, and any drift here would miscount.
+        const baseRow = disputeToRow(dispute);
+
+        // `reason_code` and `network` are intentionally overridden with
+        // the richer values from normalizeDispute, NOT the raw
+        // disputeToRow versions. This is a wart: the `reason_code`
+        // column is overloaded between two semantic spaces -- Stripe's
+        // coarse reason (`fraudulent`) which is what insights/aggregate
+        // labels expect, and the network reason code (`10.4`) which is
+        // what submit→getPlaybook needs to look up the playbook. Today
+        // the webhook writes the former and this route writes the
+        // latter; whichever ran most recently wins. See follow-up below
+        // about splitting the column. Until then: keep the existing
+        // behavior so submission still works post-view.
         const { error: upsertError } = await supabase.from("disputes").upsert(
           {
-            merchant_id: (merchant as { id: string }).id,
-            stripe_dispute_id: normalized.id,
-            stripe_charge_id: normalized.charge_id,
-            amount: normalized.amount,
-            currency: normalized.currency,
+            ...baseRow,
             reason_code: normalized.reason_code,
             network: normalized.network,
-            status: normalized.status,
+            merchant_id: (merchant as { id: string }).id,
             customer_name: normalized.customer_name ?? null,
             transaction_date: transactionDate,
-            response_deadline: responseDeadline,
             livemode,
             updated_at: new Date().toISOString(),
           },

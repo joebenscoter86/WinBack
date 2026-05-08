@@ -44,6 +44,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       merchant_count: 0,
       disputes_seen: 0,
       disputes_upserted: 0,
+      status_refreshes: 0,
+      truncated_merchants: 0,
       errors: [] as Array<{ merchant_id: string; message: string }>,
     };
 
@@ -53,6 +55,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         const r = await reconcileDisputes(livemode, m.stripe_account_id);
         aggregate.disputes_seen += r.disputes_seen;
         aggregate.disputes_upserted += r.disputes_upserted;
+        aggregate.status_refreshes += r.status_refreshes;
+        if (r.truncated) aggregate.truncated_merchants += 1;
         aggregate.errors.push(...r.errors);
       }
     }

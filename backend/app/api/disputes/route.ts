@@ -4,6 +4,7 @@ import { listDisputes, normalizeDispute, classifyStripeError } from "@/lib/strip
 import { ensureMerchant } from "@/lib/merchants";
 import { supabase } from "@/lib/supabase";
 import { captureRouteError } from "@/lib/sentry";
+import { reconcileDisputes } from "@/lib/webhooks/reconcile-disputes";
 import Stripe from "stripe";
 
 export const POST = withStripeAuth(async (_request, { identity, livemode }) => {
@@ -34,25 +35,71 @@ export const POST = withStripeAuth(async (_request, { identity, livemode }) => {
     // opened it in WinBack yet (viewed_at IS NULL). Disputes not yet in the
     // DB (pre-webhook race) default to is_new=false -- safer to under-badge
     // than to badge every dispute on a cold start.
-    const unseenIds = new Set<string>();
-    if (normalized.length > 0) {
-      const { data: merchantRow } = await supabase
+    const { data: merchantRow } = await supabase
+      .from("merchants")
+      .select("id, disputes_backfilled_at_test, disputes_backfilled_at_live")
+      .eq("stripe_account_id", accountId)
+      .maybeSingle();
+    const m = merchantRow as
+      | {
+          id: string;
+          disputes_backfilled_at_test: string | null;
+          disputes_backfilled_at_live: string | null;
+        }
+      | null;
+    const merchantId = m?.id;
+    const needsBackfill = m
+      ? (livemode ? m.disputes_backfilled_at_live : m.disputes_backfilled_at_test) === null
+      : false;
+
+    // First-install backfill. The disputes table only gets populated by
+    // webhook deliveries that happen AFTER the merchant row exists, plus
+    // the daily cron's 90-day window. Disputes that pre-date install
+    // (or that hit during the deploy/cold-start gap that dropped the
+    // webhook) are otherwise invisible to the Insights aggregator until
+    // the merchant clicks into them. Run a one-time per-livemode 90-day
+    // reconcile inline on the first list call so Insights has real data
+    // immediately. Stamped via disputes_backfilled_at_{mode} so it
+    // doesn't repeat. Errors are swallowed -- a backfill failure must
+    // not break the disputes list, since the list itself comes from
+    // Stripe directly and is correct regardless. We do this BEFORE the
+    // is_new lookup so a fresh merchant's first list call still gets
+    // accurate unseen-badging instead of "everything looks viewed."
+    if (merchantId && needsBackfill) {
+      try {
+        await reconcileDisputes(livemode, accountId);
+      } catch (backfillErr) {
+        captureRouteError(backfillErr, {
+          route: "disputes.list.first_install_backfill",
+          extra: { account_id: accountId, livemode },
+        });
+      }
+      const stampColumn = livemode
+        ? "disputes_backfilled_at_live"
+        : "disputes_backfilled_at_test";
+      const { error: stampErr } = await supabase
         .from("merchants")
-        .select("id")
-        .eq("stripe_account_id", accountId)
-        .maybeSingle();
-      const merchantId = (merchantRow as { id: string } | null)?.id;
-      const { data: viewRows } = merchantId
-        ? await supabase
-            .from("disputes")
-            .select("stripe_dispute_id, viewed_at")
-            .eq("merchant_id", merchantId)
-            .eq("livemode", livemode)
-            .in(
-              "stripe_dispute_id",
-              normalized.map((d) => d.id),
-            )
-        : { data: null };
+        .update({ [stampColumn]: new Date().toISOString() })
+        .eq("id", merchantId);
+      if (stampErr) {
+        captureRouteError(stampErr, {
+          route: "disputes.list.backfill_stamp",
+          extra: { account_id: accountId, livemode },
+        });
+      }
+    }
+
+    const unseenIds = new Set<string>();
+    if (merchantId && normalized.length > 0) {
+      const { data: viewRows } = await supabase
+        .from("disputes")
+        .select("stripe_dispute_id, viewed_at")
+        .eq("merchant_id", merchantId)
+        .eq("livemode", livemode)
+        .in(
+          "stripe_dispute_id",
+          normalized.map((d) => d.id),
+        );
       for (const row of (viewRows ?? []) as {
         stripe_dispute_id: string;
         viewed_at: string | null;

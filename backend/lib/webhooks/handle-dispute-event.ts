@@ -3,35 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { reportDisputeWonFee } from "@/lib/billing";
 import { captureRouteError } from "@/lib/sentry";
 import { isInquiryToChargebackEscalation } from "@/lib/disputes/inquiry";
-
-/**
- * WIN-21: Map a Stripe dispute object to the columns we persist.
- * Mirrors the fields normalizeDispute returns to the iframe — kept narrow on
- * purpose so a missed Stripe API field doesn't silently overwrite a hand-set
- * one in the DB.
- */
-function disputeToRow(d: Stripe.Dispute): Record<string, unknown> {
-  return {
-    stripe_dispute_id: d.id,
-    stripe_charge_id: typeof d.charge === "string" ? d.charge : d.charge?.id,
-    amount: d.amount,
-    currency: d.currency,
-    reason_code: d.reason,
-    network: d.network_reason_code ? inferNetwork(d) : null,
-    status: d.status,
-    response_deadline: d.evidence_details?.due_by
-      ? new Date(d.evidence_details.due_by * 1000).toISOString()
-      : null,
-  };
-}
-
-function inferNetwork(d: Stripe.Dispute): string | null {
-  const reason = d.reason ?? "";
-  if (/^visa_/.test(reason)) return "visa";
-  if (/^mastercard_/.test(reason)) return "mastercard";
-  if (/^amex_/.test(reason)) return "amex";
-  return null;
-}
+import { disputeToRow } from "@/lib/disputes/to-row";
 
 const CLOSED_OUTCOME_STATUSES = new Set([
   "won",

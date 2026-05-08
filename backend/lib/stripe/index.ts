@@ -1,5 +1,6 @@
 export {
   listDisputes,
+  listDisputesAllPages,
   getDispute,
   getCharge,
   getCustomer,
