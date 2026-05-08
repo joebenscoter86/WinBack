@@ -12,6 +12,7 @@ import {
 } from '@stripe/ui-extension-sdk/ui';
 import type { ExtensionContextValue } from '@stripe/ui-extension-sdk/context';
 import { fetchBackend, ApiError } from '../lib/apiClient';
+import { APP_VERSION } from '../lib/version';
 
 type BillingStatus = {
   tier: 'usage' | 'pro';
@@ -416,8 +417,10 @@ const AppSettings = (context: ExtensionContextValue) => {
           <Inline css={{ font: 'heading', fontWeight: 'semibold' }}>
             About WinBack
           </Inline>
-          {/* Keep in sync with version in stripe-app/stripe-app.json on every release. */}
-          <Inline css={{ font: 'body' }}>Version 1.1.9</Inline>
+          {/* Single source of truth: stripe-app.json. Imported at build time
+              so this Inline can never drift from the manifest version (the
+              cause of the v1.1.6 marketplace rejection). */}
+          <Inline css={{ font: 'body' }}>Version {APP_VERSION}</Inline>
           <Inline css={{ font: 'caption', color: 'secondary' }}>
             Guided dispute resolution for Stripe merchants. Built by JB Technology LLC.
           </Inline>

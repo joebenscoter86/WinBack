@@ -73,7 +73,7 @@ QA is **no longer driven through `stripe apps start` / a local backend**. The se
 | Change type | Deploy path |
 |---|---|
 | Backend code (`backend/**`) | `git push origin main` → Vercel auto-deploys in ~1-2 min. |
-| Stripe app frontend (`stripe-app/**`) | bump version in `stripe-app/stripe-app.json`, run `stripe apps upload` from `stripe-app/`, then reinstall in the Stripe test dashboard to pick up the new version. |
+| Stripe app frontend (`stripe-app/**`) | bump version in `stripe-app/stripe-app.json`, run `npm run upload` from `stripe-app/` (NOT bare `stripe apps upload` — the npm script's preupload hook regenerates `src/lib/version.ts` from the manifest, which is what AppSettings renders). Then reinstall in the Stripe test dashboard to pick up the new version. |
 | DB migrations | Apply via the Supabase MCP `apply_migration` tool against `ssnwzgxvugraswghqsvo` (or the Supabase Dashboard SQL editor). The same DB serves both the dev Vercel preview and Vercel prod. |
 
 ### Implications for Claude
@@ -81,7 +81,7 @@ QA is **no longer driven through `stripe apps start` / a local backend**. The se
 - **Don't suggest `cd stripe-app && stripe apps start` as the QA path.** That mode is for active source-edit feedback loops, not for the user's QA workflow.
 - **Pushing to `main` is a deploy action.** Treat it as risky/visible per the executing-actions-with-care guidance — confirm before pushing, even for "ready to ship" PRs, unless the user has just explicitly authorized the push for this batch.
 - **`stripe apps upload` requires a version bump first** (the upload fails on duplicate versions, including versions that were uploaded but never published — that's how 1.1.7 got skipped on the way to 1.1.8). Match the bump style of recent commits (`6d8bc64` bumped to 1.1.1; the next would be 1.1.9 or 1.2.0 depending on whether changes are user-visible).
-- **Bump `Version X.Y.Z` in [stripe-app/src/views/AppSettings.tsx:401] in lockstep with the manifest version.** v1.1.6 was rejected by Stripe specifically for hardcoded "Version 0.0.1" drift from the manifest. The string is hardcoded (no SDK helper to read manifest version at runtime), so a manifest bump that misses the AppSettings string will reproduce the same rejection.
+- **AppSettings version is now auto-synced.** v1.1.6 was rejected for hardcoded "Version 0.0.1" drift from the manifest; the fix lives in `stripe-app/scripts/sync-version.cjs`, which regenerates `src/lib/version.ts` from `stripe-app.json` via the npm `preupload`/`prestart` hooks. As long as you run `npm run upload` (not `stripe apps upload` directly), the rendered version cannot drift. Don't hand-edit `src/lib/version.ts` — the generator overwrites it.
 - **Migrations apply to the same DB the user is QAing against.** That's currently safe pre-launch, but post-WIN-47 prod cut-over the answer changes — re-read this section then.
 
 ## Development Environment
