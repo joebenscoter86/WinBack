@@ -127,13 +127,15 @@ describe("WIN-43: dispute wizard integration flow", () => {
 
     const { data: disputeRow } = await testDb
       .from("disputes")
-      .select("id, merchant_id, amount, reason_code, network")
+      .select("id, merchant_id, amount, reason_code, network_reason_code, network")
       .eq("stripe_dispute_id", TEST_DISPUTE_ID)
       .single();
     expect(disputeRow).toBeDefined();
     expect(disputeRow?.merchant_id).toBe(merchantRow?.id); // NOT null
     expect(disputeRow?.amount).toBe(14900); // NOT zero — WIN-41 regression check
-    expect(disputeRow?.reason_code).toBe("10.4"); // NOT empty string
+    // WIN-78: reason_code is Stripe coarse, network_reason_code is the network code.
+    expect(disputeRow?.reason_code).toBe("fraudulent");
+    expect(disputeRow?.network_reason_code).toBe("10.4");
     expect(disputeRow?.network).toBe("visa");
 
     // ---- STEP 2: POST /api/playbooks ----
@@ -208,13 +210,16 @@ describe("WIN-43: dispute wizard integration flow", () => {
     // Regression check for WIN-41: ensure the dispute row still has
     // real values (amount/reason_code were NOT overwritten by the
     // upload route's fallback upsert).
+    // WIN-78: reason_code is Stripe coarse; network_reason_code holds the
+    // network code that was previously stored in reason_code.
     const { data: disputeRowAfterUpload } = await testDb
       .from("disputes")
-      .select("amount, reason_code")
+      .select("amount, reason_code, network_reason_code")
       .eq("stripe_dispute_id", TEST_DISPUTE_ID)
       .single();
     expect(disputeRowAfterUpload?.amount).toBe(14900);
-    expect(disputeRowAfterUpload?.reason_code).toBe("10.4");
+    expect(disputeRowAfterUpload?.reason_code).toBe("fraudulent");
+    expect(disputeRowAfterUpload?.network_reason_code).toBe("10.4");
 
     // ---- STEP 5: PATCH /api/disputes/{id} (checklist toggle) ----
     const { PATCH: disputesPATCH } = await import(
@@ -882,16 +887,14 @@ describe("Inquiry → chargeback escalation", () => {
       .single();
     expect(postEscalationSubmission?.status).toBe("superseded");
 
-    // 3b. The webhook's disputeToRow overwrites reason_code/network with values
-    //     derived from the Stripe event, which doesn't include a network_reason_code
-    //     here, so we land at network=null, reason_code=fraudulent — invalid for
-    //     playbook lookup. Patch back to visa/10.4 (what normalize.ts would have
-    //     set during a real /api/disputes round-trip in test mode). This is test
-    //     plumbing, not validation of the bug fix.
-    await testDb
-      .from("disputes")
-      .update({ network: "visa", reason_code: "10.4" })
-      .eq("stripe_dispute_id", TEST_DISPUTE_ID);
+    // 3b. WIN-78: post-escalation, the webhook wrote reason_code = "fraudulent"
+    //     and network_reason_code = null (test-mode trigger doesn't supply
+    //     a network code). When submit runs in step 4 below, it self-heals
+    //     network + network_reason_code from the live Stripe dispute via
+    //     extractNetwork + extractNetworkReasonCode. The mock for getDispute
+    //     in step 4 returns a charge with payment_method_details.card.network
+    //     = "visa", which is the source the self-heal extracts from.
+    //     No manual DB patch needed.
 
     // Also seed an evidence_files row + checklist_state + narrative so the
     // submit route's evidence assembly has something to work with.
@@ -917,9 +920,13 @@ describe("Inquiry → chargeback escalation", () => {
 
     // Pre-submission guard fetch + post-submit refresh both expect the dispute
     // in needs_response with a charge expanded.
+    // WIN-78: also include network_reason_code so submit's self-heal can
+    // resolve it from the live Stripe dispute (DB has null after webhook).
     mockGetDispute.mockResolvedValue({
       id: TEST_DISPUTE_ID,
       status: "needs_response",
+      reason: "fraudulent",
+      network_reason_code: "10.4",
       evidence: {},
       evidence_details: { due_by: Math.floor(Date.now() / 1000) + 7 * 86_400 },
       charge: {
