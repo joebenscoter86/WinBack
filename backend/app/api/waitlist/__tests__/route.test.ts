@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
@@ -200,6 +200,75 @@ describe("POST /api/waitlist", () => {
       await POST(makeRequest({ email: "test@example.com", turnstileToken: "x" }));
       // Captcha should not be checked if the request was already rate-limited.
       expect(turnstileMock).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // WIN-80: HTML injection + length cap on the admin notification path
+  // -------------------------------------------------------------------------
+  describe("admin notification HTML safety (WIN-80)", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it("HTML-escapes the email when interpolating into admin notification body", async () => {
+      vi.stubEnv("WAITLIST_NOTIFY_EMAIL", "owner@winbackpay.com");
+      mockSupabaseInsert(null);
+      const mockSend = mockResendSend();
+
+      // EMAIL_REGEX permits <, >, ", ', & in the local-part (anything that
+      // isn't whitespace or @). A no-space payload like <b>x</b>@a.b passes
+      // validation, gets stored verbatim, and pre-fix landed raw in the
+      // admin email body. Use a payload that exercises every escape target.
+      const malicious = `<b>"x"&'y'</b>@a.b`;
+      const res = await POST(makeRequest({ email: malicious }));
+      expect(res.status).toBe(200);
+
+      // Two sends fire: welcome email (to: user) and notification (to: owner).
+      const notificationCall = mockSend.mock.calls.find(
+        (call) => (call[0] as { to: string }).to === "owner@winbackpay.com",
+      );
+      expect(notificationCall).toBeDefined();
+      const html = (notificationCall![0] as { html: string }).html;
+
+      // Critical: raw markup characters must not survive into the HTML body.
+      expect(html).not.toContain("<b>");
+      expect(html).not.toContain("</b>");
+      // Allow the route's own static <p><strong> wrapper, but every char from
+      // the user-supplied email must be escaped.
+      expect(html).toContain("&lt;b&gt;");
+      expect(html).toContain("&lt;/b&gt;");
+      expect(html).toContain("&quot;x&quot;");
+      expect(html).toContain("&amp;");
+      expect(html).toContain("&#39;y&#39;");
+    });
+
+    it("rejects emails longer than 254 chars (RFC 5321)", async () => {
+      // 255-char email that would otherwise pass EMAIL_REGEX.
+      const longLocal = "a".repeat(245);
+      const longEmail = `${longLocal}@a.bcd`; // 245 + 1 + 5 = 251... need >254
+      const tooLong = `${"a".repeat(250)}@a.bcd`; // 250 + 1 + 5 = 256
+      expect(tooLong.length).toBeGreaterThan(254);
+      const res = await POST(makeRequest({ email: tooLong }));
+      const json = await res.json();
+      expect(res.status).toBe(400);
+      expect(json).toEqual({ success: false, error: "Invalid email address" });
+      // Must short-circuit before hitting Supabase.
+      expect(supabase.from).not.toHaveBeenCalled();
+      expect(longEmail.length).toBe(251); // sanity
+    });
+
+    it("accepts an email exactly at the 254-char limit", async () => {
+      vi.stubEnv("WAITLIST_NOTIFY_EMAIL", "owner@winbackpay.com");
+      mockSupabaseInsert(null);
+      mockResendSend();
+
+      const okLocal = "a".repeat(248); // 248 + 1 + 5 = 254
+      const okEmail = `${okLocal}@a.bcd`;
+      expect(okEmail.length).toBe(254);
+
+      const res = await POST(makeRequest({ email: okEmail }));
+      expect(res.status).toBe(200);
     });
   });
 });
