@@ -177,8 +177,9 @@ export const PATCH = withStripeAuth(async (
     );
   }
 
-  // Await -- the PATCH may fall back to upserting a row with merchant_id,
-  // which requires the merchant row to exist (WIN-42).
+  // Ensure the caller's merchant row exists for downstream code paths --
+  // PATCH itself does not insert merchants, but other routes co-running
+  // for this user expect the row to be present (WIN-42).
   await ensureMerchant(accountId, userId);
 
   // Use the body parsed by withStripeAuth -- the request body stream was
@@ -212,7 +213,15 @@ export const PATCH = withStripeAuth(async (
     );
   }
 
-  // Verify the dispute belongs to this merchant before updating (WIN-42).
+  // WIN-79: PATCH must require an already-scoped dispute row. The previous
+  // implementation fell through to an upsert keyed on the globally-unique
+  // stripe_dispute_id when getDisputeForAccount returned null, with a
+  // payload that set merchant_id to the caller. That meant any
+  // authenticated merchant could rewrite another merchant's row by
+  // PATCHing their du_* id (the service-role client bypasses RLS). The
+  // canonical entry point is POST /api/disputes/[id], which backfills
+  // through a Stripe-account-scoped path; legit clients always POST
+  // before they PATCH.
   const { data: scoped } = await getDisputeForAccount<{ id: string }>(
     livemode,
     disputeId,
@@ -220,57 +229,27 @@ export const PATCH = withStripeAuth(async (
     "id",
   );
 
-  if (scoped) {
-    const { data, error } = await supabase
-      .from("disputes")
-      .update(updatePayload)
-      .eq("id", scoped.id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Failed to update checklist:", error);
-      return NextResponse.json(
-        { error: "Failed to save checklist", code: "db_error" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ data });
+  if (!scoped) {
+    return NextResponse.json(
+      { error: "Dispute not found", code: "not_found" },
+      { status: 404 },
+    );
   }
 
-  // Dispute row doesn't exist yet for this merchant -- fall back to an
-  // upsert so checklist state saved before the Review tab loaded isn't
-  // silently dropped. This matches the pre-WIN-42 behavior.
-  const { data: merchant } = await supabase
-    .from("merchants")
-    .select("id")
-    .eq("stripe_account_id", accountId)
-    .single();
-
-  const { data: inserted, error: insertError } = await supabase
+  const { data, error } = await supabase
     .from("disputes")
-    .upsert(
-      {
-        stripe_dispute_id: disputeId,
-        merchant_id: (merchant as { id: string } | null)?.id,
-        amount: 0,
-        reason_code: "",
-        livemode,
-        ...updatePayload,
-      },
-      { onConflict: "stripe_dispute_id" },
-    )
+    .update(updatePayload)
+    .eq("id", scoped.id)
     .select()
     .single();
 
-  if (insertError) {
-    console.error("Failed to upsert dispute checklist:", insertError);
+  if (error) {
+    console.error("Failed to update dispute:", error);
     return NextResponse.json(
-      { error: "Failed to save checklist", code: "db_error" },
+      { error: "Failed to save changes", code: "db_error" },
       { status: 500 },
     );
   }
 
-  return NextResponse.json({ data: inserted });
+  return NextResponse.json({ data });
 });
