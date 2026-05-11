@@ -1,6 +1,15 @@
+import { createHash } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import type { NarrativeOutput } from "./prompts/types";
 import type { PromptResult } from "./prompts/build-prompt";
+
+// Short, non-reversible fingerprint of Claude's raw output. Used in JSON-parse
+// error messages so Sentry can dedupe identical malformed responses without
+// the message itself carrying PromptContext PII (customer name, billing
+// address, last4 etc.) that the prompt builder feeds into Claude. WIN-81.
+function fingerprintRawText(text: string): string {
+  return `sha256:${createHash("sha256").update(text).digest("hex").slice(0, 12)}`;
+}
 
 let _client: Anthropic | null = null;
 
@@ -96,12 +105,12 @@ export async function generateNarrative(
         parsed = JSON.parse(fixText);
       } catch {
         throw new Error(
-          `Invalid JSON in Claude response after retry (${rawText.length} chars). First 500: ${rawText.slice(0, 500)}`,
+          `Invalid JSON in Claude response after retry (${rawText.length} chars, ${fingerprintRawText(rawText)})`,
         );
       }
     } else {
       throw new Error(
-        `Invalid JSON in Claude response (${rawText.length} chars). First 500: ${rawText.slice(0, 500)}`,
+        `Invalid JSON in Claude response (${rawText.length} chars, ${fingerprintRawText(rawText)})`,
       );
     }
   }
