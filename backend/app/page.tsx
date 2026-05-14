@@ -36,16 +36,21 @@ export const metadata: Metadata = {
     url: "https://winbackpay.com",
     siteName: "WinBack",
     type: "website",
-    // images intentionally omitted here. Task 22 adds the image entries
-    // at the same time it commits backend/public/og-card.png, so metadata
-    // never references a missing asset.
+    images: [
+      {
+        url: "/og-card.png",
+        width: 1200,
+        height: 630,
+        alt: "WinBack: Stripe App for Chargebacks and Dispute Response",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "WinBack: Stripe App for Chargebacks and Dispute Response",
     description:
       "Respond to Stripe disputes with reason-code playbooks and AI-drafted narratives. Pay 15% per win or $79/month flat.",
-    // images added by Task 22 alongside the asset, same fail-closed reason.
+    images: ["/og-card.png"],
   },
 };
 
@@ -597,6 +602,14 @@ export default function Home() {
       {
         "@type": "Offer",
         name: PRICING.payPerWin.name,
+        // Google Rich Results expects price/priceCurrency directly on the Offer
+        // and treats priceSpecification as an unrecognized field at this path.
+        // Keep both: top-level fields for Google, priceSpecification for crawlers
+        // that understand the richer model. The description on both the Offer
+        // and the priceSpecification documents the 15% success fee so the
+        // bare "0" price is not misread as "free with no caveat."
+        price: PRICING.payPerWin.monthlyPriceUsd.toString(),
+        priceCurrency: "USD",
         availability: "https://schema.org/InStock",
         url: MARKETPLACE_URL,
         description: PRICING.payPerWin.description,
@@ -614,6 +627,8 @@ export default function Home() {
       {
         "@type": "Offer",
         name: PRICING.pro.name,
+        price: PRICING.pro.monthlyPriceUsd.toString(),
+        priceCurrency: "USD",
         availability: "https://schema.org/InStock",
         url: MARKETPLACE_URL,
         description: PRICING.pro.description,
