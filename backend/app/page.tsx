@@ -3,6 +3,7 @@ import { PlaybookCards } from "./components/playbook-cards";
 import { HeroWidget } from "./components/hero-widget";
 import { NarrativeDemo } from "@/components/ui/narrative-demo";
 import { AlertFeed } from "@/components/ui/alert-feed";
+import { InstallCTA } from "./components/install-cta";
 
 function Navbar() {
   return (
@@ -33,12 +34,7 @@ function Navbar() {
             Compare
           </a>
         </div>
-        <a
-          href="#waitlist"
-          className="primary-cta-gradient text-on-primary-container px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-[family-name:var(--font-plus-jakarta)] font-bold text-xs sm:text-sm tracking-tight hover:opacity-90 transition-opacity"
-        >
-          Join Waitlist
-        </a>
+        <InstallCTA />
       </div>
     </nav>
   );
