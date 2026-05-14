@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { PlaybookCards } from "./components/playbook-cards";
 import { HeroWidget } from "./components/hero-widget";
 import { NarrativeDemo } from "@/components/ui/narrative-demo";
@@ -12,6 +13,41 @@ import {
   ORGANIZATION,
 } from "./lib/marketing";
 import { FAQ_ITEMS } from "./content/faq";
+
+export const metadata: Metadata = {
+  title: "WinBack: Stripe App for Chargebacks and Dispute Response",
+  description:
+    "Respond to Stripe disputes with reason-code playbooks and AI-drafted narratives. Install WinBack from the Stripe App Marketplace. Pay 15% per win or $79/month flat.",
+  keywords: [
+    "Stripe disputes",
+    "Stripe chargebacks",
+    "chargeback response",
+    "dispute playbook",
+    "Stripe app for disputes",
+    "reason code playbook",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "WinBack: Stripe App for Chargebacks and Dispute Response",
+    description:
+      "Respond to Stripe disputes with reason-code playbooks and AI-drafted narratives. Pay 15% per win or $79/month flat.",
+    url: "https://winbackpay.com",
+    siteName: "WinBack",
+    type: "website",
+    // images intentionally omitted here. Task 22 adds the image entries
+    // at the same time it commits backend/public/og-card.png, so metadata
+    // never references a missing asset.
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "WinBack: Stripe App for Chargebacks and Dispute Response",
+    description:
+      "Respond to Stripe disputes with reason-code playbooks and AI-drafted narratives. Pay 15% per win or $79/month flat.",
+    // images added by Task 22 alongside the asset, same fail-closed reason.
+  },
+};
 
 function Navbar() {
   return (
