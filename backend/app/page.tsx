@@ -464,14 +464,14 @@ function FinalCTA() {
           </h2>
           <p className="text-on-surface-variant text-lg sm:text-xl max-w-xl mx-auto">
             The system isn&apos;t rigged. You just need the right playbook.
-            Join the waitlist and be first to get issuer-side expertise in your
-            Stripe Dashboard.
+            Install WinBack from the Stripe App Marketplace and get a
+            step-by-step response on every dispute.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 max-w-lg mx-auto mt-12">
-            <WaitlistForm />
+          <div className="flex justify-center mt-12">
+            <InstallCTA primary />
           </div>
           <p className="text-slate-500 font-[family-name:var(--font-inter)] text-[10px] tracking-[0.2em] uppercase">
-            No credit card required &bull; Secure Stripe connection
+            Stripe account required &bull; No setup fee
           </p>
         </div>
       </div>
