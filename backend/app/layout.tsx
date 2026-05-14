@@ -22,28 +22,13 @@ const inter = Inter({
   weight: ["400", "500", "600"],
 });
 
+// Sitewide-only metadata. Landing-page-specific fields (title, description,
+// keywords, OG, Twitter, canonical) live in app/page.tsx so sibling routes
+// (/upgrade, /setup-billing) do not inherit marketing copy via the root
+// layout. /privacy and /terms export their own metadata already.
 export const metadata: Metadata = {
-  title: "WinBack: Win Your Stripe Disputes. Keep Every Dollar.",
-  description:
-    "Guided dispute resolution for Stripe merchants. Reason-code playbooks built from 10+ years of payments experience. Pay 15% only when you win, or go flat at $79/month.",
   metadataBase: new URL("https://winbackpay.com"),
-  alternates: {
-    canonical: "/",
-  },
-  openGraph: {
-    title: "WinBack: Win Your Stripe Disputes. Keep Every Dollar.",
-    description:
-      "Guided dispute resolution for Stripe merchants. Pay 15% only when you win, or go flat at $79/month.",
-    url: "https://winbackpay.com",
-    siteName: "WinBack",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "WinBack: Win Your Stripe Disputes. Keep Every Dollar.",
-    description:
-      "Guided dispute resolution for Stripe merchants. Pay 15% only when you win, or go flat at $79/month.",
-  },
+  authors: [{ name: "JB Technology LLC", url: "https://winbackpay.com" }],
 };
 
 export default function RootLayout({
