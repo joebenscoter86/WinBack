@@ -10,7 +10,19 @@ type FormState = "idle" | "submitting" | "success" | "error";
 // verifier also skips in that case).
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
-export function WaitlistForm() {
+type WaitlistFormProps = {
+  submitLabel?: string;
+  placeholder?: string;
+  successTitle?: string;
+  successBody?: string;
+};
+
+export function WaitlistForm({
+  submitLabel = "Join Waitlist",
+  placeholder = "Enter your work email",
+  successTitle = "You're on the list.",
+  successBody = "We'll be in touch.",
+}: WaitlistFormProps = {}) {
   const [email, setEmail] = useState("");
   const [formState, setFormState] = useState<FormState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
@@ -65,10 +77,10 @@ export function WaitlistForm() {
     return (
       <div className="text-center w-full">
         <p className="text-primary text-lg font-semibold font-[family-name:var(--font-plus-jakarta)]">
-          You&apos;re on the list.
+          {successTitle}
         </p>
         <p className="text-on-surface-variant text-sm mt-2">
-          We&apos;ll be in touch.
+          {successBody}
         </p>
       </div>
     );
@@ -81,7 +93,7 @@ export function WaitlistForm() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="Enter your work email"
+          placeholder={placeholder}
           required
           className="flex-1 bg-surface-highest/40 border border-outline-variant/30 rounded-xl px-4 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
         />
@@ -111,10 +123,10 @@ export function WaitlistForm() {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                 />
               </svg>
-              Joining...
+              {submitLabel === "Join Waitlist" ? "Joining..." : "Submitting..."}
             </span>
           ) : (
-            "Join Waitlist"
+            submitLabel
           )}
         </button>
       </div>
