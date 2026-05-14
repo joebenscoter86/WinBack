@@ -65,7 +65,7 @@ function Hero() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-container opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-container" />
           </span>
-          Coming soon in Stripe Marketplace
+          Live in the Stripe App Marketplace
         </div>
 
         <h1 className="text-5xl sm:text-6xl md:text-8xl font-[family-name:var(--font-plus-jakarta)] font-extrabold tracking-tighter text-white leading-[0.9]">
@@ -75,20 +75,23 @@ function Hero() {
         </h1>
 
         <p className="text-on-surface-variant text-xl md:text-2xl max-w-lg leading-relaxed">
-          You&apos;re losing disputes you should be winning. WinBack gives you
-          step-by-step playbooks that show you exactly what to submit and why
-          it wins. Pay 15% only when you win, or go flat at $79/month and keep
-          every dollar you recover.
+          Live in the Stripe App Marketplace. Install WinBack from the
+          marketplace, open any dispute in your Stripe Dashboard, and get a
+          reason-code playbook plus an AI-drafted narrative ready for review.
+          Pay 15% only when you win, or go flat at $79/month.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 max-w-md" id="waitlist">
-          <WaitlistForm />
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+          <InstallCTA primary />
         </div>
+        <p className="text-slate-500 font-[family-name:var(--font-inter)] text-xs">
+          Opens Stripe Marketplace in a new tab.
+        </p>
 
         <div className="flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-6 text-slate-500 font-[family-name:var(--font-inter)] text-xs tracking-widest uppercase">
           <span>Lives in your Stripe Dashboard</span>
           <span className="hidden sm:block w-12 h-px bg-outline-variant/30" />
-          <span>No credit card required</span>
+          <span>Stripe account required &middot; No setup fee</span>
         </div>
       </div>
 
