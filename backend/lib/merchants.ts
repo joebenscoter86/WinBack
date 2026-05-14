@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { notifyNewInstall } from "@/lib/install-notifier";
 
@@ -62,11 +63,19 @@ export async function ensureMerchant(
       return;
     }
 
-    // Genuine first install. Fire-and-forget so the notification can never
-    // block the request that triggered it -- if Resend is slow or down, the
-    // user still sees a fast iframe load.
-    notifyNewInstall(accountId).catch((err) => {
-      console.error("notifyNewInstall failed:", err);
+    // Genuine first install. Defer the notification via `after()` so it runs
+    // after the response is sent (no added latency on first iframe load) but
+    // stays attached to the function lifecycle. Plain fire-and-forget would
+    // be unreliable on Vercel: the serverless function can be torn down once
+    // the response is flushed, dropping unawaited promises mid-flight. And
+    // because the row insert above already succeeded, future calls take the
+    // `existing` branch and never retry -- a dropped notification is silent.
+    after(async () => {
+      try {
+        await notifyNewInstall(accountId);
+      } catch (err) {
+        console.error("notifyNewInstall failed:", err);
+      }
     });
   } catch (err) {
     console.error("ensureMerchant unexpected error:", err);
