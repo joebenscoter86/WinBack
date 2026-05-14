@@ -22,7 +22,7 @@ describe("notifyNewInstall", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.WAITLIST_NOTIFY_EMAIL = "owner@example.com";
+    process.env.INSTALL_NOTIFY_EMAIL = "owner@example.com";
     process.env.RESEND_FROM_EMAIL = "hello@winbackpay.com";
     process.env.STRIPE_SECRET_KEY_LIVE = "sk_live_x";
     process.env.STRIPE_SECRET_KEY_TEST = "sk_test_x";
@@ -33,12 +33,26 @@ describe("notifyNewInstall", () => {
     process.env = { ...ORIGINAL_ENV };
   });
 
-  it("is a no-op when WAITLIST_NOTIFY_EMAIL is unset", async () => {
-    delete process.env.WAITLIST_NOTIFY_EMAIL;
+  it("falls back to joe@winbackpay.com when INSTALL_NOTIFY_EMAIL is unset", async () => {
+    delete process.env.INSTALL_NOTIFY_EMAIL;
+    mockAccountsRetrieve.mockRejectedValue(new Error("skip enrichment"));
 
-    await notifyNewInstall("acct_123");
+    await notifyNewInstall("acct_default_route");
 
-    expect(mockSend).not.toHaveBeenCalled();
+    expect(mockSend).toHaveBeenCalledTimes(1);
+    expect(mockSend.mock.calls[0][0].to).toBe("joe@winbackpay.com");
+  });
+
+  it("does NOT route to WAITLIST_NOTIFY_EMAIL even when it is set", async () => {
+    // Install events and waitlist signups are separate signals.
+    delete process.env.INSTALL_NOTIFY_EMAIL;
+    process.env.WAITLIST_NOTIFY_EMAIL = "waitlist@example.com";
+    mockAccountsRetrieve.mockRejectedValue(new Error("skip enrichment"));
+
+    await notifyNewInstall("acct_default_route");
+
+    expect(mockSend).toHaveBeenCalledTimes(1);
+    expect(mockSend.mock.calls[0][0].to).toBe("joe@winbackpay.com");
   });
 
   it("sends an enriched email when the live-key account fetch succeeds", async () => {

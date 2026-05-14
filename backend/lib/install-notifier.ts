@@ -2,15 +2,23 @@ import Stripe from "stripe";
 import { getResend } from "@/lib/resend";
 
 /**
+ * Default install-notification destination when `INSTALL_NOTIFY_EMAIL` is
+ * unset. Hardcoded to the founder's address so a fresh deploy without any
+ * env config still surfaces installs -- the WAITLIST_NOTIFY_EMAIL var is
+ * deliberately NOT reused, since waitlist signups and install events are
+ * separate signals that we want to be able to route independently.
+ */
+const DEFAULT_INSTALL_NOTIFY_EMAIL = "joe@winbackpay.com";
+
+/**
  * Best-effort owner notification fired the first time a Stripe account opens
  * the WinBack iframe. Stripe Apps does not expose an `app.installed` webhook
  * event, so install detection happens at the first authenticated backend call
- * (see `ensureMerchant`). If `WAITLIST_NOTIFY_EMAIL` is unset or Resend fails,
- * this silently returns -- never blocks the request that triggered it.
+ * (see `ensureMerchant`). If Resend fails, this silently returns -- never
+ * blocks the request that triggered it.
  */
 export async function notifyNewInstall(accountId: string): Promise<void> {
-  const notifyEmail = process.env.WAITLIST_NOTIFY_EMAIL;
-  if (!notifyEmail) return;
+  const notifyEmail = process.env.INSTALL_NOTIFY_EMAIL || DEFAULT_INSTALL_NOTIFY_EMAIL;
 
   const fromEmail = process.env.RESEND_FROM_EMAIL || "hello@winbackpay.com";
   const enrichment = await fetchAccountEnrichment(accountId);
