@@ -4,6 +4,8 @@ import { HeroWidget } from "./components/hero-widget";
 import { NarrativeDemo } from "@/components/ui/narrative-demo";
 import { AlertFeed } from "@/components/ui/alert-feed";
 import { InstallCTA } from "./components/install-cta";
+import { FAQ } from "./components/faq";
+import { WaitlistFallback } from "./components/waitlist-fallback";
 
 function Navbar() {
   return (
@@ -523,10 +525,12 @@ export default function Home() {
       <main className="relative overflow-hidden pt-24">
         <RibbonBackground />
         <Hero />
+        <FeatureGrid />
         <PricingCallout />
         <ComparisonTable />
-        <FeatureGrid />
+        <FAQ />
         <FinalCTA />
+        <WaitlistFallback />
       </main>
       <Footer />
     </>
