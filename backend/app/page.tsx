@@ -1,4 +1,3 @@
-import { WaitlistForm } from "./components/waitlist-form";
 import { PlaybookCards } from "./components/playbook-cards";
 import { HeroWidget } from "./components/hero-widget";
 import { NarrativeDemo } from "@/components/ui/narrative-demo";
