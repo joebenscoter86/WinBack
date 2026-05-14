@@ -6,7 +6,7 @@
 
 **Architecture:** Single Next.js app in `backend/`. Shared constants in `app/lib/marketing.ts`, FAQ data in `app/content/faq.ts`, four new components in `app/components/`, the existing `WaitlistForm` gets non-breaking optional props. Page-level JSON-LD emits from `app/page.tsx`; site-wide `Organization` JSON-LD lives in `app/layout.tsx`. New SEO files: `app/sitemap.ts`, `app/robots.ts`, `public/llms.txt`, `public/og-card.png`.
 
-**Tech Stack:** Next.js 15 App Router, TypeScript, Tailwind (existing tokens), Vitest, `next/image`, `next/font/google`. No new dependencies.
+**Tech Stack:** Next.js 16 App Router, TypeScript, Tailwind (existing tokens), Vitest, `next/image`, `next/font/google`. One devDependency batch added in Task 6.5 (`@testing-library/react`, `@testing-library/jest-dom`, `jsdom`) to support the new component test in Task 7; no runtime dependencies added.
 
 **Spec:** [docs/superpowers/specs/2026-05-13-landing-page-live-redesign-design.md](../specs/2026-05-13-landing-page-live-redesign-design.md) (committed at `0f5c1bd`).
 
@@ -18,20 +18,21 @@
 - `backend/app/lib/marketing.ts`, shared constants (`MARKETPLACE_URL`, `SITE_URL`, `PRICING`, `ORGANIZATION`).
 - `backend/app/content/faq.ts`, FAQ data; one source for the rendered accordion and the JSON-LD `FAQPage` schema.
 - `backend/app/components/install-cta.tsx`, primary install button. Reads `MARKETPLACE_URL` from `lib/marketing.ts`.
-- `backend/app/components/install-walkthrough.tsx`, 4-tile screenshot section. Uses `next/image`.
+- `backend/app/components/install-walkthrough.tsx`, 4-tile screenshot section. Uses `next/image`. Stays dormant until Task 23 wires it into the page.
 - `backend/app/components/waitlist-fallback.tsx`, small section that wraps `WaitlistForm` with override props.
 - `backend/app/components/faq.tsx`, client component, FAQ accordion. Imports `FAQ_ITEMS` from `content/faq.ts`.
 - `backend/app/sitemap.ts`, Next.js sitemap route.
 - `backend/app/robots.ts`, Next.js robots route.
 - `backend/public/llms.txt`, AI-search-engine summary.
-- `backend/public/og-card.png`, 1200x630 social card. Placeholder is acceptable for v1.
-- `backend/public/walkthrough/01-install.png` (and 02/03/04), captured from live install. Skipped if not ready (walkthrough section ships in a follow-up PR per spec).
-- `backend/app/components/__tests__/waitlist-form.test.tsx`, verify the new optional props.
+- `backend/public/og-card.png`, 1200x630 social card. Optional asset (Task 22). If skipped, metadata ships without OG image fields rather than referencing a missing file.
+- `backend/public/walkthrough/01-install.png` (and 02/03/04), captured from live install. Optional asset (Task 23). If skipped, the `<InstallWalkthrough />` component stays dormant and is not rendered.
+- `backend/app/components/__tests__/waitlist-form.test.tsx`, verify the new optional props. Uses a per-file `@vitest-environment jsdom` override; the rest of the test suite stays on the Node default.
 
 **Modified files:**
-- `backend/app/page.tsx`, Navbar, Hero, ComparisonTable, FinalCTA, Footer edits; new section order; page-level JSON-LD.
-- `backend/app/layout.tsx`, metadata rewrite + Organization JSON-LD.
+- `backend/app/page.tsx`, Navbar, Hero, ComparisonTable, FinalCTA, Footer edits; new section order; page-level metadata; page-level JSON-LD. **Landing-page-specific metadata lives here, not in `layout.tsx`** — so sibling routes (`/upgrade`, `/setup-billing`) do not inherit marketing copy via the root layout.
+- `backend/app/layout.tsx`, sitewide-only metadata (`metadataBase`, `authors`) + Organization JSON-LD. OG image entries land here in Task 22 alongside the asset.
 - `backend/app/components/waitlist-form.tsx`, extend with optional props (`submitLabel`, `placeholder`, `successTitle`, `successBody`); defaults preserve current behavior.
+- `backend/package.json`, add `@testing-library/react`, `@testing-library/jest-dom`, `jsdom` as devDependencies. **Vitest config is NOT modified** — global default stays Node so the existing 30+ server-side tests keep running in their original environment.
 
 ---
 
@@ -275,7 +276,7 @@ git commit -m "feat(backend): add InstallCTA component"
 
 ## Task 5: Create InstallWalkthrough component
 
-Note: this component references screenshots at `/walkthrough/*.png`. The screenshots are captured in Task 23 (or deferred). The component itself ships, but is only rendered on the page if screenshots exist (handled in Task 14).
+Note: this component references screenshots at `/walkthrough/*.png`. The component ships in the codebase, but is NOT wired into `page.tsx` by default. Task 13's section reorder deliberately omits `<InstallWalkthrough />`. Task 23 is the only path that adds it to the page — and Task 23 only runs if screenshots actually exist. This is fail-closed: forgetting Task 23 leaves the section dormant, never broken.
 
 **Files:**
 - Create: `backend/app/components/install-walkthrough.tsx`
@@ -463,6 +464,39 @@ git commit -m "feat(backend): add FAQ accordion component"
 
 ---
 
+## Task 6.5: Add React Testing Library for component tests (Node default preserved)
+
+This is a test-infrastructure pre-task for Task 7. The current `backend/package.json` ships only `vitest`; component tests cannot render React without adding jsdom and testing-library. **Important: the default Vitest environment stays Node.** Switching the global env to jsdom would change how 30+ existing backend tests run (middleware, Stripe App signature verification, dispute submission, Claude client, webhooks, billing) — all server-side code that runs in Node in production. This task keeps Node as the default and uses a per-file environment override only in the new component test file.
+
+**Files:**
+- Modify: `backend/package.json` (devDependencies, via npm)
+- Do NOT modify `backend/vitest.config.ts`. Leave the existing Node-default config alone.
+
+- [ ] **Step 1: Install testing-library + jsdom**
+
+```bash
+cd /Users/joeb/Projects/WinBack/backend && npm install --save-dev @testing-library/react @testing-library/jest-dom jsdom
+```
+
+These are devDependencies only. No runtime bundle impact. `jsdom` is installed even though it's not the default environment — Vitest needs it available so the per-file override in Task 7 can opt in.
+
+- [ ] **Step 2: Verify the existing test suite still passes**
+
+```bash
+cd /Users/joeb/Projects/WinBack/backend && npm test
+```
+
+Expected: PASS. No environment change means no regressions in the 30+ existing app tests (middleware CORS, `verifyStripeAppSignature`, `assembleEvidence`, `submitDispute`, Claude narratives, webhooks, etc.). If anything fails after the package install but before any code changes, stop and investigate — a fresh `npm install` should not break tests.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add backend/package.json backend/package-lock.json
+git commit -m "test(backend): add jsdom + React Testing Library devDeps for component tests"
+```
+
+---
+
 ## Task 7: Extend WaitlistForm with optional override props (TDD)
 
 **Files:**
@@ -472,14 +506,23 @@ git commit -m "feat(backend): add FAQ accordion component"
 - [ ] **Step 1: Write the failing test**
 
 ```tsx
+// @vitest-environment jsdom
 // backend/app/components/__tests__/waitlist-form.test.tsx
 
+import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { WaitlistForm } from "../waitlist-form";
 
-// next/font is not available in test runtime; mock the env var read.
-vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "");
+// Per-file jsdom override. The Vitest default for this repo is Node — the
+// 30+ existing server-side tests (middleware, Stripe auth, dispute submit,
+// webhooks) need Node and must NOT be switched to jsdom.
+//
+// NEXT_PUBLIC_TURNSTILE_SITE_KEY is captured at module load in waitlist-form.tsx
+// (`const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY`),
+// so vi.stubEnv after import would be a no-op. Vitest does not load .env.local
+// by default, so the constant is undefined here, the Turnstile widget does not
+// render, and the assertions below run against a clean form.
 
 describe("WaitlistForm", () => {
   it("renders default copy when no props are passed", () => {
@@ -511,21 +554,9 @@ describe("WaitlistForm", () => {
 });
 ```
 
-- [ ] **Step 2: Confirm the project already has testing-library/react and jsdom set up, or set them up**
+The jest-dom matchers (`toBeInTheDocument`) are wired in globally via the setup file from Task 6.5; no per-test import is needed.
 
-```bash
-cd /Users/joeb/Projects/WinBack/backend && cat package.json | grep -E "@testing-library/react|jsdom"
-```
-
-If both are present, skip to Step 4. If missing:
-
-```bash
-cd /Users/joeb/Projects/WinBack/backend && npm install --save-dev @testing-library/react @testing-library/jest-dom jsdom
-```
-
-Then check `vitest.config.ts` for `environment: "jsdom"`. If absent, add `environment: "jsdom"` to the `test` config block and add `import "@testing-library/jest-dom/vitest"` to a setup file (or inline at top of the test). If `@testing-library/react` is already a dependency in this codebase, the existing setup should work, adopt the existing pattern instead of inventing new infrastructure.
-
-- [ ] **Step 3: Run the test to verify it fails**
+- [ ] **Step 2: Run the test to verify it fails**
 
 ```bash
 cd /Users/joeb/Projects/WinBack/backend && npx vitest run app/components/__tests__/waitlist-form.test.tsx
@@ -533,7 +564,7 @@ cd /Users/joeb/Projects/WinBack/backend && npx vitest run app/components/__tests
 
 Expected: FAIL on the "override copy" case because the form does not yet accept those props.
 
-- [ ] **Step 4: Modify `WaitlistForm` to accept optional props**
+- [ ] **Step 3: Modify `WaitlistForm` to accept optional props**
 
 Replace the contents of [backend/app/components/waitlist-form.tsx](backend/app/components/waitlist-form.tsx) with:
 
@@ -687,7 +718,7 @@ export function WaitlistForm({
 }
 ```
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [ ] **Step 4: Run the test to verify it passes**
 
 ```bash
 cd /Users/joeb/Projects/WinBack/backend && npx vitest run app/components/__tests__/waitlist-form.test.tsx
@@ -695,7 +726,7 @@ cd /Users/joeb/Projects/WinBack/backend && npx vitest run app/components/__tests
 
 Expected: PASS for both cases.
 
-- [ ] **Step 6: Run full unit-test suite to ensure no regression**
+- [ ] **Step 5: Run full unit-test suite to ensure no regression**
 
 ```bash
 cd /Users/joeb/Projects/WinBack/backend && npm test
@@ -703,7 +734,7 @@ cd /Users/joeb/Projects/WinBack/backend && npm test
 
 Expected: PASS, including the new test.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add backend/app/components/waitlist-form.tsx backend/app/components/__tests__/waitlist-form.test.tsx
@@ -860,17 +891,13 @@ Replace with:
 ```tsx
 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
   <InstallCTA primary />
-  <a
-    href="#walkthrough"
-    className="text-on-surface-variant hover:text-white transition-colors font-[family-name:var(--font-inter)] text-sm underline-offset-4 hover:underline"
-  >
-    See how it works
-  </a>
 </div>
 <p className="text-slate-500 font-[family-name:var(--font-inter)] text-xs">
   Opens Stripe Marketplace in a new tab.
 </p>
 ```
+
+The "See how it works" secondary link is intentionally omitted here. Task 23's "screenshots ready" path adds it back alongside the `<InstallWalkthrough />` section. Fail-closed: without screenshots, no broken anchor.
 
 - [ ] **Step 4: Update the trust microcopy below the CTA**
 
@@ -1038,15 +1065,18 @@ git commit -m "feat(backend): flip final CTA to install action"
 
 This is the load-bearing structural change. Verify the result matches the page-layout table in the spec.
 
+**Note (fail-closed for walkthrough):** `<InstallWalkthrough />` is deliberately NOT added here. It is wired into the page only in Task 23's "screenshots ready" path, after the four PNGs commit. Same with the "See how it works" hero link in Task 10 — Task 23 also handles adding/removing it. This makes the default state safe: forgetting Task 23 leaves the walkthrough section dormant, never broken.
+
 - [ ] **Step 1: Add imports for the new section components**
 
 Near the existing component imports at the top of `page.tsx`:
 
 ```tsx
-import { InstallWalkthrough } from "./components/install-walkthrough";
 import { FAQ } from "./components/faq";
 import { WaitlistFallback } from "./components/waitlist-fallback";
 ```
+
+Do NOT import `InstallWalkthrough` here. Task 23 adds that import as part of the same edit that renders the section.
 
 - [ ] **Step 2: Replace the `Home` function body**
 
@@ -1081,7 +1111,6 @@ export default function Home() {
       <main className="relative overflow-hidden pt-24">
         <RibbonBackground />
         <Hero />
-        <InstallWalkthrough />
         <FeatureGrid />
         <PricingCallout />
         <ComparisonTable />
@@ -1148,27 +1177,34 @@ const softwareApplicationSchema = {
     {
       "@type": "Offer",
       name: PRICING.payPerWin.name,
-      price: PRICING.payPerWin.monthlyPriceUsd.toString(),
-      priceCurrency: "USD",
       availability: "https://schema.org/InStock",
       url: MARKETPLACE_URL,
       description: PRICING.payPerWin.description,
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price: PRICING.payPerWin.monthlyPriceUsd.toString(),
+        priceCurrency: "USD",
+        billingDuration: "P1M",
+        unitText: "MONTH",
+        valueAddedTaxIncluded: false,
+        description:
+          "$0 monthly base. A 15% success fee applies to disputes won, billed via Stripe.",
+      },
     },
     {
       "@type": "Offer",
       name: PRICING.pro.name,
-      price: PRICING.pro.monthlyPriceUsd.toString(),
-      priceCurrency: "USD",
       availability: "https://schema.org/InStock",
       url: MARKETPLACE_URL,
+      description: PRICING.pro.description,
       priceSpecification: {
         "@type": "UnitPriceSpecification",
         price: PRICING.pro.monthlyPriceUsd.toString(),
         priceCurrency: "USD",
         billingDuration: "P1M",
         unitText: "MONTH",
+        valueAddedTaxIncluded: false,
       },
-      description: PRICING.pro.description,
     },
   ],
   provider: {
@@ -1300,8 +1336,10 @@ import { WaitlistForm } from "./components/waitlist-form";
 - [ ] **Step 2: Search for residual stale phrasing**
 
 ```bash
-cd /Users/joeb/Projects/WinBack/backend && grep -nE "waitlist|early access|coming soon|be first to|join the waitlist" app/page.tsx
+cd /Users/joeb/Projects/WinBack/backend && grep -inE "waitlist|early access|coming soon|be first to|join the waitlist" app/page.tsx
 ```
+
+The `-i` (case-insensitive) flag catches `Waitlist`, `Coming Soon`, etc.
 
 Expected: only matches inside the `WaitlistFallback` framing ("Get a heads up when we add general signup" is allowed; "Not on Stripe yet?" is allowed). Any other surfaced text needs to be reworded to live-product language. If a match shows in Hero / FinalCTA / Navbar / FeatureGrid, fix it.
 
@@ -1322,14 +1360,38 @@ git commit -m "chore(backend): remove unused WaitlistForm import and finish copy
 
 ---
 
-## Task 17: Rewrite layout.tsx metadata
+## Task 17: Scope sitewide metadata in layout.tsx; emit landing-page metadata from page.tsx
 
 **Files:**
 - Modify: `backend/app/layout.tsx`
+- Modify: `backend/app/page.tsx`
 
-- [ ] **Step 1: Replace the `metadata` export**
+**Why split:** Sibling routes `/upgrade` and `/setup-billing` (in-app billing flows used after a merchant installs the Stripe App) do not export their own metadata and inherit from the root layout. If the landing-page title, description, canonical, and OG copy live in `layout.tsx`, the in-app billing flows will advertise themselves as the marketing page with `canonical: "/"` — leaking landing-page surface into the actual product. Pre-existing routes `/privacy` and `/terms` already override metadata; they are unaffected. This task confines marketing metadata to the homepage by moving it to `page.tsx`.
 
-Find the existing `export const metadata: Metadata = { ... };` block (lines 25-47 in current HEAD) and replace with:
+- [ ] **Step 1: Replace the `metadata` export in `layout.tsx` with sitewide-only fields**
+
+Find the existing `export const metadata: Metadata = { ... };` block and replace it with the minimal sitewide version:
+
+```tsx
+export const metadata: Metadata = {
+  metadataBase: new URL("https://winbackpay.com"),
+  authors: [{ name: "JB Technology LLC", url: "https://winbackpay.com" }],
+};
+```
+
+These two fields are appropriate sitewide defaults. `metadataBase` lets Next.js resolve relative URLs in any page-level metadata. `authors` is harmless on any route.
+
+Do NOT add `title`, `description`, `keywords`, `alternates`, `openGraph`, or `twitter` here — those are landing-page-specific and belong in `page.tsx`.
+
+- [ ] **Step 2: Add the landing-page metadata to `page.tsx`**
+
+Near the top of `backend/app/page.tsx`, alongside the other imports, add:
+
+```tsx
+import type { Metadata } from "next";
+```
+
+Then add an `export const metadata` block at module scope (before the `Home` function):
 
 ```tsx
 export const metadata: Metadata = {
@@ -1344,8 +1406,6 @@ export const metadata: Metadata = {
     "Stripe app for disputes",
     "reason code playbook",
   ],
-  authors: [{ name: "JB Technology LLC", url: "https://winbackpay.com" }],
-  metadataBase: new URL("https://winbackpay.com"),
   alternates: {
     canonical: "/",
   },
@@ -1356,26 +1416,46 @@ export const metadata: Metadata = {
     url: "https://winbackpay.com",
     siteName: "WinBack",
     type: "website",
-    images: [
-      {
-        url: "/og-card.png",
-        width: 1200,
-        height: 630,
-        alt: "WinBack: Stripe App for Chargebacks and Dispute Response",
-      },
-    ],
+    // images intentionally omitted here. Task 22 adds the image entries
+    // at the same time it commits backend/public/og-card.png, so metadata
+    // never references a missing asset.
   },
   twitter: {
     card: "summary_large_image",
     title: "WinBack: Stripe App for Chargebacks and Dispute Response",
     description:
       "Respond to Stripe disputes with reason-code playbooks and AI-drafted narratives. Pay 15% per win or $79/month flat.",
-    images: ["/og-card.png"],
+    // images added by Task 22 alongside the asset, same fail-closed reason.
   },
 };
 ```
 
-- [ ] **Step 2: Typecheck**
+Note: `page.tsx` is a Server Component by default (no `"use client"` directive at the top), so the `metadata` export works. If a future edit accidentally adds `"use client"` to this file, the metadata export will silently stop working — keep this file server-side.
+
+- [ ] **Step 3: Verify sibling routes still render their own metadata correctly**
+
+```bash
+cd /Users/joeb/Projects/WinBack/backend && npm run dev &
+DEV_PID=$!
+sleep 8
+echo "--- Landing page metadata ---"
+curl -sL http://localhost:3000 | grep -oE '<title>[^<]+</title>|<meta[^>]+name="description"[^>]*>' | head -3
+echo "--- /upgrade metadata (should NOT show landing-page title) ---"
+curl -sL http://localhost:3000/upgrade | grep -oE '<title>[^<]+</title>' | head -1
+echo "--- /setup-billing metadata (should NOT show landing-page title) ---"
+curl -sL http://localhost:3000/setup-billing | grep -oE '<title>[^<]+</title>' | head -1
+echo "--- /privacy (has its own metadata; should show its own title) ---"
+curl -sL http://localhost:3000/privacy | grep -oE '<title>[^<]+</title>' | head -1
+echo "--- /terms (has its own metadata; should show its own title) ---"
+curl -sL http://localhost:3000/terms | grep -oE '<title>[^<]+</title>' | head -1
+kill $DEV_PID 2>/dev/null
+```
+
+Expected: the landing page shows the new title. `/upgrade` and `/setup-billing` show whatever default title Next.js emits when no metadata is set on the route or root layout (likely empty or a generic fallback) — they MUST NOT show the landing-page title. `/privacy` and `/terms` show their existing titles.
+
+If `/upgrade` or `/setup-billing` shows the landing-page title, the metadata move did not work — recheck that `page.tsx` is server-side and the export is at module scope.
+
+- [ ] **Step 4: Typecheck**
 
 ```bash
 cd /Users/joeb/Projects/WinBack/backend && npx tsc --noEmit
@@ -1383,11 +1463,11 @@ cd /Users/joeb/Projects/WinBack/backend && npx tsc --noEmit
 
 Expected: no errors.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add backend/app/layout.tsx
-git commit -m "feat(backend): rewrite layout metadata for live launch + OG card"
+git add backend/app/layout.tsx backend/app/page.tsx
+git commit -m "feat(backend): scope landing-page metadata to page.tsx; layout keeps sitewide only"
 ```
 
 ---
@@ -1616,22 +1696,60 @@ git commit -m "feat(backend): add robots.ts allowing crawl with Disallow on /api
 
 ---
 
-## Task 22: Add OG card asset
+## Task 22: Add OG card asset + wire it into metadata
 
 **Files:**
 - Create: `backend/public/og-card.png`
+- Modify: `backend/app/page.tsx`
 
-This task is a one-time asset drop. Joe generates a 1200x630 PNG and places it at `backend/public/og-card.png`. The placeholder version is acceptable for v1: a clean WinBack logo on the brand color background (no marketing claims rendered into the image).
+This is a paired change: the asset and the metadata references that point at it land in the same commit. Task 17 deliberately omitted the `images:` arrays so metadata never points at a missing file. The OG metadata lives in `page.tsx` (not `layout.tsx`) so only the homepage advertises the card — the in-app billing routes are not affected either way. If the OG card is not ready, this task is deferred wholesale to a follow-up PR. Joe generates a 1200x630 PNG (placeholder acceptable for v1: clean WinBack logo on brand color background, no marketing claims rendered).
 
-- [ ] **Step 1: Confirm asset exists**
+- [ ] **Step 1: Place the asset**
 
 ```bash
+# Save the generated 1200x630 PNG at:
+# /Users/joeb/Projects/WinBack/backend/public/og-card.png
 ls -la /Users/joeb/Projects/WinBack/backend/public/og-card.png
 ```
 
 Expected: file exists, size > 10KB and < 8MB.
 
-- [ ] **Step 2: Verify accessibility from dev server**
+- [ ] **Step 2: Add the `images` entries to the page-level metadata in `page.tsx`**
+
+In the `metadata` export from Task 17 (which lives at the top of `page.tsx`), replace the `openGraph` block with:
+
+```tsx
+openGraph: {
+  title: "WinBack: Stripe App for Chargebacks and Dispute Response",
+  description:
+    "Respond to Stripe disputes with reason-code playbooks and AI-drafted narratives. Pay 15% per win or $79/month flat.",
+  url: "https://winbackpay.com",
+  siteName: "WinBack",
+  type: "website",
+  images: [
+    {
+      url: "/og-card.png",
+      width: 1200,
+      height: 630,
+      alt: "WinBack: Stripe App for Chargebacks and Dispute Response",
+    },
+  ],
+},
+```
+
+And replace the `twitter` block with:
+
+```tsx
+twitter: {
+  card: "summary_large_image",
+  title: "WinBack: Stripe App for Chargebacks and Dispute Response",
+  description:
+    "Respond to Stripe disputes with reason-code playbooks and AI-drafted narratives. Pay 15% per win or $79/month flat.",
+  images: ["/og-card.png"],
+},
+```
+
+- [ ] **Step 3: Verify accessibility from dev server**
 
 ```bash
 cd /Users/joeb/Projects/WinBack/backend && npm run dev &
@@ -1643,56 +1761,126 @@ kill $DEV_PID 2>/dev/null
 
 Expected: `HTTP/1.1 200` and `Content-Type: image/png`.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Typecheck**
 
 ```bash
-git add backend/public/og-card.png
-git commit -m "feat(backend): add og-card.png for social share previews"
+cd /Users/joeb/Projects/WinBack/backend && npx tsc --noEmit
 ```
 
-If the OG card is not ready when this task runs, ship the page without the file. Open Graph image lookups will 404 on social shares until the asset lands; not a blocker for the landing-page redesign itself.
+Expected: no errors.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add backend/public/og-card.png backend/app/page.tsx
+git commit -m "feat(backend): add og-card.png and wire into OpenGraph/Twitter metadata"
+```
+
+If the OG card is not ready when this task runs, skip Task 22 entirely. The page ships without OpenGraph/Twitter images; social shares render without a card image but no URL 404s. Capture the card in a follow-up PR that runs Steps 1-5 above.
 
 ---
 
-## Task 23: Capture walkthrough screenshots (conditional)
+## Task 23: Capture walkthrough screenshots + wire walkthrough into page (conditional)
 
-**Files:**
+**Files (only if screenshots are ready):**
 - Create: `backend/public/walkthrough/01-install.png`
 - Create: `backend/public/walkthrough/02-open-dispute.png`
 - Create: `backend/public/walkthrough/03-playbook.png`
 - Create: `backend/public/walkthrough/04-submit.png`
+- Modify: `backend/app/page.tsx` (add the `<InstallWalkthrough />` import + section + "See how it works" hero link)
 
-This task is owned by Joe and uses the live WinBack install on WinBack's own Stripe account (acct_1TIwcOCbmbWLiv6V, per CLAUDE.md QA topology). Captures should be 2x (Retina) PNGs, cropped to the relevant UI region. If screenshots are not ready when the rest of the implementation is complete, skip this task, the spec says the `InstallWalkthrough` section ships in a follow-up PR rather than landing with placeholders.
+This task is owned by Joe and uses the live WinBack install on WinBack's own Stripe account (acct_1TIwcOCbmbWLiv6V, per CLAUDE.md QA topology). The plan is fail-closed: Task 13 deliberately left the walkthrough out of the page, and Task 10 deliberately left the secondary hero link out. This task is the only place that wires them in. If screenshots are not ready, skip Task 23 entirely. The component stays dormant in the codebase, ready for a follow-up PR.
 
-- [ ] **Step 1: Capture and place screenshots**
+- [ ] **Step 0: Redaction checklist (BEFORE capturing)**
 
-Capture each of the four screenshots per the spec's caption / alt-text description, save as `01-install.png` / `02-open-dispute.png` / `03-playbook.png` / `04-submit.png` in `backend/public/walkthrough/`.
+The captures will be committed to a public Git repo and shipped on winbackpay.com. They must contain ZERO live customer or business data. Before every capture, verify:
 
-- [ ] **Step 2: If screenshots are ready, commit them and keep `<InstallWalkthrough />` in `page.tsx`**
+- No real customer names, emails, phone numbers, billing addresses, or shipping addresses visible
+- No real card last-4 / card brand / bank name / authorization codes
+- No real dispute IDs, charge IDs, or transaction IDs (use Stripe test mode disputes with synthetic data)
+- No real merchant business names (other than WinBack itself, which is the merchant in this capture)
+- No real Stripe account ID in URLs or breadcrumbs (mask the `acct_*` slug in the screenshot)
+- No internal email threads, Slack DMs, or browser-tab bleed showing real workstreams
+- No phone notifications / lock screen previews showing private text
+
+If anything sensitive is visible: re-capture or redact in an image editor (rectangle fill, not blur — blur can be reversed). When in doubt, re-capture against a fresh Stripe test-mode dispute.
+
+- [ ] **Step 1: Capture the screenshots**
+
+Capture each of the four screenshots per the spec's caption / alt-text description. 2x (Retina) PNGs, cropped to the relevant UI region. Save as `01-install.png` / `02-open-dispute.png` / `03-playbook.png` / `04-submit.png` in `backend/public/walkthrough/`.
 
 ```bash
 mkdir -p /Users/joeb/Projects/WinBack/backend/public/walkthrough
-# (copy/save the four PNGs into that directory)
-git add backend/public/walkthrough/
-git commit -m "feat(backend): add walkthrough screenshots from live install"
+# Save the four PNGs into that directory.
+ls -la /Users/joeb/Projects/WinBack/backend/public/walkthrough/
 ```
 
-- [ ] **Step 3: If screenshots are NOT ready, remove the walkthrough from the page composition**
+Expected: four PNGs visible, each between 100KB and 1MB after capture. If any single PNG exceeds 1MB, run it through `pngquant` or a similar lossless optimizer before continuing — Lighthouse will dock the page otherwise.
+
+- [ ] **Step 2: Re-verify redaction on the committed files**
+
+```bash
+ls -la /Users/joeb/Projects/WinBack/backend/public/walkthrough/*.png
+```
+
+Visually inspect each file one more time. Treat this as the last gate before the data goes to a public repo.
+
+- [ ] **Step 3: Wire `<InstallWalkthrough />` into the page**
 
 Edit `backend/app/page.tsx`:
 
-- Remove `<InstallWalkthrough />` from the `Home` function's JSX.
-- Remove the `import { InstallWalkthrough } from "./components/install-walkthrough";` line.
-- In `Hero`, remove or hide the secondary `See how it works` link (delete the entire `<a href="#walkthrough">…</a>` block).
+a. Add the import alongside the other section component imports:
 
-Then commit:
-
-```bash
-git add backend/app/page.tsx
-git commit -m "chore(backend): defer InstallWalkthrough to follow-up PR (no screenshots yet)"
+```tsx
+import { InstallWalkthrough } from "./components/install-walkthrough";
 ```
 
-The `install-walkthrough.tsx` component itself stays in the codebase, dormant, ready for a follow-up PR that re-adds the import + render when screenshots land.
+b. In the `Home` function's JSX, add `<InstallWalkthrough />` between `<Hero />` and `<FeatureGrid />`:
+
+```tsx
+<Hero />
+<InstallWalkthrough />
+<FeatureGrid />
+```
+
+c. In the `Hero` function's JSX, add the secondary "See how it works" link inside the CTA wrapper Task 10 created. Replace:
+
+```tsx
+<div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+  <InstallCTA primary />
+</div>
+```
+
+With:
+
+```tsx
+<div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+  <InstallCTA primary />
+  <a
+    href="#walkthrough"
+    className="text-on-surface-variant hover:text-white transition-colors font-[family-name:var(--font-inter)] text-sm underline-offset-4 hover:underline"
+  >
+    See how it works
+  </a>
+</div>
+```
+
+- [ ] **Step 4: Typecheck**
+
+```bash
+cd /Users/joeb/Projects/WinBack/backend && npx tsc --noEmit
+```
+
+Expected: no errors.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add backend/public/walkthrough/ backend/app/page.tsx
+git commit -m "feat(backend): add walkthrough screenshots and wire section into page"
+```
+
+If at any step screenshots cannot be captured cleanly, abort the whole task. The page already ships safely without the walkthrough (Task 13 fail-closed structure). The `install-walkthrough.tsx` component stays in the codebase, dormant, ready for a follow-up PR that runs Steps 0-5 fresh.
 
 ---
 
@@ -1746,6 +1934,38 @@ If anything fails, diagnose and fix before continuing.
 
 ---
 
+## Task 26.5: Run a production build locally
+
+**Files:** None.
+
+Typecheck and Vitest do not exercise the Next.js production compiler. App Router metadata routes, JSON-LD `<script>` injection, server/client component boundaries, and static asset references can all break at `next build` time even with green typecheck. Catching it locally is much cheaper than catching it on the Vercel preview deploy.
+
+- [ ] **Step 1: Run `npm run build`**
+
+```bash
+cd /Users/joeb/Projects/WinBack/backend && npm run build
+```
+
+Expected: build succeeds, exit 0. The build output lists the rendered routes; confirm `/`, `/sitemap.xml`, and `/robots.txt` all appear and are listed as static (`○`) — they should not be dynamic.
+
+Common failures and where to fix:
+- "Module not found: Can't resolve './components/install-walkthrough'" → Task 23 was skipped but the import was not removed. Re-read Task 13's "fail-closed" note and confirm `InstallWalkthrough` is not imported in `page.tsx`.
+- "Type error: Property 'X' does not exist on type 'Metadata'" → Next 16's metadata types got stricter for the field you added. Read the error, adjust the metadata object in `layout.tsx`.
+- "Failed to parse src \"/og-card.png\"" → metadata references `/og-card.png` but the file is missing. Either Task 22 was skipped (revert the image references in `layout.tsx`) or the file did not commit (re-run Task 22 Step 1).
+- Hydration warnings from JSON-LD `<script>` rendering inside `<main>` → move JSON-LD scripts inside `<head>` via `next/script` with `strategy="beforeInteractive"`, or keep them inline but verify they are not inside a Client Component subtree.
+
+- [ ] **Step 2: Clean up the build artifact**
+
+```bash
+cd /Users/joeb/Projects/WinBack/backend && rm -rf .next
+```
+
+Not strictly required, but the next `npm run dev` is faster from a cold `.next`.
+
+If the build fails, do NOT proceed to visual review. A failing build cannot deploy to Vercel.
+
+---
+
 ## Task 27: Local visual review
 
 **Files:** None.
@@ -1763,7 +1983,7 @@ Verify each of the following:
 - Status badge in hero reads "Live in the Stripe App Marketplace" with the green pulsing dot.
 - Navbar "Install from Stripe Marketplace" button opens `marketplace.stripe.com/apps/winback` in a new tab.
 - Hero primary CTA opens the same URL in a new tab.
-- Hero secondary "See how it works" link smooth-scrolls to the InstallWalkthrough section (only if Task 23 captured the screenshots; otherwise this link should have been removed in Task 23 Step 3).
+- Hero secondary "See how it works" link smooth-scrolls to the InstallWalkthrough section ONLY if Task 23 ran (the link and the section are wired in together). If Task 23 was skipped, the hero has no secondary link and the walkthrough section is absent — verify that's consistent (either both present or both absent, never one without the other).
 - Hero microcopy reads "Stripe account required · No setup fee" (NOT "No credit card required").
 - The "Opens Stripe Marketplace in a new tab" note appears below the primary CTA.
 - Section order is Hero → InstallWalkthrough (if present) → FeatureGrid → PricingCallout → ComparisonTable → FAQ → FinalCTA → WaitlistFallback → Footer.
@@ -1777,11 +1997,21 @@ Verify each of the following:
 
 - [ ] **Step 3: Submit a test email through the WaitlistFallback to confirm the form still works**
 
-In the page, scroll to the "Not on Stripe yet?" section. Enter a real test email (e.g., `joeb+landingtest@winbackpay.com`). Submit. Expected success message: `We'll let you know.` / `You're on the list for general signup.`
+In the page, scroll to the "Not on Stripe yet?" section. Enter a plus-tag test email (e.g., `joeb+landingtest-$(date +%s)@winbackpay.com` — unique per run to avoid duplicate-row collisions in Supabase). Submit. Expected success message: `We'll let you know.` / `You're on the list for general signup.`
 
-Then verify the email row landed in Supabase by querying the `waitlist` table (use the Supabase Dashboard SQL editor or the MCP `execute_sql` tool against the `Winback Dev` project), and confirm the Resend welcome email was triggered (visible in the Resend dashboard).
+Then verify the row landed in Supabase via the Supabase MCP `execute_sql` tool against the `Winback Dev` project:
 
-If the form fails silently or the success state is wrong, the WaitlistForm prop changes from Task 7 broke something. Diagnose and fix.
+```sql
+SELECT email, created_at
+FROM waitlist
+WHERE email LIKE 'joeb+landingtest-%@winbackpay.com'
+ORDER BY created_at DESC
+LIMIT 5;
+```
+
+Expected: the submitted email appears at the top with a fresh `created_at`. If the row is missing, the prop changes from Task 7 broke the form submission path — diagnose and fix.
+
+Resend dashboard verification is optional and not part of this gate. The waitlist submission route's contract is "writes to Supabase"; downstream email delivery is a separate path Joe can spot-check in the Resend dashboard if curious, but it is not gated here.
 
 - [ ] **Step 4: Semantic HTML quick audit**
 
@@ -1814,9 +2044,11 @@ If anything in Step 2 is wrong, fix in the relevant component, re-verify, then c
 
 ---
 
-## Task 28: Run the /seo skill audit against the staging build
+## Task 28: SEO audit against the staging build (Joe-run, with agent-executable fallback)
 
 **Files:** None.
+
+**Owner:** Joe. The `/seo` skill referenced below is a Claude Code skill, not a repo command — it runs in Joe's interactive Claude Code session against a live URL. If an agent is executing this plan headlessly, run the manual fallback in Step 2b instead.
 
 - [ ] **Step 1: Push the branch to the Vercel preview environment**
 
@@ -1826,9 +2058,9 @@ cd /Users/joeb/Projects/WinBack && git push -u origin feat/landing-page-live-red
 
 Vercel auto-creates a preview deployment for the branch. Wait ~1-2 minutes for the build to finish; the preview URL is visible in the Vercel dashboard under the branch.
 
-- [ ] **Step 2: Run the `/seo` skill against the preview URL**
+- [ ] **Step 2a (Joe path): Run the `/seo` skill against the preview URL**
 
-In the Claude Code session:
+In an interactive Claude Code session:
 
 ```
 /seo <preview-url>
@@ -1836,11 +2068,36 @@ In the Claude Code session:
 
 The `/seo` skill audits metadata, structured data, performance, accessibility, and SEO basics against the rendered page.
 
+- [ ] **Step 2b (Agent fallback): Manual SEO smoke check**
+
+If running headlessly without the `/seo` skill, exercise the same surface manually:
+
+```bash
+PREVIEW_URL="<paste preview URL from Vercel>"
+
+# Metadata + JSON-LD smoke
+curl -sL "$PREVIEW_URL" | grep -oE '<meta[^>]+(name|property)="[^"]+"[^>]*>' | head -30
+curl -sL "$PREVIEW_URL" | grep -oE '<script type="application/ld\+json">[^<]+</script>' | wc -l
+
+# Sitemap + robots
+curl -sI "$PREVIEW_URL/sitemap.xml" | head -3
+curl -sI "$PREVIEW_URL/robots.txt" | head -3
+curl -sL "$PREVIEW_URL/robots.txt"
+
+# llms.txt
+curl -sI "$PREVIEW_URL/llms.txt" | head -3
+
+# OG card (only if Task 22 ran)
+curl -sI "$PREVIEW_URL/og-card.png" | head -3
+```
+
+Expected: 200 on each of sitemap.xml / robots.txt / llms.txt; three JSON-LD script blocks on the homepage (Organization from layout, SoftwareApplication + FAQPage from page); meta tags include `title`, `description`, `og:title`, `og:description`, `og:url`, `og:type`, `og:site_name`, `twitter:card`. If OG images were wired in Task 22, also `og:image` and `twitter:image`.
+
 - [ ] **Step 3: Address findings**
 
-Any P1 or P2 issue surfaced by the skill must be fixed before the PR is merged. P3 / informational findings are optional follow-ups.
+Any P1 or P2 issue surfaced by Step 2a or Step 2b must be fixed before the PR is merged. P3 / informational findings are optional follow-ups.
 
-Repeat Steps 1-3 after each fix (push → re-audit → fix → push) until `/seo` returns clean.
+Repeat Steps 1-3 after each fix (push → re-audit → fix → push) until the audit returns clean.
 
 ---
 
@@ -1914,25 +2171,29 @@ gh pr create --title "feat: landing page live-launch redesign + SEO pass" --body
 
 - Flips winbackpay.com from waitlist framing to "live in Stripe App Marketplace" framing
 - Replaces every waitlist CTA with an Install CTA pointed at marketplace.stripe.com/apps/winback
-- Adds new sections: InstallWalkthrough, FAQ, WaitlistFallback (above the footer)
-- Reorders the page so the walkthrough lands before pricing and comparison
+- Adds new sections: FAQ + WaitlistFallback always; InstallWalkthrough conditionally (only if screenshots ship in this PR per Task 23)
 - Demotes the existing waitlist form to a small fallback for visitors without a Stripe account
-- Folds in an on-page SEO pass: metadata rewrite, JSON-LD SoftwareApplication + FAQPage + Organization, llms.txt, sitemap.ts, robots.ts, OG card
+- Folds in an on-page SEO pass: metadata rewrite, JSON-LD SoftwareApplication + FAQPage + Organization, llms.txt, sitemap.ts, robots.ts. OG card optional per Task 22.
 
 Spec: docs/superpowers/specs/2026-05-13-landing-page-live-redesign-design.md
-Codex review applied: page flow re-ordered, CTA copy fixed, walkthrough placeholder policy enforced, JSON-LD moved to page-level.
+Codex review applied (round 1): page flow re-ordered, CTA copy fixed, walkthrough placeholder policy enforced, JSON-LD moved to page-level.
+Codex review applied (round 2): test infrastructure split out as pre-task; walkthrough and OG card made fail-closed (component dormant by default, metadata omits image fields by default); JSON-LD `Offer` modeling tightened with `UnitPriceSpecification`; production build added as a merge gate; screenshot redaction checklist added; `/seo` skill replaced with agent-executable curl fallback; tech-stack version corrected to Next 16.
 
-## Test plan
+## Test plan (merge gate)
 
 - [x] Backend typecheck: `cd backend && npx tsc --noEmit`
 - [x] Backend unit tests: `cd backend && npm test`
 - [x] Backend integration tests: `cd backend && npm run test:integration`
+- [x] Backend production build: `cd backend && npm run build`
 - [x] Local visual review on desktop + mobile widths
-- [x] `/seo` skill audit on Vercel preview deployment
+- [x] SEO audit on Vercel preview deployment (`/seo` skill or manual fallback per Task 28)
 - [x] Google Rich Results Test + Schema.org validator on preview deployment
 - [x] Lighthouse on preview deployment (Performance / Accessibility / Best Practices / SEO all ≥ 90)
-- [ ] Walkthrough screenshots captured and placed (or section deferred to follow-up PR if not ready)
-- [ ] OG card asset placed at `backend/public/og-card.png` (placeholder acceptable for v1)
+
+## Deferred assets (NOT a merge gate; either present or absent — no broken refs either way)
+
+- [ ] Walkthrough screenshots: present at `backend/public/walkthrough/*.png` AND `<InstallWalkthrough />` wired into `page.tsx` per Task 23, OR Task 23 skipped wholesale (component dormant, no broken anchors).
+- [ ] OG card asset: present at `backend/public/og-card.png` AND `images:` arrays wired into `layout.tsx` metadata per Task 22, OR Task 22 skipped wholesale (metadata ships without OG image fields, no 404 references).
 EOF
 )"
 ```
