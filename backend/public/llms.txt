@@ -1,0 +1,22 @@
+# WinBack
+
+> Stripe App for dispute response. Reason-code playbooks and AI-drafted narratives, installed directly from the Stripe App Marketplace.
+
+## What it does
+
+- Guides Stripe merchants through responding to payment disputes
+- Provides reason-code-specific playbooks (Visa, Mastercard, Amex, Discover)
+- Drafts a dispute narrative using uploaded evidence
+- Lives in the merchant's Stripe Dashboard via the Stripe App Marketplace
+
+## Pricing
+
+- Pay-Per-Win: $0/month, 15% success fee on disputes you win
+- Pro: $79/month flat, zero success fee
+
+## Links
+
+- Install: https://marketplace.stripe.com/apps/winback
+- Site: https://winbackpay.com
+- Terms: https://winbackpay.com/terms
+- Privacy: https://winbackpay.com/privacy
