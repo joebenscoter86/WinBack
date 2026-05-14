@@ -6,6 +6,13 @@ import { AlertFeed } from "@/components/ui/alert-feed";
 import { InstallCTA } from "./components/install-cta";
 import { FAQ } from "./components/faq";
 import { WaitlistFallback } from "./components/waitlist-fallback";
+import {
+  MARKETPLACE_URL,
+  SITE_URL,
+  PRICING,
+  ORGANIZATION,
+} from "./lib/marketing";
+import { FAQ_ITEMS } from "./content/faq";
 
 function Navbar() {
   return (
@@ -519,11 +526,85 @@ function Footer() {
 }
 
 export default function Home() {
+  const softwareApplicationSchema = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "WinBack",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    url: SITE_URL,
+    installUrl: MARKETPLACE_URL,
+    offers: [
+      {
+        "@type": "Offer",
+        name: PRICING.payPerWin.name,
+        availability: "https://schema.org/InStock",
+        url: MARKETPLACE_URL,
+        description: PRICING.payPerWin.description,
+        priceSpecification: {
+          "@type": "UnitPriceSpecification",
+          price: PRICING.payPerWin.monthlyPriceUsd.toString(),
+          priceCurrency: "USD",
+          billingDuration: "P1M",
+          unitText: "MONTH",
+          valueAddedTaxIncluded: false,
+          description:
+            "$0 monthly base. A 15% success fee applies to disputes won, billed via Stripe.",
+        },
+      },
+      {
+        "@type": "Offer",
+        name: PRICING.pro.name,
+        availability: "https://schema.org/InStock",
+        url: MARKETPLACE_URL,
+        description: PRICING.pro.description,
+        priceSpecification: {
+          "@type": "UnitPriceSpecification",
+          price: PRICING.pro.monthlyPriceUsd.toString(),
+          priceCurrency: "USD",
+          billingDuration: "P1M",
+          unitText: "MONTH",
+          valueAddedTaxIncluded: false,
+        },
+      },
+    ],
+    provider: {
+      "@type": "Organization",
+      name: ORGANIZATION.legalName,
+      url: ORGANIZATION.url,
+    },
+  };
+
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQ_ITEMS.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.answer,
+      },
+    })),
+  };
+
   return (
     <>
       <Navbar />
       <main className="relative overflow-hidden pt-24">
         <RibbonBackground />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(softwareApplicationSchema),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(faqSchema),
+          }}
+        />
         <Hero />
         <FeatureGrid />
         <PricingCallout />
