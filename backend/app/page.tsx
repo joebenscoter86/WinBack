@@ -228,7 +228,13 @@ function ComparisonTable() {
                 15% Success Fee
               </td>
               <td className="px-4 sm:px-8 py-5 sm:py-8 text-primary/90 font-medium hidden sm:table-cell">
-                1-Click Stripe App
+                <span className="inline-flex items-center gap-2">
+                  1-Click Stripe App
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 text-primary text-[10px] font-bold uppercase tracking-wider px-2 py-0.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    Available now
+                  </span>
+                </span>
               </td>
               <td className="px-4 sm:px-8 py-5 sm:py-8 text-primary font-extrabold text-xl sm:text-2xl">
                 $1,500
@@ -243,7 +249,13 @@ function ComparisonTable() {
                 Flat $79/mo
               </td>
               <td className="px-4 sm:px-8 py-6 sm:py-10 text-primary/90 font-medium hidden sm:table-cell">
-                1-Click Stripe App
+                <span className="inline-flex items-center gap-2">
+                  1-Click Stripe App
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 text-primary text-[10px] font-bold uppercase tracking-wider px-2 py-0.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    Available now
+                  </span>
+                </span>
               </td>
               <td className="px-4 sm:px-8 py-6 sm:py-10 text-primary font-extrabold text-2xl sm:text-3xl">
                 $79
