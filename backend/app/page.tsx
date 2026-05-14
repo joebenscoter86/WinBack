@@ -78,7 +78,7 @@ function Navbar() {
             Compare
           </a>
         </div>
-        <InstallCTA />
+        <InstallCTA label="Install" />
       </div>
     </nav>
   );
@@ -576,6 +576,7 @@ function Footer() {
               <polyline points="15 3 21 3 21 9" />
               <line x1="10" y1="14" x2="21" y2="3" />
             </svg>
+            <span className="sr-only">(opens in new tab)</span>
           </a>
         </div>
       </div>
